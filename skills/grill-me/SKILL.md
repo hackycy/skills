@@ -1,6 +1,7 @@
 ---
 name: grill-me
 description: Interview the user relentlessly about a plan or design. Use when the user wants to stress-test a plan before building, or uses any 'grill' trigger phrases.
+disable-model-invocation: true
 ---
 
 请针对这份计划的每一个方面持续、深入地向我提问，直到我们双方形成完整且一致的理解。
