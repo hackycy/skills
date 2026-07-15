@@ -1,6 +1,7 @@
 ---
 name: writing-docs
 description: Use when writing, revising, or reviewing framework guides, tutorials, or narrative API docs that need concise definitions, example-first explanations, progressive disclosure, a calm tone, and clear next-step links.
+disable-model-invocation: true
 ---
 
 # 文档写作

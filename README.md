@@ -5,7 +5,7 @@ Preferences agent skills
 ## Installation
 
 ```bash
-pnpx skills add hackycy/skills
+pnpx skills@latest add hackycy/skills
 ```
 
 Learn more about the CLI usage at [skills](https://github.com/vercel-labs/skills).
@@ -17,6 +17,7 @@ Learn more about the CLI usage at [skills](https://github.com/vercel-labs/skills
 ## Awesome Skills
 
 - [superpowers](https://github.com/obra/superpowers)
+- [mattpocock-skills](https://github.com/mattpocock/skills)
 - [baoyu-skills](https://github.com/JimLiu/baoyu-skills)
 - [impeccable](https://github.com/pbakaus/impeccable)
 - [awesome-design-md](https://github.com/VoltAgent/awesome-design-md)
