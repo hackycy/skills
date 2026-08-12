@@ -1,0 +1,6 @@
+interface:
+  display_name: Goal Loop
+  short_description: 把 Wayfinder 决策转成逐 Gate 执行循环
+  default_prompt: 使用 $goal-loop 读取我指定的 Wayfinder 工件，生成或验证 Goal Runbook，并输出当前 Gate 的执行提示词。
+policy:
+  allow_implicit_invocation: false
