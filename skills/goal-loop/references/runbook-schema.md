@@ -39,7 +39,7 @@
 - 每轮向对应 Gate 的 Progress Log 追加 slice、修改、验证结果、风险和下一动作。
 - `passed` 需要计划中每条 Exit condition 的明确证据；普通实现或验证失败保持 `active`。
 - `blocked` 只用于计划声明的 Stop condition，并记录阻塞与恢复条件。
-- 当前 Gate 通过后只激活直接后继并立即停止；最后一个 Gate 通过后结束 Goal。
+- 当前 Gate 通过后只激活直接后继并结束本次 Goal；直接后继虽为 `active`，但必须由新的 Goal 执行。最后一个 Gate 通过后记录 effort 完成并结束本次 Goal。
 ```
 
 不要在此重写项目约束、验证命令、回退策略或 Gate 合同。
@@ -103,7 +103,8 @@ Gate 从 G0 连续编号。G0 无依赖；每个后继只依赖紧邻前驱。`P
 
 1. 在当前 Gate 的 Progress Log 追加逐项 Exit 和最终验证证据。
 2. 将当前 Gate 在 Goal Ledger 中从 `active` 改为 `passed`，填写 Unlock evidence。
-3. 若有直接后继，将其从 `planned` 改为 `active`，记录前驱证据，并在其日志追加“已激活，尚未开始实施”；立即停止。
-4. 若无后继，确认所有 Gate 都为 `passed`，记录 Goal 完成并停止。
+3. 若有直接后继，将其从 `planned` 改为 `active`，记录前驱证据，并在其日志追加“已激活，尚未开始实施”；该后继只能由新的 Goal 执行。
+4. 若无后继，确认所有 Gate 都为 `passed`，记录 effort 完成。
+5. 汇总当前 Gate 的验证证据，显式结束整个 Goal。不得在同一 Goal 中分析或执行直接后继。
 
 源码漂移、状态无效或证据缺失时保持账本原样。普通验证失败不能触发状态转换。

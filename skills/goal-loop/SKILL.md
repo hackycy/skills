@@ -64,7 +64,7 @@ disable-model-invocation: true
 - 不出现 G0/G1 等具体 Gate、Gate 名称或 Objective；
 - 不展开 Inputs、Constraints、Verification、Stop conditions、Rollback 或 Exit conditions；
 - 保留跨项目稳定的执行循环和行为约束：最小 slice、范围控制、验证失败闭环、职责分片、保留无关实现、不弱化测试、人工验收暂停和禁止 push；
-- 要求执行当前唯一 active Gate、遵守计划合同并更新 runbook 证据；Gate 通过后将当前 Gate 标为 `passed`、直接后继标为 `active`，然后停止。
+- 要求在 Goal 启动时锁定当前唯一 active Gate，并只执行该 Gate；人工验收时请求用户确认并强制暂停；Gate 通过后将当前 Gate 标为 `passed`、直接后继标为 `active`，汇总证据并显式结束整个 Goal，不得把后继 Gate 纳入同一 Goal。
 
 `goal-prompt.md` 是可删除、可重建的复制便利文件。它不属于源码基线，不被计划或 runbook 引用，也不参与状态验证。
 
