@@ -1,6 +1,6 @@
 interface:
   display_name: "Goal Loop"
-  short_description: "把收敛的决策文档编译成逐 Gate 计划、执行账本和提示词"
-  default_prompt: "使用 $goal-loop 读取我指定的 map、ADR、spec 或 implementation plan，生成或验证计划与 Goal Runbook，并输出当前 Gate 的执行提示词。"
+  short_description: "把收敛的决策编译成 Gate 计划、状态账本和固定提示词"
+  default_prompt: "使用 $goal-loop 读取我指定的 map、ADR、spec 或 implementation plan，生成或验证计划与状态账本，并输出可跨 Gate 复用的固定提示词。"
 policy:
   allow_implicit_invocation: false
