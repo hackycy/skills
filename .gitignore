@@ -10,3 +10,6 @@ logs
 node_modules
 temp
 workspace
+.agents
+.claude
+skills-lock.json
