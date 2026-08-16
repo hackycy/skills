@@ -39,6 +39,7 @@
 - 每轮向对应 Gate 的 Progress Log 追加 slice、修改、验证结果、风险和下一动作。
 - `passed` 需要计划中每条 Exit condition 的明确证据；普通实现或验证失败保持 `active`。
 - `blocked` 只用于计划声明的 Stop condition，并记录阻塞与恢复条件。
+- 人工验收等待时，Goal 运行时状态为 `waiting_for_user`，但 Ledger 中的 Gate 保持 `active`；Progress Log 必须记录验收请求、可验收入口和恢复所需的明确确认。
 - 当前 Gate 通过后只激活直接后继并结束本次 Goal；直接后继虽为 `active`，但必须由新的 Goal 执行。最后一个 Gate 通过后记录 effort 完成并结束本次 Goal。
 ```
 
@@ -81,7 +82,7 @@ Gate 从 G0 连续编号。G0 无依赖；每个后继只依赖紧邻前驱。`P
 - <YYYY-MM-DD>: initialized as `planned`; no implementation evidence.
 ```
 
-执行期间只能追加日志。每条实施日志至少记录：slice、修改文件、Directed/Repository/Manual 验证结果、失败及修复、风险和下一动作。
+执行期间只能追加日志。每条实施日志至少记录：slice、修改文件、Directed/Repository/Manual 验证结果、失败及修复、风险和下一动作。进入人工验收等待时，追加一条等待日志，至少包含验收 URL 或入口、最小检查清单、明确确认格式和恢复条件；等待本身不是通过证据。
 
 `passed` Gate 的日志必须逐项覆盖计划中的 Exit conditions，并记录最终验证和适用的人工确认。`blocked` Gate 必须记录触发的 Stop condition、已完成检查和恢复所需输入。`planned` Gate 只允许初始化日志。
 
