@@ -54,17 +54,6 @@ disable-model-invocation: true
 
 计划是合同的唯一来源；账本是状态和证据的唯一来源。两者不得相互复制字段或双写状态。
 
-## 人工验收与运行时暂停
-
-人工验收有两套必须同时成立、但不能混写的状态：
-
-- `goal-runbook.md` 中当前 Gate 保持 `active`。用户尚未确认时，Gate 没有通过，也不应被伪装成 `blocked` 或 `passed`。
-- 运行时 Goal 进入 `waiting_for_user`。这是宿主的暂停状态，不是 Goal Ledger 的 Gate 状态；暂停期间不得开启新的自动续跑轮次、调用工具或轮询等待。
-
-固定 prompt 必须在请求验收后发出一次可识别的暂停事件（例如 `goal-loop: waiting_for_user`），并交给宿主提供的 user-input / pause 控制机制。恢复条件必须是用户新的、明确的确认消息；确认、拒绝和补充问题不能由模型自行推断。
-
-如果宿主没有可暂停并在用户输入后恢复的运行时能力，goal-loop 无法仅靠提示词解决这个问题。此时应报告“宿主缺少 `waiting_for_user` 控制”，结束当前响应，不得用 sleep、工具轮询、重复询问或立即 `complete` / `blocked` 来伪造暂停。平台侧应补充一等的 `waiting_for_user` 状态（或等价的 `pause_goal` / `request_user_input` 原语）；在该原语存在前，不应向自动 Goal 发放包含人工验收的执行授权。
-
 ## 写入固定 prompt
 
 完整读取 [`references/goal-prompt-template.md`](references/goal-prompt-template.md)，只替换 `{{EFFORT_PATH}}`，写入或替换 `goal-prompt.md`。

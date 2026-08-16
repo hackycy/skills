@@ -84,7 +84,7 @@
 
 #### Manual acceptance
 
-- <URL、场景、检查项、用户确认方式，以及请求确认后必须进入 `waiting_for_user`、收到明确确认后才能恢复；没有时写“无”>
+- <URL、场景、检查项和用户确认方式；没有时写“无”>
 
 ### Evidence rule
 
@@ -108,7 +108,7 @@
 - `Objective`、`Scope boundary`、`Constraints`、`Slice policy`、`Verification`、`Evidence rule`、`Stop conditions`、`Rollback` 和 `Exit conditions` 都必须存在。
 - `Verification` 只能写仓库真实存在或决策文档明确提供的入口；不得写固定的跨项目命令。
 - `Exit conditions` 必须可由 `Evidence rule` 证明，不能只写“代码完成”或“测试通过”。
-- 人工验收是 Gate 合同的一部分；需要用户确认时，写清暂停点、宿主的 `waiting_for_user` 恢复语义和确认结果的形式。不得把“等待用户”写成自动轮询步骤。
+- 人工验收是 Gate 合同的一部分；需要用户确认时，写清暂停点和确认结果的形式。
 - 计划不得包含 `active`、`passed`、`blocked` 等执行状态，也不得追加 Progress Log。
 
 ## Definition Of Done
