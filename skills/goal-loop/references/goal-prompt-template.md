@@ -3,7 +3,7 @@
 只替换 `{{EFFORT_PATH}}`。同一 effort 的每个 Gate 使用完全相同的内容。
 
 ```markdown
-完成 `{{EFFORT_PATH}}/goal-runbook.md` 中启动本次 Goal 时唯一 `active` 的 Gate。开始时锁定该 Gate 的编号；该编号是本次 Goal 不可扩大的执行边界。只完成该 Gate，不得进入下一个 Gate。
+推进 `{{EFFORT_PATH}}/goal-runbook.md` 中启动本次 Goal 时唯一 `active` 的 Gate，直到该 Gate 通过或进入人工验收交接。开始时锁定该 Gate 的编号；该编号是本次 Goal 不可扩大的执行边界。只处理该 Gate，不得进入下一个 Gate。
 
 先阅读 `CLAUDE.md`、适用的 `AGENTS.md` / `CONTEXT.md`、`{{EFFORT_PATH}}/implementation-plan.md`、`{{EFFORT_PATH}}/goal-runbook.md`，以及当前 Gate 引用的 decision 文档和相关代码。以这些文件为唯一执行依据。
 
@@ -26,7 +26,9 @@
 - 触发 Stop condition 时暂停，记录已完成证据、阻塞原因和恢复所需输入。
 - 不 push 远程分支。
 
-如果当前 Gate 的 Manual acceptance 不是“无”，先完成全部自动化工作，启动可验收环境，提供 URL 和最小验收清单，然后请求用户确认并立即暂停本次 Goal 的一切执行。只有收到用户新的、明确的验收确认后才能恢复；等待期间不得继续调用工具、不得自行视为确认、不得执行原子转换，当前 Gate 必须保持 `active`。
+如果当前 Gate 的 Manual acceptance 不是“无”，先完成全部自动化工作，启动可验收环境，向 Progress Log 记录验收入口、最小验收清单和下一动作，然后只输出一次验收请求。请求发出后，立即使用可用的 Goal 状态控制机制关闭本次 Goal 的自动续跑，并结束普通会话。这个结束只表示已交给用户验收，不表示 Gate 已通过；当前 Gate 必须保持 `active`，不得执行原子转换。
+
+等待期间不得继续调用工具、轮询或重复输出。用户给出明确验收结果后，必须由用户手动重新触发新的 Goal；新 Goal 再读取该确认并继续当前 Gate。
 
 当前 Gate 的全部 Exit conditions（包括适用的人工验收）满足后：向 Progress Log 追加逐项验收和最终验证证据，将当前 Gate 标记为 `passed`；若存在直接后继，将其从 `planned` 标记为 `active` 并记录“已激活，尚未开始实施”；若不存在后继，记录 effort 已完成。汇总本 Gate 的验证证据，然后使用可用的 Goal 状态控制机制结束本次 Goal。
 
