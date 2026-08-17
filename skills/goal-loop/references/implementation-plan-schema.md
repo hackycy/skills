@@ -108,7 +108,7 @@
 - `Objective`、`Scope boundary`、`Constraints`、`Slice policy`、`Verification`、`Evidence rule`、`Stop conditions`、`Rollback` 和 `Exit conditions` 都必须存在。
 - `Verification` 只能写仓库真实存在或决策文档明确提供的入口；不得写固定的跨项目命令。
 - `Exit conditions` 必须可由 `Evidence rule` 证明，不能只写“代码完成”或“测试通过”。
-- 人工验收是 Gate 合同的一部分；需要用户确认时，写清暂停点和确认结果的形式。
+- 人工验收是 Gate 合同的一部分；需要用户确认时，写清交接入口、自动化完成边界、最小验收清单和明确结果的形式。人工验收待确认会终止当前 Goal 但不改变 Gate 状态；只有新的 Goal 读取明确结果后，才可满足对应 Exit condition 或进入修复。
 - 计划不得包含 `active`、`passed`、`blocked` 等执行状态，也不得追加 Progress Log。
 
 ## Definition Of Done

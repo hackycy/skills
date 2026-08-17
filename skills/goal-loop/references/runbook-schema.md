@@ -39,6 +39,7 @@
 - 每轮向对应 Gate 的 Progress Log 追加 slice、修改、验证结果、风险和下一动作。
 - `passed` 需要计划中每条 Exit condition 的明确证据；普通实现或验证失败保持 `active`。
 - `blocked` 只用于计划声明的 Stop condition，并记录阻塞与恢复条件。
+- 人工验收待确认是一次 Goal 终止交接，必须记录在 Progress Log；它不是 `blocked`，当前 Gate 必须保持 `active`，不得通过重复日志表示等待。
 - 当前 Gate 通过后只激活直接后继并结束本次 Goal；直接后继虽为 `active`，但必须由新的 Goal 执行。最后一个 Gate 通过后记录 effort 完成并结束本次 Goal。
 ```
 
@@ -81,9 +82,9 @@ Gate 从 G0 连续编号。G0 无依赖；每个后继只依赖紧邻前驱。`P
 - <YYYY-MM-DD>: initialized as `planned`; no implementation evidence.
 ```
 
-执行期间只能追加日志。每条实施日志至少记录：slice、修改文件、Directed/Repository/Manual 验证结果、失败及修复、风险和下一动作。
+执行期间只能追加日志。每条实施日志至少记录：slice、修改文件、Directed/Repository/Manual 验证结果、失败及修复、风险和下一动作。每次进入人工验收交接时只追加一条记录，至少包含验收入口、自动化证据、最小清单、明确回复格式和下一动作；未收到验收结果前不重复追加“仍在等待”或等价消息。
 
-`passed` Gate 的日志必须逐项覆盖计划中的 Exit conditions，并记录最终验证和适用的人工确认。`blocked` Gate 必须记录触发的 Stop condition、已完成检查和恢复所需输入。`planned` Gate 只允许初始化日志。
+`passed` Gate 的日志必须逐项覆盖计划中的 Exit conditions，并记录最终验证和适用的人工确认。人工验收交接中的 Gate 仍为 `active`，直到新的 Goal 读取明确验收结果；`blocked` Gate 必须记录触发的 Stop condition、已完成检查和恢复所需输入。`planned` Gate 只允许初始化日志。
 
 ## 初始状态导入
 

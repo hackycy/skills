@@ -63,8 +63,8 @@ disable-model-invocation: true
 - 在同一 effort 的所有 Gate 中保持完全相同；
 - 不出现 G0/G1 等具体 Gate、Gate 名称或 Objective；
 - 不展开 Inputs、Constraints、Verification、Stop conditions、Rollback 或 Exit conditions；
-- 保留跨项目稳定的执行循环和行为约束：最小 slice、范围控制、验证失败闭环、职责分片、保留无关实现、不弱化测试、人工验收会话终止和禁止 push；
-- 要求在 Goal 启动时锁定当前唯一 active Gate，并只执行该 Gate；人工验收时只请求一次确认，关闭本次 Goal 的自动续跑并结束普通会话，后续必须由用户手动重新触发；Gate 通过后将当前 Gate 标为 `passed`、直接后继标为 `active`，汇总证据并显式结束整个 Goal，不得把后继 Gate 纳入同一 Goal。
+- 保留跨项目稳定的执行循环和行为约束：最小 slice、范围控制、验证失败闭环、职责分片、保留无关实现、不弱化测试、人工验收交接终止和禁止 push；
+- 要求在 Goal 启动时锁定当前唯一 active Gate，并只执行该 Gate；人工验收时只请求一次确认，先记录交接证据，再使用宿主 agent 提供的成功终态结束本次 Goal（不得标记为 `blocked`、`paused` 或继续运行），最后输出包含 Gate、自动化结果、验收入口、最小清单、明确回复格式和“Goal 已结束、Gate 仍 active”的交接结果并结束普通会话。此时 Gate 必须保持 `active`，后续只能由用户带着明确验收结果手动重新触发新的 Goal；没有 Goal 状态机制时直接结束当前任务，不创建等待循环。Gate 通过后将当前 Gate 标为 `passed`、直接后继标为 `active`，汇总证据并显式结束整个 Goal，不得把后继 Gate 纳入同一 Goal。
 
 `goal-prompt.md` 是可删除、可重建的复制便利文件。它不属于源码基线，不被计划或 runbook 引用，也不参与状态验证。
 
