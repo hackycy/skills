@@ -1,0 +1,6 @@
+interface:
+  display_name: "Documentation Authoring"
+  short_description: "按事实归属、读者意图和文档边界编写技术文档"
+  default_prompt: "使用 $documentation-authoring 从代码框架建立、新增、补充或重构技术文档：先由主代理完成信息分类、canonical owner、文档类型、scope 和 authoring plan；仅在存在多个独立且可验收的工作单元时派发子代理，最后由主代理合并并完成全局校验。"
+policy:
+  allow_implicit_invocation: false
