@@ -1,7 +1,0 @@
-interface:
-  display_name: "技术文档写作风格指南"
-  short_description: "以直接、平静、清晰且示例优先的风格编写和改写技术文档"
-  default_prompt: "使用 $technical-docs-style-guide 按照这份风格指南改写技术文档。"
-
-policy:
-  allow_implicit_invocation: false
