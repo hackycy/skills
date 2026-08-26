@@ -1,0 +1,6 @@
+interface:
+  display_name: "Initialize AGENTS.md"
+  short_description: "基于项目证据初始化或更新作用域内的 AGENTS.md"
+  default_prompt: "使用 $init-agents-md 为当前仓库生成或更新 AGENTS.md，并在发现现有指南时先让我选择合并、覆盖或取消。"
+policy:
+  allow_implicit_invocation: false
