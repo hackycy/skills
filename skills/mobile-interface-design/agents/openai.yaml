@@ -1,0 +1,17 @@
+interface:
+  display_name: mobile interface design
+  short_description: Design and implement polished mobile-first H5 interfaces from
+    product requirements when no UI mockup is available. Use for mobile web pages,
+    app WebView screens, forms, lists, dashboards, detail pages, consumer flows, operational
+    tools, and redesigns. Produces real HTML/CSS/JavaScript (or the project's existing
+    frontend stack), infers a page-specific visual direction, avoids generic AI aesthetics,
+    and visually reviews the rendered result when browser tools are available.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: false
