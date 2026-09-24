@@ -2,75 +2,134 @@
 
 Use after the page has been rendered in a real browser or equivalent visual surface.
 
-The goal is not pixel perfection to a reference image; there is no reference image. The goal is to determine whether the implementation actually expresses the chosen Visual Contract and works as mobile UI.
+The goal is not pixel perfection to a reference image. There may be no reference image. The goal is to judge whether the implementation expresses the chosen product-specific direction and works as mobile UI.
 
-## Review order
+Review the whole screen before individual components.
 
-Review the whole screen first. Do not start by tweaking individual border radii.
+## Pass 1: whole-screen read
 
-### 1. First-viewport comprehension
+At ~390px width, inspect without zooming into details.
 
-At ~390px width, ask:
+Ask:
 
-- Can the screen's primary job be understood quickly?
-- Is the most important content/action visually dominant?
-- Is the first viewport consumed by decorative chrome rather than useful content?
-- Does the top area feel like mobile product UI rather than a landing page?
+- What wins first?
+- What is the expected eye/thumb path?
+- Is the primary job understandable quickly?
+- Is useful content present in the first viewport?
+- Does the screen look like mobile product UI rather than a reduced desktop page or marketing landing page?
+- Are there clear dense and quiet regions, or is the rhythm flat?
 
-### 2. Hierarchy
+Do not start by adjusting border radii.
 
-- Are primary, secondary, and tertiary information clearly separated?
-- Does semantic importance match visual weight?
-- Are dangerous/urgent states visible without overwhelming every other state?
-- Is the primary action obvious but not visually noisy?
+## Pass 2: squint test
 
-### 3. Composition and rhythm
+Blur your attention or view the screenshot at reduced scale.
 
-- Are margins and alignments coherent?
-- Are sections grouped by spacing before extra containers are introduced?
-- Is repeated content easy to scan?
-- Are there awkward dead zones or crowded clusters?
-- Is the page rhythm too repetitive/template-like?
+Check:
 
-### 4. Typography
+- one dominant focal path remains visible;
+- primary/secondary/tertiary zones remain distinguishable;
+- no decorative object steals attention from the task;
+- critical states are visible without turning the page into a wall of alerts.
 
-- Are titles, body, metadata, and numeric values meaningfully distinct?
-- Is any text too small on a phone?
+If the hierarchy disappears when text cannot be read, typography/spacing/contrast are too flat.
+
+## Pass 3: composition and scan path
+
+Compare the render with the chosen composition hypothesis.
+
+- Did implementation drift back into generic stacked cards?
+- Is the first viewport doing what the hypothesis promised?
+- Are repetitive records aligned predictably?
+- Are forms grouped progressively rather than merely boxed?
+- Are important actions placed according to frequency and thumb reach?
+- Are there awkward dead zones or cramped clusters?
+
+Fix structure before cosmetic polish.
+
+## Pass 4: signature fidelity
+
+Name the signature idea, then point to at least three visible manifestations.
+
+Check:
+
+- does it improve understanding or action?
+- does it belong to the product's domain?
+- is it repeated coherently rather than copied mechanically?
+- is the surrounding UI quiet enough for it to matter?
+
+If fewer than three real consequences are visible, the implementation has lost its design thesis.
+
+## Pass 5: distinctiveness / replacement test
+
+Mentally replace the product nouns with an unrelated category.
+
+Could the same:
+
+- layout;
+- palette;
+- typography;
+- surfaces;
+- icon containers;
+- section rhythm
+
+remain unchanged?
+
+If yes, identify the most generic layer and redesign it from Domain World. Do not fix genericness by adding random decoration.
+
+## Pass 6: typography
+
+Inspect real content.
+
+- Are title, body, values, labels, and metadata meaningfully distinct?
+- Does hierarchy use weight and contrast as well as size?
+- Is any text too small at phone distance?
 - Do Chinese/mixed-language lines breathe correctly?
-- Are line breaks or truncation visually awkward?
+- Are important numbers aligned and stable where comparison matters?
+- Do long labels/wrapped values look intentional?
+- Does the chosen type treatment reinforce the intended atmosphere?
 
-### 5. Color and surfaces
+## Pass 7: color, shape, and surfaces
 
-- Is accent color used intentionally?
-- Do surfaces help grouping or merely create card clutter?
-- Are borders/shadows too weak, too strong, or too frequent?
-- Are semantic states distinguishable beyond color alone?
+- Is accent color used for action, identity, or state rather than spread everywhere?
+- Are semantic states distinguishable beyond color?
+- Is there one coherent depth/grouping strategy?
+- Are cards actually grouping meaningful content?
+- Are borders/shadows/radii too frequent or too loud?
+- Are pills reserved for roles that benefit from pills?
 
-### 6. Controls and mobile ergonomics
+## Pass 8: controls and ergonomics
 
-- Are common targets comfortably tappable?
-- Do bottom bars/sticky actions respect the safe area and content padding?
-- Are filters, tabs, and menus placed where a thumb can reasonably reach them?
+- Are frequent targets comfortably tappable?
+- Do bottom bars and sticky actions respect safe area and reserve content space?
+- Can filters/tabs be reached and understood without dominating content?
 - Does any essential action depend on hover?
+- Are focused inputs likely to remain visible above the keyboard?
+- Are destructive actions unmistakable?
 
-### 7. Visual Contract fidelity
+## Pass 9: states and copy
 
-Compare observed design with the internal contract:
+Where relevant, inspect:
 
-- Does the actual density match the intended density?
-- Is the intended atmosphere visible without reading a description?
-- Did implementation drift into generic cards/pills/gradients?
-- Was the one dominant visual thesis actually expressed?
+- loading;
+- empty;
+- error;
+- disabled;
+- submitting;
+- selected/pressed.
 
-### 8. Width resilience
+Check whether the copy names the state and next action clearly. Avoid vague "Something went wrong" when a useful recovery can be stated.
+
+## Pass 10: width resilience
 
 Spot-check around 375px and 430px:
 
-- no horizontal scrolling;
+- no accidental horizontal scrolling;
 - no clipped labels;
 - no broken fixed widths;
-- no huge empty gaps on wider phones;
-- sticky/fixed elements do not obscure content.
+- no oversized empty gaps on wide phones;
+- sticky/fixed elements do not obscure content;
+- long content does not destroy alignment.
 
 ## Refinement format
 
@@ -78,15 +137,28 @@ Internally summarize each pass as:
 
 ```text
 KEEP
-- ...
+- strongest successful decisions
 
 FIX
-- ...
+- highest-impact problems
 
 CHANGE
-- exact implementation changes
+- exact implementation changes to make now
 ```
 
-Then immediately make the changes. Do not only produce critique.
+Make changes immediately, then re-render.
 
-Prioritize high-impact fixes. Normally 1-3 passes are enough. Stop when additional changes are mostly subjective micro-polish or begin to weaken the coherent direction.
+Batch related corrections so each render tests a coherent design change rather than one tiny value.
+
+Normally 1-3 refinement passes are enough. Stop when remaining changes are subjective micro-polish or would weaken the chosen direction.
+
+## Completion gate
+
+Do not call the page finished until:
+
+- primary job is clear;
+- composition matches the chosen hypothesis;
+- signature appears visibly in at least three places/states;
+- replacement test no longer reads as obviously interchangeable;
+- mobile ergonomics and width resilience hold;
+- remaining issues are low-impact polish.

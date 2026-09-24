@@ -1,72 +1,100 @@
-# Anti-patterns: Avoid Unexplained AI Defaults
+# Anti-patterns: Replace Defaults with Decisions
 
-These are not absolute bans. They are patterns that should not appear merely because they are easy for a model to generate.
+These are not universal bans. They are common model habits that should not appear merely because they are easy to generate.
 
-A pattern is acceptable when it clearly supports the chosen Visual Contract.
+When one appears, ask whether it follows from the Visual Contract. If not, replace it with a product-specific decision rather than simply removing decoration.
 
-## Generic visual clichés
+## Generic visual defaults
 
-Avoid defaulting to:
+Do not default to:
 
-- blue-purple gradients as the primary identity;
-- gradient text for ordinary product headings;
+- blue-purple gradients as identity;
+- gradient text for ordinary headings;
 - glassmorphism without a meaningful layered context;
-- blurred neon blobs as background decoration;
-- giant marketing-style titles inside operational screens;
-- excessive drop shadows;
+- blurred neon blobs as background filler;
+- warm-cream + serif + clay-accent simply because it looks "editorial";
+- near-black + acid accent simply because it looks "technical";
+- giant marketing titles in task screens;
+- excessive soft shadows;
 - every surface floating independently;
-- extreme 20-32px rounding on everything;
-- making every button, filter, badge, and input pill-shaped;
-- placing every icon inside a colored rounded square/circle;
-- decorative charts that do not answer a user question;
-- empty "hero" areas that consume the first viewport;
-- generic KPI card rows copied from desktop dashboards;
-- center-aligning task-heavy interfaces;
-- random multi-accent palettes;
-- decorative gradients used to create hierarchy that typography should provide.
+- one large radius repeated everywhere;
+- pills for every button, input, filter, badge, and tab;
+- icons inside colored rounded squares by reflex;
+- generic illustration added only to make a screen feel designed.
 
-## Composition clichés
+Replacement principle: go back to Domain World, hierarchy, and the Signature Idea.
+
+## Composition defaults
 
 Avoid:
 
-- card-per-section and card-per-record without grouping rationale;
-- desktop sidebar layouts reduced to phone width;
-- identical section blocks producing monotonous "template" rhythm;
-- excessive whitespace in high-frequency tools;
-- cramped density in lifestyle/editorial screens merely to fit more content;
-- floating action buttons that cover content when a sticky/in-flow action is clearer;
-- filter controls occupying more visual weight than the data being filtered.
+- card-per-section;
+- card-per-record;
+- dashboard KPI strips copied onto mobile;
+- desktop sidebar logic squeezed into phone width;
+- empty hero space that delays useful content;
+- identical section blocks that create template rhythm;
+- filters that visually outweigh the content;
+- floating primary actions that cover content when an in-flow/sticky action is clearer;
+- center alignment in scan-heavy operational screens;
+- modal/sheet flows for choices that can happen more clearly inline.
 
-## Typography clichés
+Replacement principle: choose a composition around the primary job and content shape.
+
+## Typography defaults
 
 Avoid:
 
-- arbitrary font-size jumps without hierarchy logic;
-- weak gray-on-gray text everywhere;
-- too many weights and styles;
-- all-caps Latin labels mixed into Chinese UI purely for "premium" appearance;
-- large numerals with no semantic priority;
-- overusing monospace fonts to signal "technical" products.
+- relying only on font-size changes for hierarchy;
+- arbitrary neighboring sizes such as 15/16/17px without a meaningful scale;
+- weak gray text everywhere;
+- all-caps Latin labels mixed into Chinese UI purely to signal "premium";
+- monospace used as a costume for "technical";
+- oversized numbers with no semantic priority;
+- decorative eyebrow labels above every section heading;
+- generic marketing copy in product UI.
 
-## Interaction clichés
+Replacement principle: let weight, contrast, line-height, alignment, and domain vocabulary carry hierarchy.
+
+## Interaction defaults
 
 Avoid:
 
 - animation on every component;
+- identical fade-and-slide entrance for every section;
 - hover-first interactions on touch devices;
-- drawers/sheets for actions that can happen inline;
-- hiding primary actions behind ambiguous icons;
-- fake controls that do not respond;
-- decorative loading skeletons with no plausible loading state.
+- ambiguous icon-only primary actions;
+- fake controls;
+- loading skeletons for content that would not plausibly load that way;
+- `transition: all`;
+- destructive actions styled like routine actions.
 
-## Corrective principle
+Replacement principle: motion and states should explain cause, consequence, and priority.
 
-When a page feels generic, do not add more decoration first.
+## Surface defaults
 
-Revisit:
+Avoid:
 
-1. content priority;
-2. composition;
-3. type hierarchy;
-4. spacing rhythm;
-5. one distinctive, context-specific visual decision.
+- border + shadow + tinted background on the same ordinary card;
+- heavy borders where spacing already communicates grouping;
+- nested rounded cards;
+- decorative progress rings with no comparative advantage;
+- side accent stripes added to every callout/record merely for color;
+- background grids/stripes/noise with no connection to the product world.
+
+Replacement principle: choose one depth/grouping strategy and make it serve the structure.
+
+## De-template audit
+
+When the rendered page still feels generic, do not add more decoration.
+
+Ask, in order:
+
+1. Is the primary job visible immediately?
+2. Did the chosen composition survive implementation?
+3. Is the signature idea visible in at least three places/states?
+4. Does typography create a real hierarchy?
+5. Is the rhythm varied according to content importance?
+6. Could the same screenshot belong to an unrelated product?
+
+If the answer to the last question is yes, revisit Domain World and Signature Idea rather than polishing shadows and radii.

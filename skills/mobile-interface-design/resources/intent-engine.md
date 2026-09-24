@@ -1,84 +1,97 @@
 # Intent Engine
 
-Use this resource to infer what the screen is *for* before choosing how it looks.
+Use this resource to determine what the mobile screen is for before choosing how it looks.
 
 Do not expose this analysis unless the user asks for design rationale.
 
-## Infer the screen along these axes
+## Start with a use scene, not a persona label
 
-### Product character
+Identify a concrete person-in-context.
 
-Choose the strongest fit, or a deliberate hybrid:
+Weak:
 
-- operational / industrial
-- finance / account
-- commerce / marketplace
-- social / community
-- content / reading
-- lifestyle / wellness
-- booking / travel / local service
-- productivity / utility
-- communication / support
-- event / campaign
-- creator / media
-- education
-- data / monitoring
+> operations user
 
-Do not map every business product to "dashboard". Dashboard is a composition, not a product category.
+Stronger:
 
-### Primary user job
+> a maintenance technician checking unresolved equipment alarms while walking the floor
 
-Express the single most important job as a verb phrase, for example:
+Weak:
+
+> consumer
+
+Stronger:
+
+> a returning member opening the app in a queue to see whether a reward is available
+
+The use scene influences density, reachability, motion, copy, and what belongs in the first viewport.
+
+## Primary job
+
+Express the single most important job as a verb phrase:
 
 - triage urgent alarms;
 - find and purchase an item;
-- check account balance and recent activity;
+- verify a transaction;
 - submit a field inspection;
-- compare available appointment slots;
+- compare appointment slots;
 - read and save an article;
-- scan inventory quickly.
+- scan inventory quickly;
+- start today's training.
 
-The page hierarchy should make this job obvious within the first viewport.
+If several jobs compete, identify one primary and demote the rest.
 
-### Usage frequency
+The first viewport should make the primary job or its key state obvious.
 
-- rare: onboarding, account closure, special campaign
-- occasional: booking, checkout, profile setup
-- frequent: messaging, task lists, order operations
-- continuous: monitoring, dispatch, scanning, trading/market watch
+## Usage frequency
 
-Frequent interfaces tolerate and often benefit from higher density and lower decoration.
+- rare: onboarding, account closure, special campaign;
+- occasional: booking, checkout, profile setup;
+- frequent: messaging, task lists, order operations;
+- continuous: monitoring, dispatch, scanning, market watch.
 
-### Task pressure
+Frequent interfaces can support higher density and usually benefit from less decorative friction.
 
-- relaxed / exploratory
-- normal
-- time-sensitive
-- high-risk / error-sensitive
+## Task pressure and error cost
 
-High-pressure interfaces should reduce ambiguity, decorative friction, and unnecessary motion.
+- relaxed / exploratory;
+- normal;
+- time-sensitive;
+- high-risk / error-sensitive.
 
-### Information density
+Higher pressure means:
 
-Estimate required density from the content and task, not from personal taste.
+- less ambiguity;
+- more stable alignment;
+- clearer state/action distinction;
+- more conservative motion;
+- stronger confirmation around destructive or irreversible actions.
 
-- low: one decision or one focal object
-- medium: mixed content and several actions
-- high: repetitive records, monitoring, comparison, operations
+## Information density
 
-### Emotional character
+Estimate required density from the task and content.
 
-How much should the interface communicate mood or identity?
+- low: one focal object or decision;
+- medium: mixed content and several actions;
+- high: repetitive records, monitoring, comparison, operations.
 
-- low: tools, operations, settings
-- medium: finance, productivity, booking
-- high: lifestyle, entertainment, campaigns, editorial, commerce discovery
+Density is a product decision, not an aesthetic preference.
 
-### Content shape
+## Emotional character
 
-Identify dominant content:
+How much identity/mood should the interface communicate?
 
-- repetitive list records;
+- low: operations, settings, high-risk utilities;
+- medium: finance, productivity, booking;
+- high: lifestyle, entertainment, campaigns, editorial, discovery commerce.
+
+Emotional expression should not obscure operational meaning.
+
+## Dominant content shape
+
+Identify what the page is mostly made of:
+
+- repetitive records;
 - one detailed entity;
 - forms/inputs;
 - numbers/statuses;
@@ -87,17 +100,54 @@ Identify dominant content:
 - map/location;
 - conversations;
 - time/calendar;
-- steps/progress.
+- steps/progress;
+- route/journey.
 
-Choose the composition around the content shape rather than forcing everything into cards.
+Composition should follow content shape rather than forcing all content into cards.
+
+## Action structure
+
+Identify:
+
+- primary action;
+- secondary actions;
+- destructive actions;
+- repeated row-level actions;
+- passive/read-only states.
+
+Ask whether the primary action should be:
+
+- always visible;
+- contextual;
+- inline after required information;
+- sticky near the thumb;
+- absent because the screen is primarily informational.
+
+Do not use a floating action merely because mobile apps often have one.
+
+## First-viewport contract
+
+Internally complete:
+
+```text
+Within the first viewport, the user must be able to understand:
+- ...
+
+and must be able to do:
+- ...
+```
+
+This contract helps prevent decorative headers, oversized titles, and filter chrome from consuming the screen.
 
 ## Decision heuristics
 
-- Operational + frequent + high density -> compact hierarchy, strong states, minimal ornament.
-- Commerce + exploratory + image-heavy -> visual storytelling, stronger imagery, selective promotional emphasis.
-- Finance + error-sensitive -> controlled color, clear numeric hierarchy, conservative motion, trust-oriented surfaces.
+- Operational + frequent + high density -> compact hierarchy, stable scan paths, strong states, minimal ornament.
+- Commerce + exploratory + image-heavy -> stronger imagery and browse rhythm, selective promotional emphasis.
+- Finance + error-sensitive -> precise terminology, controlled color, strong numeric hierarchy, conservative motion.
 - Content + reading -> typography and reading rhythm dominate chrome.
-- Form + high risk -> progressive grouping, inline validation, clear primary action, minimal distraction.
-- Campaign + rare + emotional -> more expressive composition and motion may be appropriate.
+- Form + high risk -> progressive grouping, inline validation, explicit completion state, minimal distraction.
+- Campaign + rare + emotional -> more expressive composition and motion may be justified.
+- Travel/journey + time-sensitive -> current position and next action should dominate decorative destination content.
+- Field use + movement/poor lighting -> larger targets, clear contrast, short labels, restrained motion.
 
 These are tendencies, not templates.

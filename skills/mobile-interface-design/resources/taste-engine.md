@@ -1,8 +1,8 @@
 # Taste Engine
 
-The Taste Engine converts page intent into a useful amount of visual expression.
+The Taste Engine calibrates how much visual expression the page can support after intent, domain material, and composition are understood.
 
-It is inspired by the idea of semantic design controls, but it is intentionally page-scoped: no persistent design system is required.
+It is page-scoped. No persistent design system is required.
 
 ## Four controls
 
@@ -10,48 +10,78 @@ Rate each from 1 to 10 internally.
 
 ### Creativity
 
-How far may the page depart from conventional mobile UI composition?
+How far may the page depart from familiar mobile product composition?
 
-- 1-3: utilitarian, familiar, task-first
-- 4-6: polished with a recognizable point of view
-- 7-8: expressive composition, typography, or imagery
-- 9-10: campaign/editorial/art-directed; only when the context earns it
+- 1-3: utilitarian, familiar, task-first;
+- 4-6: polished with a recognizable point of view;
+- 7-8: expressive composition, typography, imagery, or interaction;
+- 9-10: art-directed/campaign-like; rarely appropriate for repeated product tasks.
 
-High creativity must not reduce usability.
+High creativity never excuses unclear hierarchy or hidden actions.
 
 ### Density
 
 How much meaningful information should fit on screen?
 
-- 1-3: spacious, focal, low-content
-- 4-7: balanced daily-app density
-- 8-10: compact operational/cockpit density
+- 1-3: spacious, focal, low-content;
+- 4-7: balanced daily-app density;
+- 8-10: compact operational/cockpit density.
 
-Density is not the same as visual clutter. High-density UI needs stronger alignment and hierarchy.
+Density is not clutter. High density requires stronger alignment, stable scan paths, and tighter typography discipline.
 
 ### Variance
 
-How much structural variation/asymmetry should the composition use?
+How much structural variation or asymmetry should sections use?
 
-- 1-3: predictable, repetitive, efficient
-- 4-6: controlled variation between sections
-- 7-8: visibly art-directed or editorial
-- 9-10: intentionally unconventional; rarely suitable for task-heavy H5
+- 1-3: predictable and repetitive for speed;
+- 4-6: controlled changes in rhythm;
+- 7-8: visibly art-directed or editorial;
+- 9-10: intentionally unconventional and rarely suitable for task-heavy H5.
+
+Variance should track content importance. Random offsets are not art direction.
 
 ### Motion
 
 How prominent should animation be?
 
-- 1-3: state feedback only
-- 4-6: smooth transitions and useful micro-interactions
-- 7-8: expressive choreography in consumer/marketing experiences
-- 9-10: cinematic; only when motion is central to the experience
+- 1-3: state feedback only;
+- 4-6: useful transitions and a few authored moments;
+- 7-8: expressive choreography for infrequent consumer experiences;
+- 9-10: motion-centered experience.
 
-Always honor reduced-motion preferences when implementing significant animation.
+Motion must communicate causality, hierarchy, continuity, or brand mood. Repeated task screens should not make users wait for animation.
+
+Always honor reduced-motion preferences for meaningful motion.
+
+## Expression budget
+
+In addition to the four numeric controls, explicitly choose where visual boldness is spent.
+
+Example:
+
+```text
+BOLD
+severity typography and status rail
+
+QUIET
+background, row containers, navigation chrome, secondary metadata
+```
+
+Another:
+
+```text
+BOLD
+reward-progress focal object and warm editorial type
+
+QUIET
+transaction list, bottom navigation, secondary controls
+```
+
+A page with everything emphasized has no point of view.
 
 ## Typical starting profiles
 
-Use these only as calibration references. Adapt to the actual brief.
+Use these as calibration references only.
 
 | Context | Creativity | Density | Variance | Motion |
 |---|---:|---:|---:|---:|
@@ -65,7 +95,7 @@ Use these only as calibration references. Adapt to the actual brief.
 | editorial / lifestyle | 7 | 3 | 7 | 3 |
 | event / launch campaign | 9 | 3 | 8 | 7 |
 
-## Translate controls into design decisions
+## Translate controls into decisions
 
 ### Low creativity
 
@@ -73,72 +103,72 @@ Prefer:
 
 - familiar navigation;
 - explicit labels;
-- restrained palettes;
-- strong alignment;
-- low-risk type choices;
-- minimal decorative surfaces.
+- stable alignment;
+- restrained palette;
+- low-risk interaction patterns;
+- quality expressed through hierarchy, spacing, type, and states.
 
-Do not make it bland. Quality comes from hierarchy, spacing, type, and state design.
+Low creativity is not permission to be generic.
 
 ### High creativity
 
-Permit one or two strong ideas, for example:
+Permit one or two strong ideas:
 
-- distinctive type scale;
-- editorial section composition;
-- dramatic image crop;
-- unexpected but usable navigation treatment;
-- intentional asymmetry;
-- a strong color relationship.
+- a domain-derived composition;
+- distinctive type hierarchy;
+- dramatic but useful crop/imagery;
+- controlled asymmetry;
+- a strong color relationship;
+- an interaction that clarifies a product concept.
 
-Do not stack every effect at once.
+Do not stack effects.
 
 ### High density
 
-Use:
+Prefer:
 
-- compact but readable type;
+- compact readable type;
+- stable row anatomy;
 - short labels;
-- list/table-like alignment where appropriate;
-- separators and grouping before cards;
-- stable spatial rhythm;
-- persistent filters/actions when valuable.
+- alignment over containers;
+- separators/spacing before card-per-record;
+- persistent controls only when they save repeated work.
 
 ### Low density
 
-Allow:
+Permit:
 
 - larger focal content;
 - more whitespace;
 - stronger imagery;
 - fewer simultaneous actions.
 
-### High variance
-
-Variation should correspond to content importance. Random offsets are not art direction.
-
-### High motion
-
-Motion should express causality, hierarchy, or brand mood. Avoid animation that delays frequent tasks.
-
 ## Atmosphere vocabulary
 
-Select 3-6 words that point in one direction. Examples:
+Choose 3-6 words pointing in one coherent direction.
 
-- restrained, precise, trustworthy, quiet
-- warm, tactile, editorial, intimate
-- energetic, youthful, crisp, playful
-- technical, compact, utilitarian, decisive
-- premium, dark, cinematic, sparse
-- fresh, airy, optimistic, friendly
-- dense, analytical, controlled, high-signal
+Examples:
 
-Avoid contradictory piles such as "minimal, maximalist, playful, corporate, brutalist" unless the tension is intentional and explainable.
+- restrained, precise, trustworthy, quiet;
+- warm, tactile, editorial, intimate;
+- energetic, crisp, athletic, direct;
+- technical, compact, utilitarian, decisive;
+- premium, dark, cinematic, sparse;
+- fresh, airy, optimistic, friendly;
+- dense, analytical, controlled, high-signal.
+
+Avoid generic adjectives that do not constrain implementation: "modern", "clean", "beautiful", "premium" by themselves are insufficient.
+
+Avoid contradictory piles unless the tension is intentional and can be translated into design decisions.
 
 ## Taste rule
 
-The page should have one dominant visual thesis and at most one secondary accent idea.
+The page should have one dominant visual thesis, one signature idea, and at most one secondary accent idea.
 
-Good: "compact operational interface with unusually strong status typography."
+Good:
 
-Weak: "modern clean UI with cards, gradients, glass, bold fonts, soft shadows, neon icons, and minimalism."
+> compact maintenance interface with a severity rail that organizes scanning across summary, filter, and rows.
+
+Weak:
+
+> modern clean UI with cards, gradients, glass, bold fonts, soft shadows, neon icons, and minimalism.
