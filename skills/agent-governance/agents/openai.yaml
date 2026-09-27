@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent 项目治理"
+  short_description: "安装、接管、同步并检查项目中的 Agent 工程治理体系"
+  default_prompt: "使用 $agent-governance 为当前项目建立、接管、同步或检查 Agent 工程治理体系。"
+policy:
+  allow_implicit_invocation: false

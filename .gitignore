@@ -13,3 +13,5 @@ workspace
 .agents
 .claude
 skills-lock.json
+!skills/agent-governance/templates/project/.agents
+!skills/agent-governance/templates/project/.claude

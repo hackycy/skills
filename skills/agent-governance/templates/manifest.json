@@ -1,0 +1,182 @@
+{
+  "framework": {
+    "name": "agent-governance",
+    "version": "0.0.1"
+  },
+  "notes": {
+    "language": "zh-CN",
+    "mode": "single-file",
+    "extension": ".md"
+  },
+  "directories": [
+    ".agents/notes/proposed/feature",
+    ".agents/notes/proposed/bug-fix",
+    ".agents/notes/proposed/simplification",
+    ".agents/notes/proposed/architecture",
+    ".agents/notes/proposed/process",
+    ".agents/notes/proposed/testing",
+    ".agents/notes/implemented/feature",
+    ".agents/notes/implemented/bug-fix",
+    ".agents/notes/implemented/simplification",
+    ".agents/notes/implemented/architecture",
+    ".agents/notes/implemented/process",
+    ".agents/notes/implemented/testing",
+    ".agents/notes/rejected/feature",
+    ".agents/notes/rejected/bug-fix",
+    ".agents/notes/rejected/simplification",
+    ".agents/notes/rejected/architecture",
+    ".agents/notes/rejected/process",
+    ".agents/notes/rejected/testing",
+    ".agents/notes/archived/feature",
+    ".agents/notes/archived/bug-fix",
+    ".agents/notes/archived/simplification",
+    ".agents/notes/archived/architecture",
+    ".agents/notes/archived/process",
+    ".agents/notes/archived/testing",
+    ".agents/skills/agent-note/templates",
+    ".agents/skills/agent-note-maintenance",
+    ".agents/skills/project-governance",
+    ".agents/scripts",
+    ".agents/skills/agent-note/agents",
+    ".agents/skills/agent-note-maintenance/agents",
+    ".agents/skills/project-governance/agents",
+    ".claude/skills/agent-note",
+    ".claude/skills/agent-note-maintenance",
+    ".claude/skills/project-governance"
+  ],
+  "managed_blocks": [
+    {
+      "id": "agent-governance",
+      "source": "root/AGENTS.block.md",
+      "target": "AGENTS.md",
+      "strategy": "managed-block"
+    }
+  ],
+  "files": [
+    {
+      "source": "project/.agents/AGENTS.md",
+      "target": ".agents/AGENTS.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/notes/README.md",
+      "target": ".agents/notes/README.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/notes/AGENTS.md",
+      "target": ".agents/notes/AGENTS.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/notes/proposed/AGENTS.md",
+      "target": ".agents/notes/proposed/AGENTS.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/notes/implemented/AGENTS.md",
+      "target": ".agents/notes/implemented/AGENTS.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/notes/rejected/AGENTS.md",
+      "target": ".agents/notes/rejected/AGENTS.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/notes/archived/AGENTS.md",
+      "target": ".agents/notes/archived/AGENTS.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/agent-note/SKILL.md",
+      "target": ".agents/skills/agent-note/SKILL.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/agent-note/templates/proposed.md",
+      "target": ".agents/skills/agent-note/templates/proposed.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/agent-note/templates/implemented.md",
+      "target": ".agents/skills/agent-note/templates/implemented.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/agent-note/templates/rejected.md",
+      "target": ".agents/skills/agent-note/templates/rejected.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/agent-note-maintenance/SKILL.md",
+      "target": ".agents/skills/agent-note-maintenance/SKILL.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/project-governance/SKILL.md",
+      "target": ".agents/skills/project-governance/SKILL.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/scripts/verify_agent_notes.py",
+      "target": ".agents/scripts/verify_agent_notes.py",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/scripts/new_agent_note.py",
+      "target": ".agents/scripts/new_agent_note.py",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/agent-note/agents/openai.yaml",
+      "target": ".agents/skills/agent-note/agents/openai.yaml",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/agent-note-maintenance/agents/openai.yaml",
+      "target": ".agents/skills/agent-note-maintenance/agents/openai.yaml",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/skills/project-governance/agents/openai.yaml",
+      "target": ".agents/skills/project-governance/agents/openai.yaml",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.claude/skills/agent-note/SKILL.md",
+      "target": ".claude/skills/agent-note/SKILL.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.claude/skills/agent-note-maintenance/SKILL.md",
+      "target": ".claude/skills/agent-note-maintenance/SKILL.md",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.claude/skills/project-governance/SKILL.md",
+      "target": ".claude/skills/project-governance/SKILL.md",
+      "strategy": "replace-if-unmodified"
+    }
+  ],
+  "user_owned_globs": [
+    ".agents/notes/proposed/*/*.md",
+    ".agents/notes/implemented/*/*.md",
+    ".agents/notes/rejected/*/*.md",
+    ".agents/notes/archived/*/*.md"
+  ],
+  "note_classes": [
+    "feature",
+    "bug-fix",
+    "simplification",
+    "architecture",
+    "process",
+    "testing"
+  ],
+  "note_lifecycles": [
+    "proposed",
+    "implemented",
+    "rejected",
+    "archived"
+  ]
+}

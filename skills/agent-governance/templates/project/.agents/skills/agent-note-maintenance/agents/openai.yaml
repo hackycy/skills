@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent Note 维护"
+  short_description: "审计、合并、替代、归档和清理 Agent Notes"
+  default_prompt: "使用 $agent-note-maintenance 审计并维护当前项目的 Agent Notes。"
+policy:
+  allow_implicit_invocation: false

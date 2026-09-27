@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent Note"
+  short_description: "记录和转换项目中的长期工程决策 Note"
+  default_prompt: "使用 $agent-note 记录或更新当前项目中的长期工程决策。"
+policy:
+  allow_implicit_invocation: true

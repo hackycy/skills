@@ -1,0 +1,6 @@
+interface:
+  display_name: "项目治理"
+  short_description: "维护项目内 Agent 指令、知识归属和治理边界"
+  default_prompt: "使用 $project-governance 检查或调整当前项目的 Agent 治理边界。"
+policy:
+  allow_implicit_invocation: true
