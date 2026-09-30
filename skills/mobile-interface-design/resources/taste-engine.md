@@ -1,64 +1,126 @@
-# Expression Profile
+# 表达档位
 
-Calibrate how much visual expression the page can support after intent, product material, and composition are understood.
+在意图、领域材料和构图基本明确之后，用这个资源决定页面允许多少视觉表达。
 
-Do not use 1–10 scores. Numeric ratings create false precision and encourage category stereotypes.
+不要用 1–10 分数。数字会制造伪精确，还会让“金融=4、运营=2、生活方式=7”这种类别偏见偷偷固化。
 
-## Four semantic controls
+## 四个维度
 
-For each control, choose a level and one short task reason.
+### 表达 Expression
 
-### Expression
+- **克制**：熟悉、明确、任务优先；
+- **平衡**：有清晰观点，但不抢任务；
+- **强表达**：构图、字体、图像或交互有明显设计语言，适合低频或强品牌场景。
 
-- **restrained** — utility, risk, repetition, or product continuity dominates;
-- **balanced** — polished point of view without competing with the task;
-- **expressive** — the context genuinely benefits from stronger art direction.
+选择后补一句任务理由。
 
-### Density
+### 密度 Density
 
-- **sparse** — few simultaneous decisions/content units;
-- **balanced** — typical mixed product content;
-- **dense** — repeated scanning, monitoring, comparison, operations.
+- **稀疏**：少量核心内容、大留白；
+- **平衡**：日常 App 常见密度；
+- **紧凑**：运营、扫描、监控、高频专业任务。
 
-Dense is not clutter. It requires stable alignment and stronger typographic discipline.
+高密度不是杂乱，它要求更稳定的对齐、更短文案和更清楚状态。
 
-### Rhythm
+### 节奏 Rhythm
 
-- **stable** — repetition supports speed and prediction;
-- **varied** — importance changes across sections;
-- **editorial** — content hierarchy benefits from pronounced compositional variation.
+- **稳定**：重复结构多，利于快速识别；
+- **有变化**：根据内容重要性控制节奏变化；
+- **编辑感**：结构差异明显，适合内容/消费/品牌表达较强页面。
 
-### Motion
+随机错位不等于编辑感。
 
-- **minimal** — state feedback only;
-- **functional** — transitions clarify continuity, causality, or hierarchy;
-- **expressive** — motion is part of an infrequent or brand-led experience.
+### 动效 Motion
 
-Always honor reduced-motion preferences.
+- **极少**：只做状态反馈；
+- **功能性**：适量过渡，帮助解释连续性和因果；
+- **表现性**：允许少量 authored motion，适合低频消费或品牌体验。
 
-## Expression budget
+高频任务页不应让用户等待动画。
 
-Choose where boldness is useful and what stays quiet.
+始终尊重 reduced-motion。
 
-Example:
+## 表达预算
+
+除了档位，还要明确：
 
 ```text
-EXPRESSION: restrained — repeated field task
-DENSITY: dense — operator scans many records
-RHYTHM: stable — row predictability matters
-MOTION: minimal — speed over spectacle
+大胆区域
+[哪里允许明显表达，为什么]
 
-BOLD
-critical state hierarchy
-
-QUIET
-surfaces, navigation chrome, secondary metadata
+安静区域
+[哪些部分必须克制，为什么]
 ```
 
-## Atmosphere vocabulary
+如果所有区域都大胆，就等于没有层级。
 
-Choose 3–6 coherent words that constrain implementation. Avoid empty terms such as “modern”, “clean”, or “premium” by themselves.
+## 根据任务翻译成设计决定
 
-## Rule
+### 克制表达
 
-The profile calibrates decisions; it does not prescribe visual effects. High expression does not imply gradients, giant type, asymmetry, or motion. Restrained does not imply generic.
+通常偏向：
+
+- 熟悉导航；
+- 明确标签；
+- 稳定对齐；
+- 克制色板；
+- 低风险交互；
+- 用字体、间距、状态和细节体现质量。
+
+克制不等于通用。
+
+### 强表达
+
+最多允许一两个真正有价值的强决定，例如：
+
+- 来自产品逻辑的结构；
+- 有辨识度但可读的字体层级；
+- 对内容有意义的图像裁切；
+- 有控制的不对称；
+- 明确的颜色关系；
+- 帮助理解产品概念的交互。
+
+不要堆效果。
+
+### 紧凑密度
+
+通常偏向：
+
+- 紧凑但可读的字体；
+- 稳定行结构；
+- 短标签；
+- 对齐优先于容器；
+- spacing / divider 优先于 card-per-record；
+- 只有真正节省重复操作的控件才常驻。
+
+### 稀疏密度
+
+可以允许：
+
+- 更大的焦点内容；
+- 更多留白；
+- 更强图像；
+- 更少同时出现的动作。
+
+## 氛围词
+
+选择 3–6 个能真正约束实现的词，例如：
+
+- 克制、精确、可信、安静；
+- 温暖、触感、编辑感、亲密；
+- 有力、清晰、运动、直接；
+- 技术、紧凑、实用、果断；
+- 清爽、轻盈、乐观、友好；
+- 高信号、分析感、可控、紧凑。
+
+避免单独使用“现代、干净、高级、漂亮”这类几乎没有约束力的词。
+
+## 规则
+
+页面应该有一个主导视觉逻辑，但**不要求每页必须有一个特殊 signature**。
+
+成熟设计可以只是：
+
+> 克制、紧凑的维修工具，靠稳定状态层级和快速扫描建立品质。
+
+而不必再额外发明一个视觉隐喻。

@@ -1,75 +1,159 @@
-# Mobile Craft Floor
+# 移动端工艺底线
 
-Load after the Visual Contract is settled.
+在 Visual Contract 确定后使用。
 
-This is a quality floor, not a design direction. The contract and brief choose the look; this resource checks whether the result was built with enough craft.
+这不是设计方向，而是上线级质量底线。方向由页面契约决定，本文件只检查执行是否足够成熟。
 
-## Hierarchy and attention
+## 层级
 
-- The dominant outcome/use mode should be legible.
-- Task-led screens need a clear focal path; scan/monitor/browse surfaces may need multiple stable anchors instead.
-- Secondary actions and metadata must be visibly quieter.
-- Important states must be clear without making every state equally loud.
-- Group by proximity and rhythm before adding containers.
+- 任务型页面应有清晰焦点路径；扫描/监控/浏览型页面可以由多个稳定注意力锚点组织。
+- 次要动作和元数据必须明显更安静，而不只是字号小一点。
+- 重要状态要清楚，但不能让所有状态都一样吵。
+- 先用距离和节奏分组，再考虑容器。
 
-If everything is emphasized, nothing is.
+所有内容都被强调，等于没有层级。
 
-## Typography
+## 字体
 
-Typography must do real hierarchy work.
+字体必须真正承担层级工作：
 
-Check readable body text, non-microscopic metadata, meaningful use of weight/contrast, intentional mixed Chinese/Latin rhythm, stable numeric alignment when comparison matters, and intentional wrapping/truncation.
+- 正文在正常手机观看距离下可读；
+- 元数据不能小到难读；
+- 标题 / 正文 / 数值 / 标签 / 元数据通过字重、颜色、行高共同区分；
+- 中英文混排有合理行高和标点节奏；
+- 可比较数字按需要使用 `font-variant-numeric: tabular-nums`；
+- 长标签、长值、国际化文本有明确换行或截断策略；
+- 行高和字距是有意选择，不是浏览器偶然默认。
 
-System fonts are acceptable for utility screens. Display type requires context and reliable assets.
+工具型页面使用系统字体完全可以。只有场景真的需要且字体资源可靠时才引入展示字体。
 
-## Spacing and rhythm
+## 间距与节奏
 
-Use a small spacing scale. Create meaningful contrast between tight groups, normal component spacing, and section separation.
+使用小而稳定的 spacing scale，不要散落随机数值。
 
-Avoid pages where every gap, card, and section rhythm is identical.
+移动页面通常至少需要三层节奏：
 
-## Surfaces and depth
+- 紧密内部关系；
+- 常规组件间距；
+- 更大的区块间距。
 
-Choose one dominant grouping/depth strategy: open layout + spacing, dividers, tonal surfaces, restrained borders, or subtle shadow layers.
+不要让整页每个 gap 都一样。
 
-Cards should represent meaningful grouping, independence, or interaction. They are not the default wrapper for each section or record.
+标题引出一个分组时，标题上方空间通常应大于标题与正文之间的空间。
 
-## Shape
+## 表面与深度
 
-Use a small radius scale. Large rounded rectangles and pills are high-salience shapes; reserve them for roles that benefit from the geometry.
+选择一个主要 grouping / depth 策略，例如：
 
-## Color
+- 开放布局 + 留白；
+- divider；
+- tonal surface；
+- 克制边框；
+- 轻阴影层。
 
-Accent color should communicate action, identity, or state. Critical states must not rely on color alone. Domain-derived palettes still need product-UI contrast and restraint.
+不要默认全部混用。
 
-## Icons and imagery
+卡片应该代表真实分组、独立性或交互，不是每个区块和每条记录的默认包装。
 
-Prefer the existing project icon set, a real icon library, or authored SVG for simple product-specific marks. Avoid emoji/Unicode as a production icon system.
+嵌套卡片需要强理由。
 
-Images should carry content or atmosphere the UI cannot communicate better through layout and type.
+## 形状
 
-## Interaction states
+使用少量 radius 尺度。
 
-Relevant controls should account for default, pressed/active, selected, focus-visible when applicable, disabled, and loading/submitting where relevant.
+大圆角和 pill 都是高显著形状，只应用在真正适合的角色。
 
-Data surfaces should include believable empty/error/loading states when those states materially affect the screen.
+Pill 较适合：
 
-## Motion
+- 紧凑 filter / chip；
+- 短状态；
+- segmented selection；
+- 短标签。
 
-Prefer response to user action over ambient motion. Do not give every section the same entrance animation. Frequent task screens should feel nearly instantaneous. Respect `prefers-reduced-motion`.
+普通按钮、列表行、面板和输入框并不自动需要 pill。
 
-## Browser/WebView surfaces
+## 颜色
 
-Remember focus rings, text selection, input caret, native form appearance, scroll/overscroll, safe areas, keyboard interaction, and sticky/fixed behavior.
+强调色应表达动作、身份或状态。
 
-Do not break platform behavior for cosmetic consistency.
+检查：
 
-## Content quality
+- 文字对比足够；
+- 关键状态不只靠颜色；
+- 多个强调色不会无理由竞争；
+- muted text 仍然可读；
+- 深浅模式来自真实使用环境或产品系统，而不是类别刻板印象。
 
-Use realistic content that exercises long/short names, mixed states, timestamps, edge-case numbers, and localization. A page that only works with perfect demo copy is not finished.
+领域色板仍然必须表现得像产品 UI，而不是主题插画。
 
-## Authorship floor
+## 图标与图片
 
-If the contract chose an authored idea, verify that its useful consequence survived implementation. There is no three-instance quota.
+保持图标语言一致，优先：
 
-If the contract chose restraint, judge the page by hierarchy, continuity, content quality, and craft—not by whether it contains a recognizable visual gimmick.
+- 项目已有图标；
+- 正式图标库；
+- 简单、必要的自定义 SVG。
+
+不要用 emoji / 无关 Unicode 字符代替生产级图标系统。
+
+图片应传递内容或氛围，而不是单纯填满空白。
+
+## 交互状态
+
+真实存在的控件按需要考虑：
+
+- default；
+- pressed / active；
+- selected；
+- focus-visible；
+- disabled；
+- loading / submitting。
+
+只有状态真正影响页面时才实现对应 loading / empty / error，不为完成清单凭空加状态。
+
+动作词应保持连续：“保存”执行后最好反馈“已保存”，不要突然换成不相关术语。
+
+## 动效
+
+优先响应用户操作，不做环境噪音。
+
+如果表达档位允许，可以有一个 authored motion moment，但不要给每个区块都套相同 fade-and-slide。
+
+高频任务页的动画应该非常轻和快。
+
+避免 `transition: all`，遵守 `prefers-reduced-motion`。
+
+## 浏览器 / WebView 细节
+
+移动端工艺也包括设计稿没有直接画出来的东西：
+
+- focus ring；
+- 文本选择；
+- input caret；
+- 原生表单外观；
+- 滚动与 overscroll；
+- safe area；
+- 软键盘；
+- sticky / fixed 行为。
+
+只在必要时 theme / normalize，不要为视觉一致性破坏平台行为。
+
+## 内容质量
+
+使用能真正压力测试布局的内容：
+
+- 长短名称混合；
+- 不同状态；
+- 不同时间戳；
+- 边界数字；
+- 真实需要时包含空状态和错误文案。
+
+只能容纳短 demo 文案的页面还没完成。
+
+## 辨识度底线
+
+不要把“必须有 signature”当完成条件。
+
+如果用了 authored idea，检查它是否真的有用；如果没用，检查页面是否仍然通过信息结构、字体、节奏、产品语言和体系连续性显得有意设计。
+
+工艺底线负责防粗糙，不负责替页面选择视觉世界。

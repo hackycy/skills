@@ -1,63 +1,95 @@
-# Domain World
+# 领域材料
 
-Use after page intent and before composition or styling.
+在明确页面意图之后、做构图和样式之前使用。
 
-The purpose is to give design reasoning concrete product material. It is **not** a requirement to theme the interface.
+目的不是给页面套一个“主题皮肤”，而是从产品本身获得更具体的结构、语言和视觉依据。模型如果从 UI 词汇开始，容易生成 UI 模板；从业务对象和真实信号开始，更容易得到有产品依据的结果。
 
-## Extract product-native material
+## 1. 领域对象与信号
 
-Consider only what is useful for this page:
+列出自然属于该产品世界的对象、关系和可观察信号。
 
-### Objects, signals, relationships
+弱：
 
-List concrete things, states, measurements, relationships, units, or events from the product world. Prefer observable material over generic concepts such as “trust” or “efficiency”.
+- 效率
+- 信任
+- 洞察
 
-### Characteristic information forms
+更强：
 
-Look for sequences, routes, levels, batches, comparisons, timestamps, maps, measurements, conversations, checkpoints, collections, or other structures that can inform hierarchy.
+- 跑步：圈速、步频、路线、训练计划、配速区间；
+- 物流：运单、装卸窗口、路线状态、扫描码、批次；
+- 金融：账目、结算状态、商户、支付工具、退款状态；
+- 设备维护：设备编号、严重程度、巡检记录、工单阶段。
 
-### Language and tone
+这些不是要求做拟物设计，而是帮助决定层级、节奏、信息顺序和交互。
 
-Note the nouns, verbs, units, labels, and sentence style users expect. Do not invent branded jargon merely to sound distinctive.
+## 2. 颜色、材质与光线——仅在有帮助时
 
-### Color/material/light — only when useful
+如果领域本身确实提供有意义的视觉材料，可以记录 4–6 种可能的颜色、材质或光线。
 
-Identify plausible domain colors, materials, textures, or lighting conditions only if they genuinely help the visual direction. Category habit is not a reason: finance is not automatically blue; technical is not automatically dark.
+但不要因为“金融=蓝色”“科技=深色模式”就选择颜色。
 
-## Visible-theme gate
+更重要的是：**领域材料不一定要显性视觉化。**它完全可以只影响内容结构和术语。
 
-Before turning domain material into visible styling, ask:
+## 3. 领域原生的信息形态
 
-- Does this improve comprehension, hierarchy, interaction, or product recognition?
-- Or would it merely make the page look themed?
+寻找领域本身常见的结构：
 
-Domain material may remain invisible and influence only:
+- 顺序；
+- 路线；
+- 等级；
+- 批次；
+- 比较；
+- 状态带；
+- 时间戳；
+- 地图；
+- 测量值；
+- 对话；
+- 集合；
+- 检查点。
 
-- information order;
-- grouping;
-- terminology;
-- state model;
-- interaction;
-- data presentation.
+这些结构通常比“要不要卡片”更能帮助构图。
 
-That still counts as product-grounded design.
+## 4. 语言和语气
 
-## Optional authored idea candidate
+记录用户熟悉的名词、动词、单位、标签和句式。
 
-You may identify a candidate visual/structural/interaction idea, but do not assume the page needs one. The main skill's Authored-Idea Gate decides whether to use it.
+现场运营需要简短直接；会员产品可以更温和；金融详情更需要精确稳定的术语。
 
-A useful candidate should reinforce comprehension or task flow, survive removal of decorative styling, and remain usable on a phone.
+不要为了“品牌感”编造用户不熟悉的行话。
 
-## Reject category defaults
+## 5. 可选的 authored idea
 
-Identify likely clichés only when they are plausible risks for the current task, then replace them with task- or domain-grounded decisions.
+这里只能提出候选，不要求最终一定采用。
 
-The replacement must solve the same information problem better, not merely look different.
+一个值得考虑的 authored idea 应该：
 
-## Domain specificity test
+- 提升理解或任务效率；
+- 来自领域材料；
+- 去掉装饰后仍然成立；
+- 在手机上仍然好用；
+- 不破坏已有产品体系。
 
-Ask:
+如果它只是“让页面看起来更有设计感”，就不值得采用。
 
-> If the product name and logo disappeared, would the remaining information structure, language, and interaction still suggest this product world?
+## 拒绝类别套路
 
-Visual motifs are not required for the answer to be yes.
+识别 2–3 个这类页面最容易落入的默认套路，并给出更有产品依据的替代方向。
+
+内部格式可以是：
+
+```text
+默认：通用 KPI 卡
+为什么是默认：常见 dashboard 脚手架，与当前任务无直接关系
+替代：把真正影响判断的状态直接融入内容结构
+```
+
+替代方案必须更好地解决同一个信息问题，而不是为了不同而不同。
+
+## 领域辨识测试
+
+去掉产品名和 Logo 后，剩余的信息结构、语言和视觉线索是否仍然大致属于这个领域？
+
+如果完全看不出来，可能仍然太通用。
+
+但不要反过来强迫每个元素都带领域隐喻。一个真正有用的领域结构，加上克制支持，通常比整页主题化更成熟。

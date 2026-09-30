@@ -1,56 +1,106 @@
-# Anti-patterns: Replace Defaults with Decisions
+# 反模式：用决定替代默认值
 
-These are not universal bans. They are common model habits that should not appear merely because they are easy to generate.
+这里列的不是绝对禁令，而是模型很容易因为“好生成”而自动使用的习惯。
 
-## Generic visual defaults
+当这些模式出现时，先问它是否来自 Visual Contract 和真实任务。如果不是，应该用更有产品依据的决定替代，而不是简单删装饰。
 
-Do not default to blue-purple gradients, gradient text, glassmorphism, neon blobs, costume serif/monospace, giant marketing titles, excessive shadows, one large radius everywhere, pills everywhere, colored icon squares, or generic illustration filler.
+## 常见视觉默认
 
-Replacement principle: return to product truth, hierarchy, and the chosen expression profile.
+不要默认：
 
-## Composition defaults
+- 蓝紫渐变作为产品身份；
+- 普通标题使用渐变字；
+- 没有真实层级语境的 glassmorphism；
+- 模糊霓虹 blob 当背景填充；
+- “奶油底 + serif + 陶土色”一出现就代表编辑感；
+- “近黑 + 荧光色”一出现就代表技术感；
+- 任务页使用巨大营销标题；
+- 大量柔和阴影；
+- 每个 surface 都独立漂浮；
+- 一个大圆角套遍所有元素；
+- 所有按钮、input、filter、badge、tab 都做 pill；
+- 图标反射性地放进彩色圆角方块；
+- 为了“有设计感”添加无功能插画。
 
-Avoid card-per-section, card-per-record, desktop KPI strips on mobile, squeezed desktop navigation, empty hero space, identical section blocks, filters that outweigh content, floating actions that cover content, scan-heavy center alignment, and sheet/modal flows when inline interaction is clearer.
+## 构图默认
 
-Also avoid **method defaults**:
+避免：
 
-- every page has one giant focal CTA;
-- every page has a special “signature idea”;
-- every signature is repeated three times to prove it exists;
-- every operational page uses the same named composition pattern;
-- every page is visually reinvented despite belonging to an established product.
+- card-per-section；
+- card-per-record；
+- 把桌面 dashboard KPI 条直接搬到手机；
+- 把 desktop sidebar 缩进手机宽度；
+- 空 hero 延迟真实内容；
+- 所有 section 长得一模一样；
+- filter 在视觉上比内容更重要；
+- FAB 遮内容，而 inline / sticky 更清楚；
+- 扫描型运营页面强制居中布局；
+- 本来 inline 就能完成的选择被反复塞进 modal / sheet。
 
-Replacement principle: choose structure from the actual use mode and inherit good product conventions.
+## 设计方法本身的默认
 
-## Typography defaults
+这版特别避免：
 
-Avoid size-only hierarchy, arbitrary neighboring sizes, weak gray everywhere, all-caps Latin used as a premium costume, decorative eyebrow labels everywhere, oversized numbers without semantic priority, and generic marketing copy in product UI.
+- 每页都必须有一个 Signature Idea；
+- authored idea 必须出现三次；
+- 每页都必须只有一个主 CTA；
+- 每次都固定生成三个构图候选；
+- 把“状态优先 / 对象优先 / 步骤优先”当固定页面类别；
+- 用 1–10 数字把不同产品类别映射成固定视觉风格；
+- 因为做单页设计就忽略整个 App 已有视觉体系。
 
-## Interaction defaults
+如果页面不需要额外概念，**克制本身就是正确决定**。
 
-Avoid animation on every component, repeated fade-and-slide entrances, hover-first interactions, ambiguous icon-only primary actions, fake controls, unnecessary skeletons, `transition: all`, and destructive actions styled like routine actions.
+## 字体默认
 
-Do not implement filters/tabs/sheets/toggles merely because they were listed as examples in design guidance.
+避免：
 
-## Surface defaults
+- 只靠字号改变层级；
+- 15/16/17px 这种没有明确比例的小步随机字号；
+- 到处都是弱灰文字；
+- 中文界面无理由混用 ALL CAPS 英文来装高级；
+- monospace 被当成“科技感服装”；
+- 没有语义优先级的大数字；
+- 每个 section 都加 eyebrow label；
+- 产品 UI 使用泛化营销文案。
 
-Avoid border + shadow + tint on ordinary cards, heavy borders where spacing already groups content, nested rounded cards, decorative progress rings without comparative value, color stripes on every record, and unrelated background textures.
+## 交互默认
 
-## Domain-costume default
+避免：
 
-Do not turn domain objects into literal visual motifs just because Domain World found them. Product-specificity can be structural and linguistic.
+- 每个组件都动；
+- 每个区块都相同 fade-and-slide；
+- 触屏依赖 hover；
+- 主动作只用含糊 icon；
+- fake controls；
+- 对不会那样加载的内容强行加 skeleton；
+- `transition: all`；
+- 危险动作和日常动作样式一样。
 
-## De-template audit
+## Surface 默认
 
-Ask:
+避免：
 
-1. Is the dominant outcome/use mode legible?
-2. Did implementation preserve the chosen structural logic?
-3. If an authored idea was chosen, is it useful rather than decorative?
-4. If no authored idea was chosen, does the page still feel deliberate?
-5. Does typography create hierarchy?
-6. Is rhythm driven by content importance?
-7. Could the same screenshot belong unchanged to an unrelated product?
-8. Does this page still look like the same product as neighboring screens when it should?
+- 普通卡同时有 border + shadow + tinted bg；
+- spacing 已经能表达分组时仍使用粗边框；
+- nested rounded cards；
+- 无比较价值的装饰性 progress ring；
+- 每条记录都加彩色侧边线只是为了上色；
+- 和产品世界无关的背景网格、条纹和噪点。
 
-If generic, redesign the most generic layer. If over-authored, simplify before adding more ideas.
+## 去模板审计
+
+页面仍然显得普通时，不要先加装饰。
+
+按顺序问：
+
+1. 使用模式是否清楚？
+2. 构图是否真的来自任务逻辑？
+3. 如果采用 authored idea，它是否有用，而不是装饰？
+4. 如果没有 authored idea，页面是否仍然显得有明确设计？
+5. 字体是否建立层级？
+6. 节奏是否随内容重要性变化？
+7. 同一截图换成完全不同行业是否仍然成立？
+8. 如果属于已有 App，这一页是否仍然像同一个产品？
+
+如果太通用，重做最通用的那一层；如果过度 authored，先删再加。

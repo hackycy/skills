@@ -1,79 +1,84 @@
-# Composition Search
+# 构图探索
 
-Use before the Visual Contract when the structure is materially open.
+在 Visual Contract 之前使用。
 
-The goal is to avoid premature convergence without replacing one template with a library of named templates.
+目的不是给页面套类型，而是避免语言模型把“第一个看起来合理的布局”直接当成最终答案。
 
-## Decide whether search is needed
+除非用户主动要多个方案，否则这些候选只在内部比较。
 
-- Simple, constrained, or existing-flow screens may need only one justified composition.
-- Open-ended screens or redesigns often benefit from 2–3 materially different hypotheses.
+## 何时需要多个候选
 
-Do not generate alternatives just to satisfy a quota.
+只有当信息架构真的开放时，才探索 2–3 个结构明显不同的方案。
 
-## Search by structural axes
+如果页面非常简单、已有产品结构明确、行为不能改变，或者一个方案明显占优，就不必为了流程硬生成三个版本。
 
-Instead of selecting a named archetype, vary decisions along axes such as:
+## 用结构轴探索，不用 archetype 名称分类
 
-- **Lead**: state / object / action / sequence / time / location / content / conversation
-- **Attention**: focal path / stable scan anchors / progressive reveal / continuous stream
-- **Detail**: inline / expand / sheet / next screen
-- **Action placement**: inline / contextual / sticky / persistent / none
-- **Persistence**: what, if anything, must remain visible while scrolling
-- **Grouping**: open flow / sections / aligned rows / selective surfaces / editorial rhythm
+优先问：
 
-Each hypothesis must differ in hierarchy or content organization, not merely color, radius, or theme.
+- **什么领先？** 状态、对象、动作、顺序、时间、位置、内容还是对话？
+- **什么必须持续可见？** 当前状态、关键上下文、下一步还是没有任何固定区域？
+- **用户如何读取？** 单点聚焦、纵向扫描、并排比较、时间流、空间地图？
+- **详情在哪里发生？** inline、展开、sheet、下一页？
+- **什么应该滚动？** 整页、内容流、局部容器？
+- **动作何时出现？** 常驻、上下文、完成必要信息后、或根本不需要？
 
-## Describe candidates compactly
+这些轴可以自由组合，不要变成“状态页、对象页、步骤页”等固定模板。
 
-For each candidate, capture only what distinguishes it:
+## 每个候选只记录最关键内容
 
 ```text
-LEAD
-what information relationship leads the screen
+结构摘要
+一句话说明这个版本如何组织页面
 
-EARLY VIEWPORT VALUE
-what earns space before meaningful scroll
+首屏价值
+第一屏真正提供什么
 
-ATTENTION / SCAN PATH
-how the eye and thumb move
+注意力 / 扫描路径
+用户眼睛和拇指预期怎么移动
 
-ACTION MODEL
-where actions live and why
+动作策略
+动作为什么放在这里
 
-PRODUCT LINK
-which task, content shape, or product-native structure justifies it
+产品依据
+这个结构和业务/内容有什么关系
 
-RISK
-the likely usability or implementation weakness
+风险
+最可能出现的可用性或实现问题
 ```
 
-## Compare candidates
+## 比较标准
 
-Use these lenses:
+### 使用模式清晰度
 
-- dominant-outcome clarity;
-- early viewport value;
-- scan/compare efficiency;
-- domain/product specificity;
-- continuity with nearby screens;
-- thumb ergonomics;
-- implementation realism.
+页面是否让用户快速理解当前是在操作、扫描、监控、浏览、阅读还是输入？
 
-Choose the strongest direction and stop searching.
+### 首屏价值
 
-## Anti-classification rule
+第一屏是否有真正有用的信息，而不是品牌 chrome、空 hero 或压过内容的控件？
 
-Do not reason:
+### 扫描效率
 
-`alarm page -> status-first`
+重复数据的标识、状态、数值和动作是否稳定？探索型内容是否形成自然路径？
 
-or:
+### 产品依据
 
-`booking -> step-first`
+构图是否来自产品任务和内容，而不是“移动端一般都这么做”？
 
-Reason instead:
+### 拇指人体工学
 
-`the user must repeatedly notice unresolved severity while moving through records -> state should lead and remain aligned`
+高频动作是否可达？sticky 区域是否过多？固定导航是否占用过高比例？
 
-The same product category may need a completely different composition under a different use scene.
+### 产品连续性
+
+如果页面属于已有 App，这个新结构是否仍然像同一产品？
+
+### 实现现实性
+
+现有技术栈、数据、资产和时间是否支持？
+
+## 选中后停止探索
+
+一旦某个结构明显更适合任务，就提交方向。
+
+不要为了“更创新”无限生成候选。构图探索是为了逃离第一个默认答案，不是为了拖延实现。

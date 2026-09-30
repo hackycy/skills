@@ -1,6 +1,6 @@
 interface:
-  display_name: mobile interface design
-  short_description: Design and implement distinctive mobile-first H5 interfaces from product requirements when no UI mockup is available. Use for mobile web pages, app WebView screens, forms, lists, details, consumer flows, operational tools, and redesigns. Infers product truth and dominant use mode, explores composition only when needed, chooses a semantic expression profile, conditionally uses authored ideas, preserves product-wide continuity, builds real UI, and visually critiques the rendered result when browser tools are available.
+  display_name: 移动端界面设计
+  short_description: 在没有 UI 稿的情况下，从产品需求直接设计并实现有辨识度的移动端 H5、Mobile Web 和 App WebView。适用于表单、列表、详情、消费流程、运营工具和重设计。先保护产品事实并判断主要使用模式，只有需要时才探索多个构图，用语义表达档位控制视觉，页面级特殊设计必须经过准入判断，同时继承已有产品体系；完成后可在浏览器工具可用时进行真实渲染评审。
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:

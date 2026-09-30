@@ -1,317 +1,334 @@
 ---
 name: mobile-interface-design
-description: Design and implement distinctive, production-oriented mobile-first interfaces for H5 pages, mobile web, and app WebViews when no UI mockup is available.
+description: 在没有 UI 稿的情况下，从产品需求出发设计并实现有辨识度、可上线的移动端优先界面，适用于 H5、移动 Web 和 App WebView。
 disable-model-invocation: true
+metadata:
+  optimized-from-repo: hackycy/skills
+  optimized-from-commit: 2f25a7e7ef64747480c453fc9cd9a2ac3f700d01
+  variant: task-derived-mobile-v3-cn
 ---
 
-# Mobile Interface Design
+# 移动端界面设计
 
-Design the page, then build it. Do not require a mockup, design file, or persistent design system.
+先设计，再实现。不要求用户提供 UI 稿、设计文件，也不强制项目先建立完整设计系统。
 
-This skill is page-scoped by default, but **product-aware whenever product context exists**. A page may receive a distinct composition, but it should not silently invent a new visual language when the surrounding product already has one.
+本 skill 默认以“单页面任务”为工作范围，但**只要已有产品上下文，就必须尊重并继承产品整体语言**。一个页面可以有自己的构图，但不能因为重新设计这一页，就悄悄创造第二套视觉系统。
 
-The core loop is:
+核心流程：
 
-`requirement -> product truth -> use mode -> domain material -> composition search -> expression profile -> authored-idea gate -> visual contract -> implementation -> rendered critique -> de-template audit -> refinement`
+`需求 → 产品事实 → 使用模式 → 领域材料 → 构图探索 → 表达档位 → 设计表达准入 → 视觉契约 → 实现 → 渲染评审 → 去模板化审计 → 迭代`
 
-The goal is not merely to avoid ugly or generic UI. The goal is to make enough deliberate decisions that the result feels specific to the product, task, and mobile use context **without forcing every page to perform a design concept**.
+目标不只是“别做丑、别做普通”，而是做足够多的有依据设计决定，让结果真正属于这个产品、这个任务和这个移动场景，**同时避免强迫每个页面都必须有一个显眼的设计概念**。
 
-## Mission
+## 使命
 
-Turn incomplete business requirements into a coherent, production-oriented mobile interface that:
+把不完整的业务需求转成结构清晰、可实现、接近上线质量的移动界面，并满足：
 
-- feels intentionally designed for this product rather than assembled from mobile defaults;
-- makes the page's dominant outcome or use mode legible early;
-- derives structure and expression from the product's own world where useful;
-- uses real HTML/CSS/JavaScript and real interaction states;
-- remains usable at phone widths and in constrained WebViews;
-- preserves product-wide visual and interaction conventions when they already exist;
-- can be handed directly to a frontend engineer or used as the implementation itself.
+- 看起来是为这个产品专门设计，而不是由常见移动端模板拼出来；
+- 让页面的主要结果或使用模式尽早变得清楚；
+- 在有帮助时，从产品本身的领域、数据和语言中获得结构与表现力；
+- 使用真实 HTML/CSS/JavaScript 或项目现有前端栈，并包含真实交互状态；
+- 在手机宽度和受限 WebView 环境中仍然可用；
+- 已有产品体系存在时，继承其字体、颜色语义、控件、导航和交互动效；
+- 结果可以直接交给前端工程师，或本身就是实现。
 
-## Default behavior
+## 默认行为
 
-Default to action. When the user asks for a page, implement the page rather than stopping at design advice, wireframes, UX essays, or component inventories.
+默认直接行动。用户要求做页面时，优先实现页面，而不是停在设计建议、线框图、UX 长文或组件清单。
 
-Do not ask for a design file. Infer reasonable visual decisions from business and product context. Ask only when a missing requirement would materially change product behavior, data meaning, safety, integration, or navigation semantics.
+不要要求设计稿。根据业务与现有产品上下文推导合理方案。只有当缺失信息会实质影响产品行为、数据含义、安全、集成或导航语义时才提问；其他情况说明合理假设后继续。
 
-Do not narrate internal design exploration unless the user asks for rationale.
+除非用户主动询问，不要把内部设计探索过程完整倾倒给用户。
 
-Do not require a project-wide `DESIGN.md`. When an existing product system is present, inherit it. When none exists, create a disposable page-level direction unless the user explicitly asks to preserve one.
+不要强制项目建立 `DESIGN.md`。已有产品系统时优先继承；没有时只建立当前页面所需的临时方向，除非用户明确要求保存为长期设计系统。
 
-## Precedence and optional dependencies
+## 优先级与可选依赖
 
-Inspect project-specific instructions first.
+先检查项目自身的说明和约束。
 
-If a `frontend-design` skill is installed and available, it may be loaded as a visual craft dependency. Use it for typography, composition craft, distinctive execution, and anti-template guidance.
+如果环境中存在 `frontend-design` skill，可以把它作为视觉工艺依赖，用于字体、构图工艺、差异化执行和反模板化。
 
-This skill remains authoritative for:
+本 skill 对以下内容拥有更高优先级：
 
-- mobile task hierarchy and use mode;
-- phone-scale density and ergonomics;
-- navigation and action placement;
-- WebView/browser constraints;
-- touch behavior;
-- page-scoped decisions and continuity with the surrounding product.
+- 移动端任务层级和使用模式；
+- 手机尺度的信息密度和人体工学；
+- 导航与动作位置；
+- WebView / 浏览器约束；
+- 触控行为；
+- 单页设计与整体产品连续性之间的平衡。
 
-Do not let generic web or marketing guidance turn an app/product screen into a landing page.
+不要让通用网页或营销页指导，把产品屏幕做成落地页。
 
-If `frontend-design` is unavailable, continue with this skill and its resources.
+没有 `frontend-design` 时继续执行，不得因此阻塞任务。
 
-## Inputs to inspect
+## 开始前检查
 
-Before designing, inspect the current project when available:
+项目可用时，先检查：
 
-- existing routes, templates, screens, and components;
-- framework and package configuration;
-- CSS/Tailwind/theme/token files;
-- icons, fonts, and image assets;
-- interaction, navigation, and state conventions;
-- existing API/data contracts relevant to the screen;
-- nearby screens that establish product-wide visual language.
+- 现有路由、模板、页面和组件；
+- 框架、包管理和构建配置；
+- CSS / Tailwind / theme / token 文件；
+- 图标、字体和图片资源；
+- 现有交互、导航和状态约定；
+- 与当前页面相关的 API / 数据契约；
+- 相邻页面，它们通常最能说明产品已有视觉语言。
 
-Existing code is product and integration context, not automatically a good design system. Preserve behavior, data meaning, accessibility, and stack conventions while permitting a new direction when redesign is requested.
+现有代码是产品和集成上下文，不代表现有设计一定优秀。重设计时可以改变视觉方向，但必须保护业务行为、数据含义、可访问性和技术栈约定。
 
-## Resources
+## 资源文件
 
-Load only what the current task needs:
+只加载当前任务真正需要的内容：
 
-1. `resources/intent-engine.md` — identify person-in-context, dominant outcome/use mode, pressure, content shape, and mobile priorities.
-2. `resources/domain-world.md` — extract product-native structure and language without forcing visual theming.
-3. `resources/composition-search.md` — explore structurally different compositions using axes, not named page templates.
-4. `resources/taste-engine.md` — choose semantic expression, density, rhythm, and motion levels with task rationale.
-5. `resources/visual-contract.md` — commit to one concrete page direction; authored signature is optional and must pass a gate.
-6. `resources/craft-floor.md` — minimum visual and interaction craft expected from the shipped result.
-7. `resources/mobile-h5-rules.md` — technical constraints for mobile browsers and WebViews.
-8. `resources/anti-patterns.md` — common model defaults, including forced signatures and over-authored product screens.
-9. `resources/visual-review.md` — rendered critique, continuity, distinctiveness, and refinement loop.
+1. `resources/intent-engine.md` — 判断具体使用场景、主要结果/使用模式、压力、内容形态和移动端优先级。
+2. `resources/domain-world.md` — 从产品领域提取结构和语言，但不强迫做成视觉主题。
+3. `resources/composition-search.md` — 用结构轴探索不同构图，不按命名模板分类页面。
+4. `resources/taste-engine.md` — 用语义档位决定表达、密度、节奏和动效，并写出任务理由。
+5. `resources/visual-contract.md` — 在实现前确定具体页面方向；页面级“招牌设计”是可选项，必须先通过准入判断。
+6. `resources/craft-floor.md` — 上线级移动界面的最低视觉与交互工艺。
+7. `resources/mobile-h5-rules.md` — 移动浏览器和 WebView 的技术约束。
+8. `resources/anti-patterns.md` — 常见模型默认，包括强行做 signature 和过度设计产品页。
+9. `resources/visual-review.md` — 渲染后的视觉评审、产品连续性和迭代流程。
 
-Do not dump these resources into the user response. Apply them.
+不要把这些资源原样输出给用户，直接应用即可。
 
-# Workflow
+# 工作流程
 
-## 1. Preserve product truth
+## 1. 先保护产品事实
 
-Before visual exploration, identify what must not be invented or visually distorted:
+视觉探索前，先识别不能被擅自发明或扭曲的内容：
 
-- business meaning and terminology;
-- required information;
-- real primary and secondary actions;
-- dangerous/destructive actions;
-- data relationships;
-- existing navigation semantics;
-- explicit brand constraints;
-- behavior that already works and must remain compatible.
+- 业务含义和术语；
+- 必须展示的信息；
+- 真实的主要和次要动作；
+- 危险/破坏性动作；
+- 数据关系；
+- 现有导航语义；
+- 明确的品牌限制；
+- 已经正常工作且必须兼容的行为。
 
-When demo data is necessary, make it plausible and clearly illustrative. Do not invent business claims, guarantees, pricing, or operational facts and present them as real.
+需要演示数据时，可以编造合理示例，但要明确它只是演示。不得把虚构的价格、承诺、运营数据或业务结论当成真实事实。
 
-## 2. Resolve intent and use mode
+## 2. 判断意图与使用模式
 
-Use `resources/intent-engine.md`.
+读取 `resources/intent-engine.md`。
 
-Internally establish:
+内部至少明确：
 
-- who is using the screen and in what situation;
-- the **dominant outcome or use mode**, not necessarily a single action;
-- usage frequency;
-- task pressure/risk;
-- information density;
-- emotional character;
-- dominant content shape;
-- action structure;
-- what must earn space near the top of the viewport.
+- 谁在什么场景下使用；
+- 页面追求的**主要结果或使用模式**，不一定是一个单独按钮动作；
+- 使用频率；
+- 任务压力和出错成本；
+- 所需信息密度；
+- 情绪和品牌表达程度；
+- 主导内容形态；
+- 动作结构；
+- 首屏哪些内容真正值得占空间。
 
-A screen may be task-led, scan-led, compare-led, monitor-led, browse-led, read-led, conversation-led, or form-led. Do not force every page into “one primary CTA”.
+页面可能以任务、扫描、比较、监控、浏览、阅读、对话或表单为主。不要强迫每一页都形成“一个巨大主 CTA”。
 
-The first viewport must **earn its space**. It should establish useful context, content, state, or action; it does not always need to complete the job or expose a large CTA.
+首屏必须**值得占用空间**。它可以优先建立上下文、内容、状态或动作，不要求一定在第一屏完成任务，也不要求一定出现大按钮。
 
-## 3. Build a Domain World
+## 3. 建立领域材料
 
-Use `resources/domain-world.md`.
+读取 `resources/domain-world.md`。
 
-Extract product-native material before styling:
+在选视觉风格前，从产品本身提取：
 
-- domain objects, signals, relationships, units, sequences, and vocabulary;
-- plausible colors/material qualities/light conditions only when they genuinely help;
-- characteristic information forms;
-- category-default treatments to reject and better grounded replacements.
+- 领域对象、信号、关系、单位、顺序和术语；
+- 只有真正有帮助时才提取领域颜色、材质和光线；
+- 产品特有的信息结构；
+- 最容易出现的类别套路，以及更有产品依据的替代方案。
 
-Domain material may influence **information order, copy, grouping, state, or interaction without becoming visible theming**. Do not turn every product into a themed costume.
+领域材料可以只影响**信息排序、文案、分组、状态和交互**，完全不必变成可见主题。不要把每个产品都做成“领域 cosplay”。
 
-## 4. Search compositions before styling
+## 4. 先探索构图，再做样式
 
-Use `resources/composition-search.md`.
+读取 `resources/composition-search.md`。
 
-Before committing to a Visual Contract, internally explore 2–3 materially different structural hypotheses **when the structure is genuinely open**. For simple or strongly constrained screens, one well-justified composition is enough.
+如果页面结构确实开放，在进入 Visual Contract 前，内部探索 2–3 个有实质差异的结构方案。对于简单页、强约束页或已有产品结构非常明确的页面，一个有充分理由的方案就够了。
 
-Explore using structural questions such as:
+用问题探索，不要先给页面贴 archetype 标签：
 
-- What leads: state, object, action, sequence, time, location, content, or conversation?
-- What remains visible while acting?
-- What is scanned repeatedly versus opened for detail?
-- What belongs inline versus in a sheet or next screen?
-- What should scroll and what, if anything, deserves persistence?
+- 什么应该领先：状态、对象、动作、顺序、时间、位置、内容还是对话？
+- 用户操作时哪些信息必须保持可见？
+- 哪些内容需要重复扫描，哪些才需要进入详情？
+- 哪些动作应该 inline，哪些适合 sheet / 下一页？
+- 哪些区域应该滚动，哪些内容真的值得固定？
 
-Do not classify the page by a named archetype and then fill in its usual parts.
+不要先决定“这是某某型页面”，然后把那类页面常见的部件填进去。
 
-Choose the composition that best supports task/use-mode clarity, viewport value, scan efficiency, ergonomics, product specificity, continuity, and implementation realism.
+选择最符合使用模式、首屏价值、扫描效率、拇指可达性、产品辨识度、产品连续性和实现现实性的方案。
 
-## 5. Infer an expression profile
+## 5. 建立表达档位
 
-Use `resources/taste-engine.md`.
+读取 `resources/taste-engine.md`。
 
-Choose semantic levels and give each a task reason:
+使用语义档位，并为每个选择给出任务理由：
 
-- Expression: restrained / balanced / expressive
-- Density: sparse / balanced / dense
-- Rhythm: stable / varied / editorial
-- Motion: minimal / functional / expressive
-- 3–6 atmosphere words
-- expression budget: where boldness is useful and what stays quiet
+- 表达：克制 / 平衡 / 强表达
+- 密度：稀疏 / 平衡 / 紧凑
+- 节奏：稳定 / 有变化 / 编辑感
+- 动效：极少 / 功能性 / 表现性
+- 3–6 个氛围词
+- 表达预算：哪里允许大胆，哪里必须安静
 
-Do not use numerical 1–10 scores. They create false precision and category stereotypes.
+不要使用 1–10 数字评分。它会制造伪精确，并把产品类别偷偷变成固定模板。
 
-## 6. Run the Authored-Idea Gate
+## 6. 运行“设计表达准入”
 
-A distinctive authored idea is **optional**.
+页面级的特殊视觉/结构/交互设计**不是必选项**。
 
-Ask:
+先问：
 
-- Would a special visual/structural/interaction idea materially improve comprehension, task flow, domain recognition, or brand experience?
-- Can it survive removal of decorative styling?
-- Does this page have enough expressive latitude, or should it mainly continue the surrounding product system?
+- 一个特殊表达是否会实质改善理解、任务效率、领域识别或品牌体验？
+- 去掉装饰后，它是否仍然成立？
+- 当前页面是否有足够的表达空间，还是更应该延续整个产品体系？
 
-If yes, define one authored idea and let it have as many consequences as naturally follow from it. There is **no minimum manifestation count**.
+如果答案是“是”，定义一个 authored idea，并让它自然影响必要位置；**没有最少出现次数**。
 
-If no, explicitly choose restraint. The correct design decision may be continuity, clarity, and absence of a page-specific signature.
+如果答案是“否”，明确选择克制。成熟设计有时就是连续性、清晰和不发明新概念。
 
-Never invent a metaphor solely because the skill expects one.
+绝不能因为 skill 里写了“要有设计感”，就硬造一个隐喻。
 
-## 7. Commit to a concrete Visual Contract
+## 7. 提交具体 Visual Contract
 
-Use `resources/visual-contract.md`.
+读取 `resources/visual-contract.md`。
 
-Commit before implementation. The contract should include only fields that affect this page:
+实现前确定方向。只填写真正影响本页的字段：
 
-- thesis and dominant use mode;
-- chosen composition;
-- hierarchy/attention strategy;
-- inherited product-system decisions versus page-specific decisions;
-- optional authored idea, if it passed the gate;
-- expression profile and budget;
-- typography;
-- color strategy and actual tokens;
-- spacing/density;
-- surfaces/depth/radius;
-- imagery/icon strategy;
-- interaction/motion character;
-- explicit defaults to avoid.
+- 页面 thesis 和主要使用模式；
+- 选定构图；
+- 层级 / 注意力策略；
+- 哪些来自已有产品系统，哪些是本页新增决定；
+- 通过准入后才填写 authored idea；
+- 表达档位和表达预算；
+- 字体；
+- 色彩策略和实际 token；
+- 间距和密度；
+- surface / depth / radius；
+- 图片与图标；
+- 交互与动效；
+- 明确要避免的默认套路。
 
-Do not leave “either/or” choices unresolved. Do not let adjectives substitute for implementation decisions.
+不要保留“二选一”式未决方案，也不要让“高级、科技、温暖”这类形容词代替具体实现决定。
 
-## 8. Design through content, not decoration
+## 8. 通过内容设计，而不是通过装饰设计
 
-Prioritize:
+优先级：
 
-1. product truth;
-2. use mode and information hierarchy;
-3. composition and spatial rhythm;
-4. typography;
-5. interaction affordance;
-6. semantic color;
-7. surfaces/elevation;
-8. decoration.
+1. 产品事实；
+2. 使用模式与信息层级；
+3. 构图与空间节奏；
+4. 字体；
+5. 交互可供性；
+6. 语义色；
+7. 表面和层级；
+8. 装饰。
 
-Do not compensate for weak hierarchy with gradients, shadows, pills, cards, blobs, animation, or forced domain motifs.
+不要用渐变、阴影、胶囊、卡片、背景 blob 或动画补救弱层级。
 
-Copy is part of interface design. Controls should name what happens. Empty/error states should explain the next useful action.
+文案也是界面设计。按钮要说明会发生什么；空状态和错误状态要告诉用户下一步。避免产品界面里出现泛化营销文案。
 
-## 9. Implement real mobile UI
+## 9. 实现真实移动端 UI
 
-Follow the project's existing stack when one exists.
+已有项目时遵循现有技术栈。
 
-If no stack is specified, default to semantic HTML, modern CSS, vanilla JavaScript, and no build step.
+没有指定栈时，默认：
 
-When the user requests React, Vue, Svelte, Tailwind, a component library, or another stack, use it while retaining mobile, craft, and design-search rules.
+- 语义化 HTML；
+- 现代 CSS；
+- 原生 JavaScript；
+- 不额外引入构建流程。
 
-Implement only interactions implied by the requirement or necessary for the chosen flow. Examples such as filters, tabs, sheets, toggles, validation, or submitting states are **not expected coverage lists**.
+用户指定 React、Vue、Svelte、Tailwind 或组件库时，按要求使用，同时保留本 skill 的移动端、设计判断和反模板规则。
 
-Use `resources/mobile-h5-rules.md` and `resources/craft-floor.md`.
+实现应使用可信内容，并包含理解当前界面所必需的真实状态。能够合理工作的控件应该真正工作。
 
-## 10. Render and critique
+读取 `resources/mobile-h5-rules.md` 和 `resources/craft-floor.md`。
 
-If rendering capability is available:
+## 10. 渲染并评审
 
-1. run the page;
-2. review at a representative phone width, using ~390px as a practical baseline rather than a design canvas;
-3. inspect the whole page before components;
-4. review using `resources/visual-review.md`;
-5. fix high-impact issues in a coherent batch;
-6. re-render;
-7. repeat until no high-impact issues remain, normally 1–3 passes;
-8. spot-check narrower and wider phone widths around 375–430px, plus product-specific device constraints if known.
+如果环境提供浏览器、Playwright、browser MCP、截图工具或等价渲染能力：
 
-The first render is a draft, not proof of quality.
+1. 运行页面；
+2. 先在代表性手机宽度观察，390px 可以作为常用基准，但不是固定画布；
+3. 先看整页，再看组件；
+4. 按 `resources/visual-review.md` 评审；
+5. 一次性修复影响最大的同类问题；
+6. 重新渲染；
+7. 一般迭代 1–3 轮，直到没有高影响问题；
+8. 再检查约 375px、430px 和已知目标设备。
 
-If rendering is unavailable, perform a static critique and state only that rendered visual QA was unavailable.
+第一次 render 只是草稿，不是质量证明。
 
-## 11. Run the de-template audit
+如果 agent 自己可以做视觉 QA，不要把评审工作转嫁给用户。
 
-Use `resources/anti-patterns.md`.
+没有渲染能力时做静态评审，并只说明“未进行真实渲染验证”，不要声称已经看过实际效果。
 
-### Replacement test
+## 11. 去模板化 + 连续性审计
 
-If product nouns were replaced with an unrelated category, could the same composition, palette, typography, surfaces, and icon treatment remain unchanged?
+完成前读取 `resources/anti-patterns.md`，至少做以下检查：
 
-If yes, revisit the most generic layer. Do not add decoration merely to become different.
+### 替换测试
 
-### Authorship test
+如果把产品名词换成完全无关的行业，这套布局、色板、字体、surface、图标容器和节奏是否仍然几乎不用改？
 
-If an authored idea was chosen, did it survive implementation in a useful way? If none was chosen, does the page still feel deliberate through hierarchy, content, continuity, and craft?
+如果是，说明仍然太通用。先重新检查信息结构和领域材料，而不是加装饰。
 
-A page **passes without a signature** when restraint was the correct decision.
+### Authorship 测试
 
-### Squint test
+如果选择了 authored idea，它是否真的改善理解或任务？
 
-When blurred or viewed at a glance, does the attention strategy still work? A task-led screen may have a focal path; a monitoring or browse surface may have stable scan anchors instead.
+如果没选择 authored idea，页面是否仍然显得经过明确设计，而不是草率默认？
 
-## 12. Run static validation
+### 连续性测试
 
-When Node.js is available and the output is HTML/CSS/JS, run:
+如果这是已有 App 的一个页面，它是否仍像同一个产品？字体、颜色语义、控件、导航和 motion 是否一致？
+
+### Squint 测试
+
+模糊观察时，任务型页面是否仍有清晰路径；扫描/监控/浏览型页面是否仍有稳定注意力锚点和明显节奏？
+
+## 12. 静态验证
+
+当 Node.js 可用且输出为 HTML/CSS/JS 时运行：
 
 `node scripts/validate-mobile-h5.mjs <html-file>`
 
-Treat validator output as heuristics. Fix clear failures and high-confidence warnings. Never distort an intentional design merely to silence a detector.
+如果 skill 安装在项目之外，使用 skill 自身目录里的 validator。
 
-# Output policy
+validator 只是启发式检查。修复明确失败和高置信告警，但不要为了让检测器闭嘴而破坏有充分理由的设计。
 
-When the user asked for implementation:
+# 输出策略
 
-- edit/create actual project files;
-- keep the final explanation concise;
-- mention the implemented screen and important interactions;
-- mention rendered visual verification only when it occurred;
-- do not output internal exploration or Visual Contract unless requested.
+用户要求实现时：
 
-When the user asked only for a visual concept, produce the concept in the richest visual form supported by the environment rather than a long prose specification.
+- 直接编辑或创建真实项目文件；
+- 最终说明保持简洁；
+- 说明实现了什么页面和关键交互；
+- 只有真的做过渲染验证时才声称视觉验证完成；
+- 除非用户要求，不输出内部领域探索、构图候选或 Visual Contract。
 
-# Quality bar
+用户只要视觉概念时，优先使用环境能支持的最丰富视觉形式，而不是写一篇长规格说明。
 
-A successful result should feel like a plausible shipped mobile product, not a prompt demo.
+# 质量门槛
 
-It should have:
+成功结果应该像一个真实可发布的移动产品，而不是 prompt demo。
 
-- a clear dominant outcome or use mode;
-- useful first-viewport content/context with no wasted hero chrome;
-- a visual point of view grounded in product context, or deliberate continuity when restraint is better;
-- deliberate hierarchy, density, and rhythm;
-- typography that carries hierarchy rather than merely delivering text;
-- restrained and meaningful color/depth/effects;
-- touch-friendly interaction and mobile-native navigation when justified;
-- believable loading/empty/error/disabled states when relevant;
-- coherent icons and content language;
-- no accidental horizontal overflow;
-- resilient treatment across common phone widths;
-- no obvious interchangeable AI-template structure;
-- no forced signature, metaphor, CTA, bottom navigation, sheet, or card pattern merely because the page is mobile.
+至少应具备：
 
-If the page is technically correct but interchangeable with unrelated products, refine it. If it is distinctive only because it is over-authored, simplify it.
+- 主要结果或使用模式清楚；
+- 构图与产品任务有关，而不是移动端默认模板；
+- 如果存在 authored idea，它必须有真实用途；如果没有，也必须显得是有意克制；
+- 有明确层级、密度和节奏；
+- 字体真正承担层级，而不仅负责显示文字；
+- 色彩、深度和效果克制且有语义；
+- 触控友好、导航符合移动场景；
+- 相关时提供可信 loading / empty / error / disabled 状态；
+- 图标和内容语言一致；
+- 没有意外横向滚动；
+- 大致 375–430px 范围内仍然稳定，并优先适配真实目标设备；
+- 已有产品中保持整体连续性；
+- 不出现明显可互换的 AI 模板结构。
+
+如果技术上正确，但换成另一个产品也几乎不用改，任务还没有完成。

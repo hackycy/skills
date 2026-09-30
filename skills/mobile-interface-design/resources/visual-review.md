@@ -1,132 +1,163 @@
-# Rendered Visual Review
+# 渲染后视觉评审
 
-Use after the page has been rendered in a real browser or equivalent visual surface.
+页面在真实浏览器或等价视觉环境中渲染后使用。
 
-The goal is not pixel perfection to a reference image. Judge whether implementation expresses the chosen product-specific direction, preserves product continuity where needed, and works as mobile UI.
+目标不是和某张参考图逐像素一致，而是判断实现是否表达了正确的产品方向、在需要时保持产品连续性，并且作为移动 UI 真正可用。
 
-Review the whole screen before individual components.
+先看整屏，再看单个组件。
 
-## Pass 1: whole-screen read
+## Pass 1：整屏读取
 
-At a representative phone width (around 390px is a useful baseline), ask:
+在代表性手机宽度观察，390px 可作为常用基准。
 
-- What wins first, or what stable scan anchors organize attention?
-- Is the dominant outcome/use mode understandable quickly?
-- Does early viewport space contain useful context/content/state/action?
-- Does the screen look like mobile product UI rather than reduced desktop or a marketing landing page?
-- Are there clear dense and quiet regions, or is rhythm flat?
-- Does it still look like the surrounding product when continuity should matter?
+问：
 
-Do not start by adjusting border radii.
+- 第一眼什么最突出，或哪些稳定 scanning anchors 在组织注意力？
+- 主要结果 / 使用模式是否很快清楚？
+- 首屏空间是否真正用于上下文、内容、状态或动作？
+- 看起来像移动产品 UI，还是缩小版桌面 / 营销落地页？
+- 页面有明显疏密节奏，还是一整屏都一样？
+- 如果需要保持连续性，它还像周围那些页面吗？
 
-## Pass 2: squint test
+不要从调圆角开始评审。
 
-Blur attention or reduce the screenshot.
+## Pass 2：Squint Test
 
-Check:
+模糊视线或缩小截图。
 
-- task-led screens retain a clear focal path;
-- monitoring/scanning/browsing surfaces retain stable attention anchors;
-- primary/secondary/tertiary zones remain distinguishable;
-- decoration does not steal attention;
-- critical states remain visible without becoming a wall of alerts.
+检查：
 
-## Pass 3: composition and scan path
+- 任务型页面仍保留清晰焦点路径；
+- 扫描 / 监控 / 浏览型页面仍有稳定注意力锚点；
+- primary / secondary / tertiary 区域仍可区分；
+- 装饰没有抢走任务注意力；
+- 关键状态清楚，但不是一整墙告警色。
 
-Compare the render with the chosen structural reasoning.
+## Pass 3：构图与扫描路径
 
-- Did implementation drift into generic stacked cards?
-- Is early viewport space doing useful work?
-- Are repetitive records aligned predictably?
-- Are forms grouped progressively rather than merely boxed?
-- Are actions placed according to frequency, context, risk, and reachability?
-- Are there awkward dead zones or cramped clusters?
+和构图推理对照：
 
-Fix structure before cosmetic polish.
+- 实现是否退回通用堆卡片？
+- 首屏是否真的在做有价值的事情？
+- 重复记录是否稳定对齐？
+- 表单是否按依赖关系渐进分组，而不是只加框？
+- 动作是否根据频率、上下文、风险和可达性放置？
+- 是否存在大块死区或局部过挤？
 
-## Pass 4: authored-idea fidelity — only if applicable
+先修结构，再做微观 polish。
 
-If the Visual Contract chose an authored idea:
+## Pass 4：Authored-Idea Fidelity——仅适用时
 
-- is its useful consequence visible?
-- does it improve understanding/action?
-- does it belong to the product?
-- is surrounding UI quiet enough for it to matter?
+只有 Visual Contract 明确启用 authored idea 时才检查：
 
-There is no minimum manifestation count.
+- 它的有用结果是否真的可见？
+- 是否改善理解或动作？
+- 是否属于这个产品？
+- 周围是否足够安静，让它真正有意义？
 
-If the contract chose restraint, skip this pass. Do not fail a page for lacking a special visual motif.
+**没有最少出现次数。**
 
-## Pass 5: distinctiveness / replacement test
+如果契约选择克制，直接跳过本 Pass。绝不能因为页面没有特殊视觉母题就判失败。
 
-Mentally replace product nouns with an unrelated category.
+## Pass 5：替换测试
 
-Could the same layout, palette, typography, surfaces, icon containers, and section rhythm remain unchanged?
+把产品名词想象成另一个完全不相关领域。
 
-If yes, identify the most generic layer and redesign it from product truth/domain material. Product-specificity may come from information structure or language; do not add random decoration.
+如果布局、色板、字体、surface、图标容器和 section 节奏都能原封不动复用，说明设计仍然太通用。
 
-## Pass 6: product continuity test
+优先从产品事实、信息结构和语言重做最通用的一层，不要随机加装饰。
 
-When this page belongs to an existing app, compare it with neighboring screens:
+## Pass 6：产品连续性测试
 
-- does typography still belong to the same product?
-- do color semantics, controls, navigation, radius, and motion remain coherent?
-- did page-level exploration invent a second design system?
+页面属于现有 App 时，和相邻页面比较：
 
-Intentional redesign scope is an exception; otherwise fix unnecessary divergence.
+- 字体还是同一个产品的吗？
+- 色彩语义、控件、导航、radius、motion 是否一致？
+- 单页探索是否偷偷创造了第二套设计系统？
 
-## Pass 7: typography
+如果用户明确要求整体改版，这是例外；否则优先修复不必要差异。
 
-Inspect real content. Check meaningful distinctions among title/body/values/labels/metadata, weight and contrast beyond size, readable phone-distance text, mixed-language rhythm, stable numbers where comparison matters, and intentional handling of long labels/values.
+## Pass 7：字体
 
-## Pass 8: color, shape, surfaces
+检查真实内容：
 
-Check accent use, semantic states beyond color, coherent grouping/depth strategy, meaningful use of cards, and whether borders/shadows/radii/pills are too frequent or loud.
+- 标题、正文、数值、标签、元数据是否真的有差异；
+- 层级是否同时使用字重和对比，而不只字号；
+- 是否存在手机距离难读的小字；
+- 中英文混排是否呼吸正常；
+- 需要比较的数字是否稳定；
+- 长标签和长值是否处理得有意图。
 
-## Pass 9: controls and ergonomics
+## Pass 8：颜色、形状与表面
 
-Check comfortable tap targets, safe-area treatment, fixed/sticky viewport cost, keyboard visibility, touch alternatives to hover, destructive-action clarity, and whether optional filters/tabs/navigation dominate content without task justification.
+检查：
 
-## Pass 10: states and copy
+- accent 是否用于动作、身份或状态；
+- 语义状态是否不只靠颜色；
+- 是否有一个连贯的 grouping / depth 策略；
+- 卡片是否真的在表达分组；
+- border / shadow / radius / pill 是否过多或过响。
 
-Where relevant, inspect loading, empty, error, disabled, submitting, selected/pressed. Copy should identify the state and next useful action when recovery exists.
+## Pass 9：控件与人体工学
 
-## Pass 11: width resilience
+检查：
 
-Spot-check narrower and wider phone widths around 375–430px, plus known target devices:
+- 高频目标是否容易触达；
+- bottom bar / sticky action 是否尊重 safe area 并给内容留空间；
+- 键盘是否会遮挡焦点 input；
+- 关键动作是否不依赖 hover；
+- 危险动作是否明确；
+- 可选 filter / tab / navigation 是否无理由压过内容。
 
-- no accidental horizontal scrolling;
-- no clipped labels;
-- no broken fixed widths;
-- no oversized empty gaps;
-- sticky/fixed UI does not obscure content;
-- long content does not destroy alignment.
+## Pass 10：状态与文案
 
-## Refinement format
+真实相关时检查：
 
-Internally summarize each pass:
+- loading；
+- empty；
+- error；
+- disabled；
+- submitting；
+- selected / pressed。
+
+有恢复路径时，文案应告诉用户发生了什么和下一步能做什么。
+
+## Pass 11：宽度韧性
+
+检查大约 375–430px，以及真实目标设备：
+
+- 没有意外横向滚动；
+- 标签不被截坏；
+- fixed width 不崩；
+- 宽手机没有莫名大空白；
+- sticky / fixed 不遮内容；
+- 长内容不破坏对齐。
+
+## 迭代格式
+
+内部每轮只记录：
 
 ```text
 KEEP
-- strongest successful decisions
+- 最成功的决定
 
 FIX
-- highest-impact problems
+- 影响最大的几个问题
 
 CHANGE
-- exact implementation changes to make now
+- 这一轮要直接改什么
 ```
 
-Batch related corrections, re-render, and normally stop after 1–3 passes once remaining changes are subjective micro-polish.
+同类问题一起改，重新渲染。通常 1–3 轮后，如果剩余只是主观微调，就应停止。
 
-## Completion gate
+## 完成门槛
 
-Do not call the page finished until:
+只有同时满足以下条件才算完成：
 
-- dominant outcome/use mode is clear;
-- composition matches the chosen reasoning;
-- authored idea is useful if one was chosen, or restraint remains deliberate if none was chosen;
-- replacement test no longer reads as obviously interchangeable;
-- product continuity holds where applicable;
-- mobile ergonomics and width resilience hold;
-- remaining issues are low-impact polish.
+- 主要结果 / 使用模式清楚；
+- 构图符合选定推理；
+- authored idea 如果存在就有实际价值，不存在时克制也是有意设计；
+- 替换测试不再明显可互换；
+- 需要时保持产品连续性；
+- 移动端人体工学和宽度韧性成立；
+- 剩余问题只是低影响 polish。

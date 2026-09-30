@@ -1,121 +1,151 @@
-# Intent Engine
+# 意图引擎
 
-Use this resource to determine what the mobile screen is for before choosing how it looks.
+在决定页面长什么样之前，先判断这个移动页面到底是干什么的。
 
-Do not expose this analysis unless the user asks for design rationale.
+除非用户要求设计理由，否则不要把这段分析直接输出。
 
-## Start with a use scene, not a persona label
+## 从“人在场景中”开始，不从 persona 标签开始
 
-Identify a concrete person-in-context.
+不要写：
 
-Weak: `operations user`
+> 运营人员
 
-Stronger: `a maintenance technician checking unresolved equipment alarms while walking the floor`
+更有用的是：
 
-The use scene influences density, reachability, motion, copy, and what deserves early viewport space.
+> 一名维修技术员正在厂区边走边查看尚未处理的设备告警。
 
-## Dominant outcome or use mode
+不要写：
 
-Do not force every screen into one primary action. First decide what kind of attention the screen needs.
+> 消费者
 
-Common modes include:
+更有用的是：
 
-- **task-led** — complete a clear action;
-- **scan-led** — repeatedly inspect many similar items;
-- **compare-led** — compare alternatives or values;
-- **monitor-led** — maintain awareness of changing state;
-- **browse-led** — discover and explore;
-- **read-led** — understand content with minimal chrome;
-- **conversation-led** — follow and respond to an exchange;
-- **form-led** — enter/verify information safely.
+> 一名老会员在排队时打开 App，想确认是否有可立即兑换的权益。
 
-Express the dominant outcome as a verb phrase or state of awareness, for example:
+真实使用场景会影响密度、拇指可达性、动效、文案和首屏内容。
 
-- triage urgent alarms;
-- understand whether anything needs intervention;
-- compare appointment slots;
-- read and save an article;
-- verify a transaction;
-- continue a conversation.
+## 主要结果 / 使用模式
 
-If multiple jobs coexist, identify which one sets the page's attention strategy and which are supporting. Do not demote legitimate parallel scan anchors merely to satisfy “one job”.
+不要强迫所有页面只有一个“主动作”。先判断页面最核心的结果或工作模式。
 
-## Usage frequency
+常见模式包括：
 
-- rare: onboarding, account closure, special campaign;
-- occasional: booking, checkout, profile setup;
-- frequent: messaging, task lists, order operations;
-- continuous: monitoring, dispatch, scanning, market watch.
+- **任务型**：提交巡检、开始训练、确认预约；
+- **扫描型**：快速看库存、告警、记录；
+- **比较型**：比较时段、套餐、数值；
+- **监控型**：持续观察状态、行情、调度；
+- **浏览型**：发现内容、商品、地点；
+- **阅读型**：文章、账单、详情；
+- **对话型**：消息、客服、协作；
+- **表单型**：输入、验证、提交。
 
-Frequent interfaces can support higher density and usually benefit from less decorative friction.
+页面可以有 dominant mode，也可以有一个清晰 outcome，但不必把所有其他任务都压缩成一个 CTA。
 
-## Task pressure and error cost
+## 使用频率
 
-- relaxed / exploratory;
-- normal;
-- time-sensitive;
-- high-risk / error-sensitive.
+- 低频：开户、注销、特殊活动；
+- 偶尔：预约、结账、资料设置；
+- 高频：消息、任务、订单操作；
+- 持续：监控、调度、扫描、行情。
 
-Higher pressure usually means less ambiguity, stable alignment, clearer state/action distinction, conservative motion, and confirmation proportional to irreversible risk.
+高频界面通常允许更高密度，同时更应该减少装饰性摩擦。
 
-## Information density
+## 任务压力与错误成本
 
-Estimate density from task and content, not category stereotype:
+- 放松 / 探索；
+- 常规；
+- 时间敏感；
+- 高风险 / 容错低。
 
-- sparse: one focal object, decision, or narrative;
-- balanced: mixed content and actions;
-- dense: repetitive records, comparison, monitoring, operations.
+压力越高，越需要：
 
-## Emotional character
+- 少歧义；
+- 稳定对齐；
+- 清晰区分状态和动作；
+- 更保守的动效；
+- 对不可逆操作提供更明确确认。
 
-Determine how much identity/mood the screen can support. Operational or high-risk surfaces often need more restraint; discovery or infrequent consumer moments may permit more expression. Treat this as a task-derived tendency, not a category lookup table.
+## 信息密度
 
-## Dominant content shape
+从任务和内容决定密度，不从审美偏好决定。
 
-Identify what the page is mostly made of:
+- 稀疏：一个焦点对象或单一决定；
+- 平衡：混合内容和若干动作；
+- 紧凑：重复记录、监控、比较、运营处理。
 
-- repetitive records;
-- one detailed entity;
-- forms/inputs;
-- numbers/statuses;
-- images/products;
-- long text;
-- map/location;
-- conversations;
-- time/calendar;
-- steps/progress;
-- route/journey.
+## 情绪表达强度
 
-Composition should follow content shape rather than forcing everything into cards.
+页面需要表达多少品牌情绪？
 
-## Action structure
+- 低：运营、设置、高风险工具；
+- 中：金融、效率、预约；
+- 高：生活方式、娱乐、编辑内容、探索型消费。
 
-Identify primary, secondary, destructive, repeated row-level, and passive/read-only actions.
+情绪表达不得模糊操作含义。
 
-Ask whether an action should be always visible, contextual, inline after required information, sticky near the thumb, or absent because the screen is mainly informational.
+## 主导内容形态
 
-Do not add a floating action merely because mobile apps often have one.
+识别页面主要由什么组成：
 
-## First-viewport value
+- 重复记录；
+- 单个详情对象；
+- 表单 / 输入；
+- 数字 / 状态；
+- 图片 / 商品；
+- 长文本；
+- 地图 / 位置；
+- 对话；
+- 时间 / 日历；
+- 步骤 / 进度；
+- 路线 / 行程。
 
-Do not require every screen to expose a CTA or complete the job above the fold. Instead complete this internally:
+构图应该从内容形态出发，而不是默认把所有东西包进卡片。
+
+## 动作结构
+
+判断：
+
+- 哪些动作高频；
+- 哪些动作次要；
+- 哪些动作危险；
+- 哪些动作针对重复行项目；
+- 页面是否主要是只读状态。
+
+进一步问：动作应该：
+
+- 始终可见；
+- 只在上下文出现；
+- 放在理解必要信息之后；
+- 在拇指区保持 sticky；
+- 或者根本不存在，因为页面主要是信息型。
+
+不要因为移动 App 常见 FAB，就默认添加悬浮按钮。
+
+## 首屏价值契约
+
+内部完成：
 
 ```text
-The first viewport earns its space by making the user understand:
+首屏必须让用户理解：
 - ...
 
-and, when appropriate, enabling:
+首屏如果需要允许用户行动，则应能：
 - ...
 ```
 
-Useful first-viewport value can be context, state, content, orientation, or action.
+重点不是“第一屏必须完成任务”，而是**首屏每一块空间都要值得存在**。不要让巨大标题、品牌装饰或低价值筛选控件把真正内容挤到屏幕外。
 
-## Decision heuristics
+## 判断倾向，而不是模板
 
-Heuristics are tendencies, not templates. Derive the final composition from the actual use scene.
+这些只是倾向：
 
-- high pressure + repeated scanning -> stable alignment, strong state cues, low decorative friction;
-- reading -> typography and content rhythm dominate chrome;
-- high-risk form -> progressive grouping, clear validation, explicit completion state;
-- movement/poor lighting -> larger reachable targets, high contrast, short labels, restrained motion;
-- exploratory browsing -> discovery rhythm may matter more than an early CTA.
+- 高频运营 + 高密度 → 紧凑层级、稳定扫描路径、明显状态、少装饰；
+- 探索消费 + 图片主导 → 更强图像节奏、选择性促销强调；
+- 金融 + 高错误成本 → 精确术语、克制颜色、稳定数字层级、保守动效；
+- 阅读型 → 字体和阅读节奏优先于 chrome；
+- 高风险表单 → 渐进分组、就地校验、明确完成态；
+- 活动 / 低频 / 高情绪 → 可以允许更强表达；
+- 旅程 / 时间敏感 → 当前所处位置和下一步优先于目的地装饰；
+- 移动现场 / 光线差 → 更大的可点击范围、更清晰对比、更短标签、更少动效。
+
+这些都不是页面模板。

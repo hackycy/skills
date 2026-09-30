@@ -1,109 +1,111 @@
-# Visual Contract
+# Visual Contract（页面视觉契约）
 
-Create this contract internally after composition search and before implementation.
+在构图探索后、实现前建立。它只服务当前页面，不要求写入项目，除非用户明确要求保存设计文档。
 
-It is page-scoped, but product-aware. Existing product-wide typography, color semantics, controls, navigation, and motion conventions should be inherited unless redesign scope explicitly changes them.
+Visual Contract 的作用，是防止一个不错的设计概念在写 CSS 时悄悄退回通用默认值。
 
-The contract exists to prevent a good verbal concept from silently becoming generic CSS.
+## 建议模板
 
-## Template
-
-Use only relevant fields. Do not fill fields mechanically.
+只填写当前页面真正需要的字段：
 
 ```yaml
 visual_contract:
-  thesis: <one sentence specific to this page>
-  use_mode: <task-led / scan-led / compare-led / monitor-led / browse-led / read-led / conversation-led / form-led / other>
-  outcome: <what the user should accomplish or understand>
+  thesis: <一句具体到本页的设计结论>
+  use_mode: <task / scan / monitor / browse / read / conversation / form / compare ...>
 
-  inheritance:
-    keep:
-      - <existing product-system decision>
+  continuity:
+    inherit:
+      - <从已有产品继承的字体/颜色/控件/导航/动效等>
     page_specific:
-      - <what this page is allowed to decide differently>
+      - <当前页面确实需要新增的决定>
+
+  viewport_value:
+    understand: <首屏必须让用户理解什么>
+    act: <首屏是否需要允许动作；不需要可写 none>
 
   composition:
-    lead: <state/object/action/sequence/time/location/content/conversation/...>
-    early_viewport_value: <what earns space near the top>
-    body: <structural description>
-    action_model: <inline/contextual/sticky/persistent/none>
-    navigation: <existing/product-specific choice>
-    attention: <focal path / scanning anchors / progressive reveal / stream>
+    lead: <状态/对象/动作/时间/位置/内容/...>
+    body: <列表/分组/表单/时间线/阅读流/...>
+    action: <常驻/上下文/inline/sticky/none>
+    navigation: <继承现有产品，或本页需要的导航>
+    attention: <焦点路径或 scanning anchors>
 
   authored_idea:
-    use: <yes/no>
-    reason: <why an authored idea helps, or why restraint is better>
-    idea: <only if yes>
-    consequences:
-      - <only the natural, useful consequences; no minimum count>
+    enabled: <true/false>
+    reason: <为什么需要或为什么选择克制>
+    idea: <仅 enabled=true 时填写>
 
   expression:
-    level: <restrained/balanced/expressive + reason>
-    density: <sparse/balanced/dense + reason>
-    rhythm: <stable/varied/editorial + reason>
-    motion: <minimal/functional/expressive + reason>
-    atmosphere: [<word>, <word>, <word>]
-    bold_area: <where expression is spent>
-    quiet_area: <what remains restrained>
+    level: <克制/平衡/强表达>
+    density: <稀疏/平衡/紧凑>
+    rhythm: <稳定/有变化/编辑感>
+    motion: <极少/功能性/表现性>
+    atmosphere: [<词>, <词>, <词>]
+    bold_area: <表达预算花在哪里>
+    quiet_area: <哪里必须安静>
 
   hierarchy:
-    primary: <what wins or what scan anchors matter>
-    secondary: <supporting content>
-    tertiary: <metadata/chrome>
+    primary: <最重要的内容/任务>
+    secondary: <支持内容>
+    tertiary: <元数据/chrome>
 
   typography:
-    family: <actual stack or inherited token>
-    body_size: <value/token>
-    title_size: <value/token>
-    metadata_size: <value/token>
-    weights: <values/tokens>
-    numeric_treatment: <when relevant>
-    line_height_character: <concrete choice>
+    family: <真实字体栈或 token>
+    body_size: <值/token>
+    title_size: <值/token>
+    metadata_size: <值/token>
+    primary_weight: <值/token>
+    secondary_weight: <值/token>
+    numeric_treatment: <需要时使用 tabular/lining 等>
+    line_height: <实际规则>
 
   color:
-    strategy: <inherited / neutral + accent / tonal / image-led / other>
+    strategy: <中性+强调/tonal/高对比/图像主导/...>
     tokens:
-      canvas: <actual value/token>
-      surface: <actual value/token>
-      text_primary: <actual value/token>
-      text_secondary: <actual value/token>
-      accent: <actual value/token if needed>
-      danger: <actual value/token if needed>
-      warning: <actual value/token if needed>
-      success: <actual value/token if needed>
-    semantic_rule: <how critical meaning is expressed beyond color>
+      canvas: <值/token>
+      surface: <值/token>
+      text_primary: <值/token>
+      text_secondary: <值/token>
+      accent: <值/token>
+      danger: <值/token>
+      warning: <值/token>
+      success: <值/token>
+    semantic_rule: <状态如何不只依赖颜色>
 
   spacing:
-    base: <value>
-    screen_gutter: <value>
-    section_gap: <value>
-    group_gap: <value>
+    base: <4px/8px/...>
+    screen_gutter: <值>
+    section_gap: <值>
+    group_gap: <值>
+    row_padding: <值>
 
   surfaces:
-    grouping: <spacing/dividers/selective surfaces/etc>
-    depth_strategy: <none/border-only/tonal/subtle-shadow/layered>
-    radius_scale: <values/tokens>
+    grouping: <留白/divider/card/sheet/...>
+    depth_strategy: <none/border-only/tonal/subtle-shadow/...>
+    control_radius: <值>
+    surface_radius: <值>
+    pill_usage: <允许在哪些角色使用>
 
   imagery_icons:
-    imagery: <none/supporting/dominant + source strategy>
-    icons: <existing library / authored SVG / other>
+    imagery: <none/supporting/hero/dominant + 来源策略>
+    icons: <项目图标库/线性/填充/自定义几何等>
 
   interaction:
-    feedback: <pressed/loading/selection/etc>
-    motion_character: <choice from expression profile>
+    feedback: <pressed/loading/selected/...>
+    motion_character: <极少/功能性/表现性>
 
   avoid:
-    - <specific default that would weaken this page>
+    - <会削弱本页方向的默认套路>
+    - <默认套路>
 ```
 
-## Contract rules
+## 契约规则
 
-- Choose one direction; no unresolved “either/or”.
-- Do not invent a new page visual system when the surrounding product already provides a good one.
-- The thesis must explain task and composition, not only mood.
-- `authored_idea.use: no` is a valid, often mature choice.
-- An authored idea needs no minimum number of manifestations. One strong structural consequence can be enough.
-- Product-specificity can come from information structure, language, state, or interaction; it does not require decorative theming.
-- Use project tokens when they encode the intended values; otherwise choose actual page-level values.
-- Radius, shadows, cards, gradients, dark mode, motion, bottom navigation, sticky CTAs, and sheets are consequences, never defaults.
-- Every bold choice needs quiet surrounding structure.
+- 选择一个方向，不写“either/or”。
+- thesis 必须具体到不能直接复制给另一个无关产品。
+- `authored_idea.enabled=false` 是完全合法的成熟结果。
+- 如果启用 authored idea，它必须影响理解、结构、状态或交互，而不是纯背景装饰。
+- 已有项目 token 能表达方向时优先复用；否则选择真实页面级值，不要只留形容词。
+- radius、阴影、卡片、渐变、暗色模式和动效都只是结果，不是默认答案。
+- 每个强表达都必须有安静对照区。
+- 重设计时保护行为和数据含义，并优先继承仍然合理的产品体系。

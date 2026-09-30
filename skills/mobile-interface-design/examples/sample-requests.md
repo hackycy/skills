@@ -1,149 +1,149 @@
-# Sample Requests and Calibration
+# 示例请求与校准
 
-These examples demonstrate reasoning shape, not reusable visual answers. They intentionally avoid supplying a finished signature motif that can be copied into unrelated tasks.
+这些示例只演示**推理方式**，不提供可以跨产品复制的视觉答案。不要把示例里的具体结构当模板。
 
-## 1. Operational alarm page
+## 1. 设备告警页面
 
-### Request
+### 请求
 
 > 做一个移动端 H5 设备告警列表，原生 HTML/CSS/JS。需要严重/一般/提示筛选，显示设备名、告警内容、时间、状态，底部有首页/设备/告警/我的。
 
-### Expected internal calibration
+### 期望内部校准
 
 ```text
-USE MODE
-scan-led + task-led: triage unresolved alarms
+使用模式
+扫描型 + 任务型：快速处理未解决告警
 
-PRODUCT TRUTH
-severity, device identity, alarm message, time, acknowledgement state
+产品事实
+严重程度、设备身份、告警内容、时间、确认状态
 
-COMPOSITION SEARCH
-compare at least two structurally different ways of leading with urgency vs device context
+构图探索
+至少比较“紧急程度领先”和“设备上下文领先”两种真正不同的组织方式
 
-EXPRESSION
-restrained / dense / stable / minimal motion
+表达档位
+克制 / 紧凑 / 稳定 / 极少动效
 
-AUTHORED-IDEA GATE
-optional; only use a special structural motif if it makes severity easier to scan
+设计表达准入
+只有特殊结构真的能提高严重程度扫描效率时才采用；不要求强行发明视觉母题
 
-REJECT
-giant dashboard KPIs
+拒绝
+巨大 KPI 条
 card-per-alarm
-ornamental dark-tech styling
+装饰性 dark-tech 风格
 ```
 
-Expected implementation: high density, explicit state/action distinction, and no decorative motif required simply to make the page “distinctive”.
+预期：高密度、状态和动作区分清楚；不需要为了“有辨识度”硬造装饰概念。
 
-## 2. Consumer coffee membership home
+## 2. 咖啡会员首页
 
-### Request
+### 请求
 
 > 做一个咖啡品牌会员首页 H5，需要积分、距离下一等级、可兑换权益、最近消费记录。年轻一些，但不要像活动落地页。
 
-### Expected internal calibration
+### 期望内部校准
 
 ```text
-USE MODE
-browse-led with a clear progress/reward outcome
+使用模式
+浏览型，同时有明确的会员进度/权益结果
 
-PRODUCT MATERIAL
-membership progress, reward thresholds, benefits, purchase history; coffee vocabulary may inform tone without literal skeuomorphism
+产品材料
+会员进度、权益阈值、福利、消费记录；咖啡语言可以影响语气，但不要求拟物
 
-COMPOSITION SEARCH
-compare progress-led, benefits-led, and history-led emphasis if structure is open
+构图探索
+如果结构开放，比较进度领先、权益领先、历史领先三种侧重点
 
-EXPRESSION
-balanced-to-expressive / balanced density / varied rhythm / functional motion
+表达档位
+平衡到强表达 / 平衡密度 / 有变化节奏 / 功能性动效
 
-AUTHORED-IDEA GATE
-may be justified, but there is no requirement to invent a coffee-themed motif
+设计表达准入
+可以成立，但绝不因为“咖啡品牌”就必须发明咖啡主题视觉符号
 ```
 
-Expected implementation: recurring product screen, not a campaign landing page; continuity with the existing brand/app system takes precedence over page-level novelty.
+预期：仍然是可反复使用的产品页，不是活动落地页；已有品牌/App 体系优先于单页新奇感。
 
-## 3. Finance detail page
+## 3. 账单详情
 
-### Request
+### 请求
 
 > 帮我做手机端账单详情，展示金额、状态、商户、时间、支付方式、退款入口。要让用户觉得可靠，不要太花。
 
-### Expected internal calibration
+### 期望内部校准
 
 ```text
-USE MODE
-read-led + task-led: verify one transaction, then act if necessary
+使用模式
+阅读型 + 任务型：确认这笔交易发生了什么，需要时再操作
 
-ATTENTION
-transaction identity/state first; refund is available but should not visually equal identity unless context demands it
+注意力
+交易身份和状态优先；退款入口可见，但不应无理由和交易身份抢同级注意力
 
-EXPRESSION
-restrained / sparse-to-balanced / stable / minimal motion
+表达档位
+克制 / 稀疏到平衡 / 稳定 / 极少动效
 
-AUTHORED-IDEA GATE
-likely no page-specific signature; precision and continuity may be the mature choice
+设计表达准入
+很可能不需要页面级 signature；精确、连续和可靠就是成熟选择
 ```
 
-Expected implementation: clear state, precise language, conservative motion, and no forced receipt metaphor unless it improves comprehension.
+预期：状态清楚、术语准确、动效保守；除非真的提升理解，不要强做“收据隐喻”。
 
-## 4. Running activity home
+## 4. 跑步 App 首页
 
-### Request
+### 请求
 
 > 做一个跑步 App 的首页，展示今天训练、周跑量、最近一次跑步、开始跑步按钮。偏专业但不要像数据后台。
 
-### Expected internal calibration
+### 期望内部校准
 
 ```text
-USE MODE
-task-led + scan-led: understand today's training context and start/resume activity
+使用模式
+任务型 + 扫描型：理解今天训练上下文，并开始/继续活动
 
-PRODUCT MATERIAL
-training plan, weekly load, recent run, route/split/cadence language
+产品材料
+训练计划、周负荷、最近一次跑步、路线/分段/步频语言
 
-COMPOSITION SEARCH
-question whether today's plan, recent activity, or readiness should lead based on actual product priority
+构图探索
+根据产品真实优先级判断：今天训练、最近活动还是 readiness 应该领先
 
-AUTHORED-IDEA GATE
-optional; domain-specific data treatment may be enough without a decorative running motif
+设计表达准入
+可选；领域数据表达本身可能已经足够，不需要额外跑步主题装饰
 ```
 
-## 5. Booking / local service
+## 5. 本地服务预约
 
-### Request
+### 请求
 
 > 做一个手机端理发预约页面，需要选择门店、理发师、日期时间和项目，最后确认预约。
 
-### Expected internal calibration
+### 期望内部校准
 
 ```text
-USE MODE
-form-led: make a confident appointment choice with minimal backtracking
+使用模式
+表单型：尽量少回退地完成有把握的预约
 
-STRUCTURE
-derive grouping from dependencies between store/staff/service/time rather than automatically choosing a multi-step wizard
+结构
+从门店/人员/服务/时间之间的依赖关系推导分组，不默认多步骤 wizard
 
-FIRST VIEWPORT
-should establish where the user is in the booking context; no requirement for a large CTA if choice must happen first
+首屏
+先建立当前预约上下文；如果用户必须先做选择，不要求首屏放大 CTA
 
-AUTHORED-IDEA GATE
-usually restraint; selection clarity matters more than novelty
+设计表达准入
+通常更适合克制；选择清晰比新奇更重要
 ```
 
-## 6. Redesign existing code
+## 6. 重设计现有代码
 
-### Request
+### 请求
 
 > 这个 H5 表单太丑了，功能不要动，重新设计并直接改代码。
 
-### Expected behavior
+### 期望行为
 
-1. inspect current behavior, validation, data semantics, stack, and neighboring screens;
-2. preserve product truth and interaction contracts;
-3. inherit good product-wide visual conventions;
-4. search alternatives only when the structure is genuinely open and compatible with behavior;
-5. commit a page-aware Visual Contract;
-6. run the Authored-Idea Gate instead of forcing a signature;
-7. implement without breaking function;
-8. render-review, run replacement/continuity/squint tests, and validate statically when applicable.
+1. 检查现有行为、校验、数据语义、技术栈和相邻页面；
+2. 保护产品事实和交互契约；
+3. 继承仍然合理的产品级视觉约定；
+4. 只有结构真的开放且不破坏行为时才探索多个构图；
+5. 提交 page-aware Visual Contract；
+6. 运行设计表达准入，而不是强制 signature；
+7. 实现且不破坏功能；
+8. 渲染评审，执行替换 / 连续性 / squint 测试，并在适用时运行静态 validator。
 
-A redesign is not “change colors and radius”, but neither is it permission to invent a new mini-brand for one page.
+重设计不等于“换颜色和圆角”，但也不等于允许一页创造一个全新的小品牌。
