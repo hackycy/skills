@@ -1,129 +1,53 @@
 # 产品界面设计系统
 
-## 产品模型
+## Direction
 
-**核心使用者：** [具体角色与场景]
+- 性格：
+- 底色：
+- 主要深度策略：
+- 核心使用者与任务：
+- 注意力模式：单点焦点 / scanning anchors / 其他
+- 标志性表达：
 
-**高频任务：** [最多 3 个]
+## Product constraints
 
-**核心对象：** [订单 / 客户 / 告警 / 工单 / ...]
+只记录会跨页面复用、已经验证的任务约束。不要把一次性页面功能变成系统规则。
 
-**关键状态：** [决定下一步动作的状态]
+- [例] 审核队列按顺序处理，不提供页面级 Search
+- [例] 客户对象以 ID/邮箱精确定位，因此保留全局 Search
 
-**主要成功指标：** [速度 / 准确率 / 覆盖率 / 决策质量 / ...]
+## Tokens
 
-## 页面模式
+### Spacing
+- Base:
+- Scale:
 
-**主 archetype：** [Table-first | Queue | Master-detail | Object workspace | Console | Builder | Settings]
+### Typography
+- Font:
+- Scale:
+- Weights:
 
-**详情模式：** [Full page | Drawer | Split view | Inline expand]
+### Color layers
+- Primitive:
+- Semantic:
+- Component-specific（仅必要时）:
 
-**Primary task：** [这一屏真正要完成的任务]
+### Radius / Depth
+- Radius scale:
+- Depth strategy:
 
-**Scanning anchors：** [3–6 个稳定扫描点]
+## Reusable patterns
 
-## 数据工作流
+仅记录使用 2 次以上、真正可复用或尺寸值得稳定下来的模式。
 
-**Search 范围：** [当前表 / 对象 / 全局]
+### [Pattern]
+- Measurements:
+- Tokens:
+- Usage:
+- Why:
 
-**Filter：** [常驻维度 / 高级筛选 / 当前 scope 展示]
+## Decisions
 
-**Saved views：** [无 | 个人 | 共享]
-
-**Selection：** [当前页 / 全部结果 / 不支持]
-
-**Batch actions：** [动作及风险]
-
-**Row actions：** [常驻 / hover / overflow]
-
-**Return context：** [filter / sort / cursor / scroll / selection]
-
-## 方向
-
-**性格：** [精密与密度 | 温暖与亲和 | 精致与信任 | 大胆与清晰 | 实用与功能 | 数据与分析]
-
-**底色：** [暖 | 冷 | 中性 | 染色]
-
-**深度：** [仅边框 | 轻微阴影 | 分层阴影 | 表面色差]
-
-**密度：** [compact | default | comfortable | touch-first]
-
-**标志性元素：** [至少包含一个结构或交互层的产品特征]
-
-## Token
-
-### Primitive
-
-```css
---slate-950: ...;
---slate-700: ...;
---blue-600: ...;
---space-1: 4px;
---space-2: 8px;
-```
-
-### Semantic
-
-```css
---text-primary: var(--slate-950);
---text-secondary: ...;
---surface-canvas: ...;
---surface-raised: ...;
---border-subtle: ...;
---action-primary: var(--blue-600);
---status-danger: ...;
-```
-
-### Component
-
-仅在组件确实需要独立控制时定义：
-
-```css
---table-row-selected-bg: ...;
---filter-chip-border: ...;
---input-focus-ring: ...;
-```
-
-### 间距
-
-基数：[4px | 8px]
-
-尺度：[4, 8, 12, 16, 24, 32, 48, 64]
-
-### 圆角
-
-控件：[值]
-
-容器：[值]
-
-浮层：[值]
-
-### 字体
-
-字体：[具体字体及回退]
-
-字级：[值]
-
-字重：[400, 500, 600]
-
-比例：[1.2 | 1.25 | 1.333]
-
-数字：`tabular-nums`
-
-## 组件模式
-
-### [组件名称]
-
-- 密度 variant：[compact/default/...]
-- 高度：[值]
-- 内边距：[值]
-- 圆角：[值]
-- 字体：[字号/字重]
-- 状态：[default/hover/active/focus/disabled/loading/...]
-- 用途：[何时使用]
-
-## 决策
-
-| 决策 | 理由 | 日期 |
+| Decision | Rationale | Date |
 |---|---|---|
-| [选择] | [它如何服务任务、数据或产品世界] | YYYY-MM-DD |
+| | | |
