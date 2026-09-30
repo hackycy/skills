@@ -8,34 +8,35 @@ disable-model-invocation: true
 
 Design the page, then build it. Do not require a mockup, design file, or persistent design system.
 
-This skill is page-scoped. It exists for mobile product surfaces that must be designed from requirements, not for maintaining a global brand system.
+This skill is page-scoped by default, but **product-aware whenever product context exists**. A page may receive a distinct composition, but it should not silently invent a new visual language when the surrounding product already has one.
 
 The core loop is:
 
-`requirement -> product truth -> page intent -> domain world -> composition search -> taste profile -> signature idea -> visual contract -> implementation -> rendered critique -> de-template audit -> refinement`
+`requirement -> product truth -> use mode -> domain material -> composition search -> expression profile -> authored-idea gate -> visual contract -> implementation -> rendered critique -> de-template audit -> refinement`
 
-The goal is not merely to avoid ugly or generic UI. The goal is to make enough deliberate design decisions that the result feels specific to the product, task, and use context.
+The goal is not merely to avoid ugly or generic UI. The goal is to make enough deliberate decisions that the result feels specific to the product, task, and mobile use context **without forcing every page to perform a design concept**.
 
 ## Mission
 
-Turn incomplete business requirements into a visually coherent, production-oriented mobile interface that:
+Turn incomplete business requirements into a coherent, production-oriented mobile interface that:
 
-- feels intentionally designed for this product rather than assembled from common UI defaults;
-- makes the primary mobile task obvious within the first viewport;
-- derives visual character from the product's own world, not from fashionable templates;
+- feels intentionally designed for this product rather than assembled from mobile defaults;
+- makes the page's dominant outcome or use mode legible early;
+- derives structure and expression from the product's own world where useful;
 - uses real HTML/CSS/JavaScript and real interaction states;
 - remains usable at phone widths and in constrained WebViews;
+- preserves product-wide visual and interaction conventions when they already exist;
 - can be handed directly to a frontend engineer or used as the implementation itself.
 
 ## Default behavior
 
 Default to action. When the user asks for a page, implement the page rather than stopping at design advice, wireframes, UX essays, or component inventories.
 
-Do not ask for a design file. Infer reasonable visual decisions from the business context. Ask a question only when a missing requirement would materially change product behavior, data meaning, safety, or integration; otherwise make a concrete assumption and proceed.
+Do not ask for a design file. Infer reasonable visual decisions from business and product context. Ask only when a missing requirement would materially change product behavior, data meaning, safety, integration, or navigation semantics.
 
 Do not narrate internal design exploration unless the user asks for rationale.
 
-Do not create or require a project-wide `DESIGN.md`. This skill creates a disposable page-level design direction unless the user explicitly asks to preserve a system.
+Do not require a project-wide `DESIGN.md`. When an existing product system is present, inherit it. When none exists, create a disposable page-level direction unless the user explicitly asks to preserve one.
 
 ## Precedence and optional dependencies
 
@@ -45,17 +46,16 @@ If a `frontend-design` skill is installed and available, it may be loaded as a v
 
 This skill remains authoritative for:
 
-- mobile product hierarchy;
-- first-viewport utility;
+- mobile task hierarchy and use mode;
 - phone-scale density and ergonomics;
 - navigation and action placement;
 - WebView/browser constraints;
 - touch behavior;
-- page-scoped design decisions.
+- page-scoped decisions and continuity with the surrounding product.
 
 Do not let generic web or marketing guidance turn an app/product screen into a landing page.
 
-If `frontend-design` is unavailable, continue with this skill and its resources. Never block the task on the dependency.
+If `frontend-design` is unavailable, continue with this skill and its resources.
 
 ## Inputs to inspect
 
@@ -66,23 +66,24 @@ Before designing, inspect the current project when available:
 - CSS/Tailwind/theme/token files;
 - icons, fonts, and image assets;
 - interaction, navigation, and state conventions;
-- existing API/data contracts relevant to the screen.
+- existing API/data contracts relevant to the screen;
+- nearby screens that establish product-wide visual language.
 
-Existing code is product and integration context, not automatically a good visual system. Preserve behavior, data meaning, accessibility, and stack conventions while permitting a new visual direction when redesign is requested.
+Existing code is product and integration context, not automatically a good design system. Preserve behavior, data meaning, accessibility, and stack conventions while permitting a new direction when redesign is requested.
 
 ## Resources
 
 Load only what the current task needs:
 
-1. `resources/intent-engine.md` — identify user, job, pressure, content shape, and mobile priorities.
-2. `resources/domain-world.md` — extract product-native visual material and reject category clichés.
-3. `resources/composition-search.md` — internally explore structurally different mobile compositions before committing.
-4. `resources/taste-engine.md` — calibrate creativity, density, variance, motion, and atmosphere.
-5. `resources/visual-contract.md` — commit to one concrete page direction, signature idea, and implementation tokens.
+1. `resources/intent-engine.md` — identify person-in-context, dominant outcome/use mode, pressure, content shape, and mobile priorities.
+2. `resources/domain-world.md` — extract product-native structure and language without forcing visual theming.
+3. `resources/composition-search.md` — explore structurally different compositions using axes, not named page templates.
+4. `resources/taste-engine.md` — choose semantic expression, density, rhythm, and motion levels with task rationale.
+5. `resources/visual-contract.md` — commit to one concrete page direction; authored signature is optional and must pass a gate.
 6. `resources/craft-floor.md` — minimum visual and interaction craft expected from the shipped result.
 7. `resources/mobile-h5-rules.md` — technical constraints for mobile browsers and WebViews.
-8. `resources/anti-patterns.md` — common model defaults and how to replace them with decisions.
-9. `resources/visual-review.md` — rendered critique, distinctiveness tests, and refinement loop.
+8. `resources/anti-patterns.md` — common model defaults, including forced signatures and over-authored product screens.
+9. `resources/visual-review.md` — rendered critique, continuity, distinctiveness, and refinement loop.
 
 Do not dump these resources into the user response. Apply them.
 
@@ -103,133 +104,116 @@ Before visual exploration, identify what must not be invented or visually distor
 
 When demo data is necessary, make it plausible and clearly illustrative. Do not invent business claims, guarantees, pricing, or operational facts and present them as real.
 
-## 2. Resolve page intent
+## 2. Resolve intent and use mode
 
 Use `resources/intent-engine.md`.
 
 Internally establish:
 
 - who is using the screen and in what situation;
-- the single primary job;
+- the **dominant outcome or use mode**, not necessarily a single action;
 - usage frequency;
 - task pressure/risk;
 - information density;
 - emotional character;
 - dominant content shape;
-- primary and secondary actions;
-- what must be understood in the first viewport.
+- action structure;
+- what must earn space near the top of the viewport.
 
-Express the primary job as a verb phrase. If the hierarchy cannot be tied to that job, it is not yet a design decision.
+A screen may be task-led, scan-led, compare-led, monitor-led, browse-led, read-led, conversation-led, or form-led. Do not force every page into “one primary CTA”.
+
+The first viewport must **earn its space**. It should establish useful context, content, state, or action; it does not always need to complete the job or expose a large CTA.
 
 ## 3. Build a Domain World
 
 Use `resources/domain-world.md`.
 
-Extract product-native material before selecting UI style:
+Extract product-native material before styling:
 
-- 5-8 domain objects, materials, signals, metaphors, or visual phenomena;
-- 4-6 plausible colors/material qualities/light conditions from the domain;
-- characteristic vocabulary or data forms;
-- one candidate signature element;
-- three category-default treatments to reject and domain-grounded replacements.
+- domain objects, signals, relationships, units, sequences, and vocabulary;
+- plausible colors/material qualities/light conditions only when they genuinely help;
+- characteristic information forms;
+- category-default treatments to reject and better grounded replacements.
 
-The purpose is not literal skeuomorphism. The purpose is to give the model more specific design material than "modern", "clean", or "premium".
-
-Use the removal test: if the product name disappeared, the domain clues should still make the intended world guessable.
+Domain material may influence **information order, copy, grouping, state, or interaction without becoming visible theming**. Do not turn every product into a themed costume.
 
 ## 4. Search compositions before styling
 
 Use `resources/composition-search.md`.
 
-Before committing to a Visual Contract, internally produce 2-3 structurally different composition hypotheses.
+Before committing to a Visual Contract, internally explore 2–3 materially different structural hypotheses **when the structure is genuinely open**. For simple or strongly constrained screens, one well-justified composition is enough.
 
-They must differ in hierarchy or information architecture, not merely color, radius, or theme. Examples:
+Explore using structural questions such as:
 
-- status-first vs object-first;
-- timeline-first vs card-list;
-- task-first vs summary-first;
-- single focal object vs progressive groups.
+- What leads: state, object, action, sequence, time, location, content, or conversation?
+- What remains visible while acting?
+- What is scanned repeatedly versus opened for detail?
+- What belongs inline versus in a sheet or next screen?
+- What should scroll and what, if anything, deserves persistence?
 
-Compare the hypotheses by:
+Do not classify the page by a named archetype and then fill in its usual parts.
 
-- primary-task clarity;
-- first-viewport usefulness;
-- scan efficiency;
-- domain specificity;
-- thumb ergonomics;
-- implementation realism.
+Choose the composition that best supports task/use-mode clarity, viewport value, scan efficiency, ergonomics, product specificity, continuity, and implementation realism.
 
-Choose one. Do not expose alternatives unless the user requested them.
-
-This step exists to prevent the model's first plausible layout from automatically becoming the final layout.
-
-## 5. Infer a taste profile
+## 5. Infer an expression profile
 
 Use `resources/taste-engine.md`.
 
-At minimum establish internally:
+Choose semantic levels and give each a task reason:
 
-- Creativity: 1-10
-- Density: 1-10
-- Variance: 1-10
-- Motion: 1-10
-- 3-6 atmosphere words
-- expression budget: where the page is allowed to be bold and where it should stay quiet
+- Expression: restrained / balanced / expressive
+- Density: sparse / balanced / dense
+- Rhythm: stable / varied / editorial
+- Motion: minimal / functional / expressive
+- 3–6 atmosphere words
+- expression budget: where boldness is useful and what stays quiet
 
-The purpose is not to maximize expression. It is to choose how much visual personality the task can support without sacrificing clarity.
+Do not use numerical 1–10 scores. They create false precision and category stereotypes.
 
-## 6. Choose one Signature Idea
+## 6. Run the Authored-Idea Gate
 
-A finished page needs at least one design decision that is specific enough to be memorable and useful.
+A distinctive authored idea is **optional**.
 
-The signature may be:
+Ask:
 
-- a domain-derived information structure;
-- a distinctive status treatment;
-- a meaningful progress metaphor;
-- a characteristic type treatment;
-- an unusual but usable navigation relationship;
-- a content-specific spatial rhythm;
-- imagery or data presentation that belongs to the subject.
+- Would a special visual/structural/interaction idea materially improve comprehension, task flow, domain recognition, or brand experience?
+- Can it survive removal of decorative styling?
+- Does this page have enough expressive latitude, or should it mainly continue the surrounding product system?
 
-It must affect real UI, not exist as decorative wallpaper.
+If yes, define one authored idea and let it have as many consequences as naturally follow from it. There is **no minimum manifestation count**.
 
-Internally answer:
+If no, explicitly choose restraint. The correct design decision may be continuity, clarity, and absence of a page-specific signature.
 
-- What is the signature idea?
-- Why does it belong to this product?
-- Where will it appear in at least 3 visible places or states?
-- What surrounding elements should stay restrained so the signature has room to work?
-
-If the answer is only "overall vibe", the signature is not concrete enough.
+Never invent a metaphor solely because the skill expects one.
 
 ## 7. Commit to a concrete Visual Contract
 
 Use `resources/visual-contract.md`.
 
-Choose one direction and commit before implementation. The contract must include:
+Commit before implementation. The contract should include only fields that affect this page:
 
-- archetype and thesis;
+- thesis and dominant use mode;
 - chosen composition;
-- hierarchy;
-- signature idea;
-- taste profile and expression budget;
-- typography decisions;
-- color strategy and actual page-level color tokens;
-- spacing/density tokens;
-- surfaces/depth/radius strategy;
+- hierarchy/attention strategy;
+- inherited product-system decisions versus page-specific decisions;
+- optional authored idea, if it passed the gate;
+- expression profile and budget;
+- typography;
+- color strategy and actual tokens;
+- spacing/density;
+- surfaces/depth/radius;
 - imagery/icon strategy;
 - interaction/motion character;
 - explicit defaults to avoid.
 
-Do not write "either/or". Do not leave the contract at adjectives such as "technical", "warm", or "premium". Translate the direction into enough concrete tokens that implementation cannot silently fall back to generic CSS habits.
+Do not leave “either/or” choices unresolved. Do not let adjectives substitute for implementation decisions.
 
 ## 8. Design through content, not decoration
 
-Prioritize in this order:
+Prioritize:
 
 1. product truth;
-2. information hierarchy;
+2. use mode and information hierarchy;
 3. composition and spatial rhythm;
 4. typography;
 5. interaction affordance;
@@ -237,67 +221,58 @@ Prioritize in this order:
 7. surfaces/elevation;
 8. decoration.
 
-Do not compensate for weak hierarchy with gradients, shadows, pills, cards, blobs, or animation.
+Do not compensate for weak hierarchy with gradients, shadows, pills, cards, blobs, animation, or forced domain motifs.
 
-Copy is part of interface design. Controls should name what happens. Empty/error states should explain the next useful action. Avoid filler copy that sounds like generic product marketing.
+Copy is part of interface design. Controls should name what happens. Empty/error states should explain the next useful action.
 
 ## 9. Implement real mobile UI
 
 Follow the project's existing stack when one exists.
 
-If no stack is specified, default to:
+If no stack is specified, default to semantic HTML, modern CSS, vanilla JavaScript, and no build step.
 
-- semantic HTML;
-- modern CSS;
-- vanilla JavaScript;
-- no build step.
+When the user requests React, Vue, Svelte, Tailwind, a component library, or another stack, use it while retaining mobile, craft, and design-search rules.
 
-When the user requests React, Vue, Svelte, Tailwind, a component library, or another stack, use it while retaining all mobile, craft, and design-search rules.
-
-Implementation should include realistic content and the states necessary to understand the interface. Controls that can reasonably work should work.
+Implement only interactions implied by the requirement or necessary for the chosen flow. Examples such as filters, tabs, sheets, toggles, validation, or submitting states are **not expected coverage lists**.
 
 Use `resources/mobile-h5-rules.md` and `resources/craft-floor.md`.
 
 ## 10. Render and critique
 
-If a browser, Playwright, browser MCP, screenshot tool, or equivalent rendering capability is available:
+If rendering capability is available:
 
 1. run the page;
-2. render at 390px width first;
-3. inspect the whole page before individual components;
-4. review it using `resources/visual-review.md`;
-5. fix high-impact issues in one coherent batch;
+2. review at a representative phone width, using ~390px as a practical baseline rather than a design canvas;
+3. inspect the whole page before components;
+4. review using `resources/visual-review.md`;
+5. fix high-impact issues in a coherent batch;
 6. re-render;
-7. repeat until no high-impact design issues remain, normally 1-3 passes;
-8. spot-check around 375px and 430px.
+7. repeat until no high-impact issues remain, normally 1–3 passes;
+8. spot-check narrower and wider phone widths around 375–430px, plus product-specific device constraints if known.
 
 The first render is a draft, not proof of quality.
 
-Do not ask the user to perform visual review when the agent can do it.
-
-If rendering is unavailable, perform a static critique and say only that rendered visual QA was unavailable. Do not claim visual verification.
+If rendering is unavailable, perform a static critique and state only that rendered visual QA was unavailable.
 
 ## 11. Run the de-template audit
 
-Before considering the page done, use `resources/anti-patterns.md` and apply three tests:
+Use `resources/anti-patterns.md`.
 
 ### Replacement test
 
-If the product nouns were replaced with a different category, could the same composition, palette, typography, surfaces, and icon treatment remain unchanged?
+If product nouns were replaced with an unrelated category, could the same composition, palette, typography, surfaces, and icon treatment remain unchanged?
 
-If yes, the design is insufficiently grounded. Revisit the Domain World and Signature Idea.
+If yes, revisit the most generic layer. Do not add decoration merely to become different.
 
-### Signature test
+### Authorship test
 
-Can at least three visible decisions be pointed to as consequences of the signature idea?
+If an authored idea was chosen, did it survive implementation in a useful way? If none was chosen, does the page still feel deliberate through hierarchy, content, continuity, and craft?
 
-If no, the page has a written concept but not a designed concept.
+A page **passes without a signature** when restraint was the correct decision.
 
 ### Squint test
 
-When visually blurred or viewed at a glance, is there still one clear focal path and a readable rhythm of dense vs quiet regions?
-
-If no, fix hierarchy and composition before micro-polish.
+When blurred or viewed at a glance, does the attention strategy still work? A task-led screen may have a focal path; a monitoring or browse surface may have stable scan anchors instead.
 
 ## 12. Run static validation
 
@@ -305,19 +280,17 @@ When Node.js is available and the output is HTML/CSS/JS, run:
 
 `node scripts/validate-mobile-h5.mjs <html-file>`
 
-If this skill is installed outside the project, use the validator at this skill's own path.
-
 Treat validator output as heuristics. Fix clear failures and high-confidence warnings. Never distort an intentional design merely to silence a detector.
 
 # Output policy
 
 When the user asked for implementation:
 
-- edit/create the actual project files;
+- edit/create actual project files;
 - keep the final explanation concise;
 - mention the implemented screen and important interactions;
-- mention rendered visual verification only when it actually occurred;
-- do not output the internal Domain World, composition candidates, or Visual Contract unless requested.
+- mention rendered visual verification only when it occurred;
+- do not output internal exploration or Visual Contract unless requested.
 
 When the user asked only for a visual concept, produce the concept in the richest visual form supported by the environment rather than a long prose specification.
 
@@ -327,17 +300,18 @@ A successful result should feel like a plausible shipped mobile product, not a p
 
 It should have:
 
-- a clear primary job visible in the first viewport;
-- a visual point of view grounded in the product's world;
-- one recognizable signature idea with visible consequences;
+- a clear dominant outcome or use mode;
+- useful first-viewport content/context with no wasted hero chrome;
+- a visual point of view grounded in product context, or deliberate continuity when restraint is better;
 - deliberate hierarchy, density, and rhythm;
 - typography that carries hierarchy rather than merely delivering text;
 - restrained and meaningful color/depth/effects;
-- touch-friendly interaction and mobile-native navigation;
+- touch-friendly interaction and mobile-native navigation when justified;
 - believable loading/empty/error/disabled states when relevant;
 - coherent icons and content language;
 - no accidental horizontal overflow;
-- resilient treatment from roughly 375-430px;
-- no obvious interchangeable AI-template structure.
+- resilient treatment across common phone widths;
+- no obvious interchangeable AI-template structure;
+- no forced signature, metaphor, CTA, bottom navigation, sheet, or card pattern merely because the page is mobile.
 
-If the page is technically correct but visually interchangeable with unrelated products, the task is not finished.
+If the page is technically correct but interchangeable with unrelated products, refine it. If it is distinctive only because it is over-authored, simplify it.

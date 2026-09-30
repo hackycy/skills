@@ -1,12 +1,6 @@
 interface:
   display_name: mobile interface design
-  short_description: Design and implement distinctive mobile-first H5 interfaces from
-    product requirements when no UI mockup is available. Use for mobile web pages,
-    app WebView screens, forms, lists, detail pages, consumer flows, operational
-    tools, and redesigns. Infers product intent and domain-specific visual material,
-    explores mobile composition before coding, commits a page-specific signature
-    idea and visual contract, builds real UI, and visually critiques the rendered
-    result when browser tools are available.
+  short_description: Design and implement distinctive mobile-first H5 interfaces from product requirements when no UI mockup is available. Use for mobile web pages, app WebView screens, forms, lists, details, consumer flows, operational tools, and redesigns. Infers product truth and dominant use mode, explores composition only when needed, chooses a semantic expression profile, conditionally uses authored ideas, preserves product-wide continuity, builds real UI, and visually critiques the rendered result when browser tools are available.
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:

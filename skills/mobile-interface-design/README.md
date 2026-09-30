@@ -2,81 +2,65 @@
 
 An Agent Skill for designing and implementing distinctive mobile-first H5 interfaces when there is no UI designer or mockup.
 
-It is intentionally **page-specific**: it does not require a global `DESIGN.md`. Each request can receive a different visual direction derived from its product context.
+It is **page-scoped by default and product-aware when context exists**: a new page can receive a composition appropriate to its task without silently inventing a second visual system inside an existing app.
 
 ## What it does
 
 The skill uses a design-search loop rather than jumping directly from requirements to CSS:
 
 1. preserves product truth and existing behavior;
-2. infers the page intent and primary mobile job;
-3. extracts a product-specific **Domain World**;
-4. internally explores 2-3 structurally different compositions;
-5. calibrates creativity, density, variance, and motion;
-6. chooses one **Signature Idea**;
-7. commits a concrete page-level Visual Contract with actual implementation tokens;
-8. builds real HTML/CSS/JS or the project's existing frontend stack;
+2. infers the dominant mobile outcome/use mode;
+3. extracts product-native material without forcing visible theming;
+4. explores structural alternatives when the structure is genuinely open;
+5. chooses a semantic expression profile instead of numeric taste scores;
+6. runs an **Authored-Idea Gate** — a special signature is optional;
+7. commits a concrete page-level Visual Contract while inheriting existing product conventions;
+8. builds real UI in the project's stack or HTML/CSS/JS;
 9. renders and critiques the result when browser tooling is available;
-10. runs replacement, signature, and squint tests to catch interchangeable AI-template UI;
-11. uses a small static validator for mobile correctness and a few high-confidence generated-UI defaults.
+10. runs replacement, continuity, authorship, and squint tests;
+11. uses a lightweight static validator for mobile correctness and high-confidence generated-UI smells.
 
-## Why the extra design-search steps?
+## Why this version changes the design-search rules
 
-Avoiding gradients, cards, or large radii is not enough to make an interface distinctive.
+A design method can become a template too. Requiring every page to have one primary CTA, one signature idea repeated three times, a numeric taste profile, or a named composition pattern creates a new kind of generated sameness.
 
-The skill asks the agent to derive visual material from the product's own world, consider more than its first plausible layout, and make one design idea visible in multiple parts of the final screen.
+This version keeps the useful search-and-critique loop while making expression conditional on the task:
 
-This is intended to move the result from:
+- a monitoring page may need scan anchors rather than one focal object;
+- a settings or verification screen may need no page-specific signature;
+- domain knowledge may shape information architecture without becoming a visible motif;
+- an existing product should usually inherit its own typography, controls, color semantics, navigation, and motion character.
 
-`correct mobile UI -> polished generic UI`
+## Core flow
 
-toward:
-
-`product-specific, intentionally designed mobile UI`
-
-without requiring a permanent design system.
+```text
+requirement
+-> product truth
+-> use mode
+-> domain material
+-> composition search when needed
+-> semantic expression profile
+-> authored-idea gate
+-> visual contract
+-> implementation
+-> rendered critique
+-> de-template + continuity audit
+-> refinement
+```
 
 ## Install
 
-Copy the `mobile-interface-design` directory into the skills directory used by your coding agent.
-
-Common setups vary by product/version. Keep `SKILL.md` at the root of the skill folder and keep `resources/`, `examples/`, and `scripts/` beside it.
-
-If your environment supports the Skills CLI, you can also place this folder in a Git repository and install it using that environment's skill installer.
+Copy the `mobile-interface-design` directory into the skills directory used by your coding agent. Keep `SKILL.md` at the root and keep `resources/`, `examples/`, `scripts/`, `assets/`, and `agents/` beside it.
 
 ## Optional dependency
 
-For best results, `mobile-interface-design` may use Anthropic's public `frontend-design` skill when it is installed.
-
-`frontend-design` acts as a visual craft dependency; `mobile-interface-design` remains authoritative for mobile product hierarchy, density, navigation, ergonomics, first-viewport utility, and WebView constraints.
-
-The dependency is optional and never blocks the task.
+For best results, `mobile-interface-design` may use Anthropic's public `frontend-design` skill when installed. It acts as a visual craft dependency; this skill remains authoritative for mobile hierarchy, use mode, ergonomics, navigation, WebView constraints, and product continuity.
 
 ## Browser review
 
-For the full loop, give the coding agent a real browser/rendering tool such as Playwright, a browser MCP, or a built-in browser.
+For the full loop, provide a browser/rendering tool such as Playwright or a browser MCP. Around 390px is a useful first review width, then spot-check narrower/wider phone widths and known target devices.
 
-The skill asks the agent to:
-
-- review at 390px first;
-- inspect the whole composition before details;
-- verify the Signature Idea is actually visible;
-- run a replacement test for genericness;
-- refine 1-3 times;
-- spot-check around 375px and 430px.
-
-Without browser tooling the skill still works, but it can only perform static visual reasoning and validation.
-
-## Example
-
-```text
-Use `$mobile-interface-design`.
-
-做一个移动端 H5 设备告警页面，原生 HTML/CSS/JS。
-需要严重/一般/提示筛选，列表显示设备名、告警内容、时间和状态，
-底部导航：首页 / 设备 / 告警 / 我的。
-直接实现，不需要先给我设计分析。
-```
+Without rendering, the skill can still perform static reasoning and validation but should not claim visual verification.
 
 ## Static validation
 
@@ -84,19 +68,8 @@ Use `$mobile-interface-design`.
 node /path/to/mobile-interface-design/scripts/validate-mobile-h5.mjs ./index.html
 ```
 
-The validator is intentionally heuristic. Browser review and product-specific design reasoning remain stronger quality signals.
+The validator is intentionally heuristic. Product-specific reasoning and rendered review remain stronger quality signals.
 
 ## Design philosophy
 
-The skill combines:
-
-- subject-matter-grounded visual direction;
-- internal divergence/convergence before implementation;
-- semantic taste controls;
-- one page-specific signature idea;
-- concrete implementation tokens rather than adjective-only design contracts;
-- mobile technical constraints;
-- rendered critique and de-template tests;
-- lightweight deterministic validation.
-
-See `NOTICE.md` for references and inspiration.
+The skill combines product-grounded structure, brief divergence before convergence, semantic expression controls, optional authored ideas, concrete implementation tokens, mobile technical constraints, product continuity, rendered critique, and lightweight deterministic validation.

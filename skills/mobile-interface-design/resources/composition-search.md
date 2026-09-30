@@ -1,141 +1,79 @@
 # Composition Search
 
-Use this resource before the Visual Contract.
+Use before the Visual Contract when the structure is materially open.
 
-The goal is to avoid premature convergence: language models often turn the first plausible layout into the final layout. Search the information architecture briefly before styling it.
+The goal is to avoid premature convergence without replacing one template with a library of named templates.
 
-Do not show these alternatives unless the user asks for options.
+## Decide whether search is needed
 
-## Generate 2-3 structural hypotheses
+- Simple, constrained, or existing-flow screens may need only one justified composition.
+- Open-ended screens or redesigns often benefit from 2–3 materially different hypotheses.
 
-Each hypothesis must differ in hierarchy or content organization.
+Do not generate alternatives just to satisfy a quota.
 
-Valid differences:
+## Search by structural axes
 
-- status-first vs object-first;
-- action-first vs summary-first;
-- timeline vs grouped sections;
-- single focal entity vs dense record stream;
-- progressive form vs one-screen form;
-- image-led discovery vs category-led discovery.
+Instead of selecting a named archetype, vary decisions along axes such as:
 
-Invalid differences:
+- **Lead**: state / object / action / sequence / time / location / content / conversation
+- **Attention**: focal path / stable scan anchors / progressive reveal / continuous stream
+- **Detail**: inline / expand / sheet / next screen
+- **Action placement**: inline / contextual / sticky / persistent / none
+- **Persistence**: what, if anything, must remain visible while scrolling
+- **Grouping**: open flow / sections / aligned rows / selective surfaces / editorial rhythm
 
-- light vs dark;
-- blue vs green;
-- 12px vs 20px radius;
-- cards vs the same cards with fewer shadows.
+Each hypothesis must differ in hierarchy or content organization, not merely color, radius, or theme.
 
-## Describe each hypothesis compactly
+## Describe candidates compactly
 
-For each candidate, capture:
+For each candidate, capture only what distinguishes it:
 
 ```text
-NAME
-one short structural phrase
+LEAD
+what information relationship leads the screen
 
-FIRST VIEWPORT
-what appears before the first meaningful scroll
+EARLY VIEWPORT VALUE
+what earns space before meaningful scroll
 
-SCAN PATH
-what the eye/thumb is expected to do
+ATTENTION / SCAN PATH
+how the eye and thumb move
 
-PRIMARY ACTION
-where it lives and why
+ACTION MODEL
+where actions live and why
 
-DOMAIN LINK
-which product-native structure or signal this composition uses
+PRODUCT LINK
+which task, content shape, or product-native structure justifies it
 
 RISK
-the most likely usability or implementation weakness
+the likely usability or implementation weakness
 ```
 
 ## Compare candidates
 
-Choose the strongest direction using these lenses:
+Use these lenses:
 
-### Primary-task clarity
+- dominant-outcome clarity;
+- early viewport value;
+- scan/compare efficiency;
+- domain/product specificity;
+- continuity with nearby screens;
+- thumb ergonomics;
+- implementation realism.
 
-Can the user understand what to do or what changed within a few seconds?
+Choose the strongest direction and stop searching.
 
-### First-viewport value
+## Anti-classification rule
 
-Does the first screen contain useful task information rather than branding chrome, empty hero space, or controls that dominate the content?
+Do not reason:
 
-### Scan efficiency
+`alarm page -> status-first`
 
-For repetitive data, do identifiers, states, values, and actions stay in predictable positions?
+or:
 
-For exploratory content, does the layout create a useful path rather than a random collage?
+`booking -> step-first`
 
-### Domain specificity
+Reason instead:
 
-Does the composition use something from the product's world, or could it belong unchanged to a different category?
+`the user must repeatedly notice unresolved severity while moving through records -> state should lead and remain aligned`
 
-### Thumb ergonomics
-
-Are frequent actions reachable? Do sticky areas compete for limited viewport height? Are filters and navigation proportionate to their importance?
-
-### Implementation realism
-
-Can this direction be implemented robustly with the available stack, data, assets, and timeframe?
-
-## Choose, then stop searching
-
-Once one hypothesis clearly fits the task, commit to it.
-
-Do not keep generating alternatives for novelty. Search exists to escape the model's first default, not to delay implementation.
-
-## Mobile composition patterns to consider
-
-These are prompts for reasoning, not templates.
-
-### Status-first
-
-Useful when exceptions, urgency, or unresolved state is the job.
-
-Potential structure:
-
-`summary -> severity/status controls -> prioritized records -> contextual action`
-
-### Object-first
-
-Useful when the user is focused on one device, booking, account, order, or media item.
-
-Potential structure:
-
-`identity/state -> key facts -> primary action -> supporting history/details`
-
-### Stream-first
-
-Useful for messages, events, activity, alarms, or repeated operational records.
-
-Potential structure:
-
-`compact controls -> high-signal rows -> progressive detail`
-
-### Step-first
-
-Useful for error-sensitive forms and submissions.
-
-Potential structure:
-
-`current step/context -> grouped fields -> validation -> sticky/in-flow completion action`
-
-### Journey-first
-
-Useful for travel, delivery, onboarding, or multi-stage processes.
-
-Potential structure:
-
-`current position -> sequence -> next decision -> secondary detail`
-
-### Discovery-first
-
-Useful for commerce, media, lifestyle, and location browsing.
-
-Potential structure:
-
-`one strong discovery cue -> curated groups -> progressive browse controls`
-
-Do not choose a pattern because its name matches the product category. Choose because it organizes the user's real job.
+The same product category may need a completely different composition under a different use scene.

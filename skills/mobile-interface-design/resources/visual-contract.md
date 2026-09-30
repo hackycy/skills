@@ -2,205 +2,108 @@
 
 Create this contract internally after composition search and before implementation.
 
-It is page-scoped and disposable. Do not write it into the project unless the user asks for design documentation.
+It is page-scoped, but product-aware. Existing product-wide typography, color semantics, controls, navigation, and motion conventions should be inherited unless redesign scope explicitly changes them.
 
 The contract exists to prevent a good verbal concept from silently becoming generic CSS.
 
 ## Template
 
+Use only relevant fields. Do not fill fields mechanically.
+
 ```yaml
 visual_contract:
-  archetype: <short phrase>
   thesis: <one sentence specific to this page>
+  use_mode: <task-led / scan-led / compare-led / monitor-led / browse-led / read-led / conversation-led / form-led / other>
+  outcome: <what the user should accomplish or understand>
 
-  primary_job: <verb phrase>
-  first_viewport: <what must be understood or acted on first>
+  inheritance:
+    keep:
+      - <existing product-system decision>
+    page_specific:
+      - <what this page is allowed to decide differently>
 
   composition:
-    chosen_hypothesis: <name>
-    top: <header/summary/focal-object strategy>
-    body: <list/sections/form/timeline/editorial/etc>
-    action: <inline/sticky/contextual/floating/none>
-    navigation: <bottom tabs/back-only/tabs/etc>
-    scan_path: <expected visual path>
+    lead: <state/object/action/sequence/time/location/content/conversation/...>
+    early_viewport_value: <what earns space near the top>
+    body: <structural description>
+    action_model: <inline/contextual/sticky/persistent/none>
+    navigation: <existing/product-specific choice>
+    attention: <focal path / scanning anchors / progressive reveal / stream>
 
-  signature:
-    idea: <one concrete domain-derived idea>
-    product_reason: <why it belongs here>
-    manifestations:
-      - <visible place/state 1>
-      - <visible place/state 2>
-      - <visible place/state 3>
+  authored_idea:
+    use: <yes/no>
+    reason: <why an authored idea helps, or why restraint is better>
+    idea: <only if yes>
+    consequences:
+      - <only the natural, useful consequences; no minimum count>
 
-  taste:
-    creativity: <1-10>
-    density: <1-10>
-    variance: <1-10>
-    motion: <1-10>
+  expression:
+    level: <restrained/balanced/expressive + reason>
+    density: <sparse/balanced/dense + reason>
+    rhythm: <stable/varied/editorial + reason>
+    motion: <minimal/functional/expressive + reason>
     atmosphere: [<word>, <word>, <word>]
     bold_area: <where expression is spent>
     quiet_area: <what remains restrained>
 
   hierarchy:
-    primary: <what wins>
-    secondary: <what supports>
+    primary: <what wins or what scan anchors matter>
+    secondary: <supporting content>
     tertiary: <metadata/chrome>
 
   typography:
-    family: <actual stack or project token>
-    display_family: <same or alternate; actual choice>
-    character: <compact/editorial/friendly/technical/etc>
-    body_size: <px/rem/token>
-    title_size: <px/rem/token>
-    metadata_size: <px/rem/token>
-    primary_weight: <value/token>
-    secondary_weight: <value/token>
-    numeric_treatment: <tabular/lining/etc when relevant>
-    line_height_character: <tight/normal/airy plus concrete values if useful>
+    family: <actual stack or inherited token>
+    body_size: <value/token>
+    title_size: <value/token>
+    metadata_size: <value/token>
+    weights: <values/tokens>
+    numeric_treatment: <when relevant>
+    line_height_character: <concrete choice>
 
   color:
-    strategy: <neutral + accent / tonal / high contrast / image-led/etc>
+    strategy: <inherited / neutral + accent / tonal / image-led / other>
     tokens:
       canvas: <actual value/token>
       surface: <actual value/token>
-      surface_raised: <actual value/token or none>
       text_primary: <actual value/token>
       text_secondary: <actual value/token>
-      accent: <actual value/token>
-      danger: <actual value/token>
-      warning: <actual value/token>
-      success: <actual value/token>
-    semantic_rule: <how state meaning is expressed beyond color>
+      accent: <actual value/token if needed>
+      danger: <actual value/token if needed>
+      warning: <actual value/token if needed>
+      success: <actual value/token if needed>
+    semantic_rule: <how critical meaning is expressed beyond color>
 
   spacing:
-    base: <4px/8px/etc>
+    base: <value>
     screen_gutter: <value>
     section_gap: <value>
     group_gap: <value>
-    row_padding: <value>
 
   surfaces:
-    grouping: <spacing/dividers/cards/sheets/etc>
+    grouping: <spacing/dividers/selective surfaces/etc>
     depth_strategy: <none/border-only/tonal/subtle-shadow/layered>
-    control_radius: <value>
-    surface_radius: <value>
-    pill_usage: <where allowed, if anywhere>
+    radius_scale: <values/tokens>
 
   imagery_icons:
-    imagery: <none/supporting/hero/dominant + source strategy>
-    icons: <library/line/filled/custom geometric + consistency rule>
+    imagery: <none/supporting/dominant + source strategy>
+    icons: <existing library / authored SVG / other>
 
   interaction:
     feedback: <pressed/loading/selection/etc>
-    motion_character: <restrained/fluid/expressive>
-    authored_moment: <one purposeful moment or none>
+    motion_character: <choice from expression profile>
 
   avoid:
-    - <specific default that would weaken this direction>
-    - <specific default>
-    - <specific default>
+    - <specific default that would weaken this page>
 ```
 
 ## Contract rules
 
-- Choose one direction. Never fill fields with "either/or".
-- The thesis must be specific enough that two unrelated products would not share it unchanged.
-- The signature must affect real hierarchy, structure, state, or interaction. Decorative background texture alone is not a signature.
-- Use project tokens when they already encode the intended values. Otherwise choose actual page-level values rather than leaving adjectives.
-- Radius, shadows, cards, gradients, dark mode, and motion are consequences of the direction, not defaults.
-- Every bold choice must have a quiet counterweight.
-- If the page is a redesign, preserve behavior and data meaning while allowing a new contract.
-
-## Example: equipment alarm list
-
-```yaml
-archetype: operational-severity-stream
-thesis: A high-signal field interface where unresolved severity forms one continuous scan path from summary to records.
-
-primary_job: triage unresolved alarms
-first_viewport: critical count, current filter, first actionable alarms
-
-composition:
-  chosen_hypothesis: status-first
-  top: compact severity summary aligned to filter states
-  body: open aligned record stream
-  action: contextual
-  navigation: bottom tabs
-  scan_path: severity rail -> device -> alarm text -> time/state
-
-signature:
-  idea: severity rail
-  product_reason: alarm priority should remain visible while scanning
-  manifestations:
-    - summary counts
-    - filter selection
-    - record leading marker
-
-taste:
-  creativity: 3
-  density: 9
-  variance: 2
-  motion: 1
-  atmosphere: [decisive, compact, technical, calm]
-  bold_area: severity/type contrast
-  quiet_area: surfaces/navigation
-
-spacing:
-  base: 4px
-  screen_gutter: 16px
-  section_gap: 20px
-  group_gap: 8px
-  row_padding: 12px 0
-
-surfaces:
-  grouping: whitespace + dividers
-  depth_strategy: tonal
-  control_radius: 10px
-  surface_radius: 12px
-  pill_usage: short filter states only
-
-avoid:
-  - card-per-alarm
-  - decorative gradients
-  - oversized page title
-```
-
-## Example: coffee loyalty home
-
-```yaml
-archetype: tactile-membership-home
-thesis: Reward progress feels cumulative and tangible while routine account information stays quiet.
-
-primary_job: understand progress and choose the next reward action
-first_viewport: membership identity, progress, next reward
-
-composition:
-  chosen_hypothesis: focal-object-first
-  top: compact identity + progress focal object
-  body: rewards then recent activity with varied rhythm
-  action: reward-related and contextual
-  navigation: bottom tabs
-  scan_path: progress -> next reward -> benefits -> activity
-
-signature:
-  idea: accumulated-fill progress language
-  product_reason: membership value grows through repeated purchases
-  manifestations:
-    - main progress object
-    - reward threshold marks
-    - redeem confirmation transition
-
-taste:
-  creativity: 7
-  density: 4
-  variance: 6
-  motion: 4
-  atmosphere: [warm, tactile, optimistic, crafted]
-  bold_area: progress object + display type
-  quiet_area: activity rows + navigation
-
-avoid:
-  - generic fintech balance card
-  - blue-purple gradient identity
-  - uniform rounded-card grid
-```
+- Choose one direction; no unresolved “either/or”.
+- Do not invent a new page visual system when the surrounding product already provides a good one.
+- The thesis must explain task and composition, not only mood.
+- `authored_idea.use: no` is a valid, often mature choice.
+- An authored idea needs no minimum number of manifestations. One strong structural consequence can be enough.
+- Product-specificity can come from information structure, language, state, or interaction; it does not require decorative theming.
+- Use project tokens when they encode the intended values; otherwise choose actual page-level values.
+- Radius, shadows, cards, gradients, dark mode, motion, bottom navigation, sticky CTAs, and sheets are consequences, never defaults.
+- Every bold choice needs quiet surrounding structure.

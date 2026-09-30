@@ -1,15 +1,16 @@
 # Mobile Craft Floor
 
-Load this after the Visual Contract is settled.
+Load after the Visual Contract is settled.
 
-This is a quality floor, not a design direction. The committed contract and explicit brief choose the look; this resource verifies whether the result was built with enough craft.
+This is a quality floor, not a design direction. The contract and brief choose the look; this resource checks whether the result was built with enough craft.
 
-## Hierarchy
+## Hierarchy and attention
 
-- One primary focal path should win within the first viewport.
-- Secondary actions and metadata must be visibly quieter, not merely smaller.
+- The dominant outcome/use mode should be legible.
+- Task-led screens need a clear focal path; scan/monitor/browse surfaces may need multiple stable anchors instead.
+- Secondary actions and metadata must be visibly quieter.
 - Important states must be clear without making every state equally loud.
-- Sections should group by proximity and rhythm before adding containers.
+- Group by proximity and rhythm before adding containers.
 
 If everything is emphasized, nothing is.
 
@@ -17,150 +18,58 @@ If everything is emphasized, nothing is.
 
 Typography must do real hierarchy work.
 
-Check:
+Check readable body text, non-microscopic metadata, meaningful use of weight/contrast, intentional mixed Chinese/Latin rhythm, stable numeric alignment when comparison matters, and intentional wrapping/truncation.
 
-- body text is comfortably readable at phone distance;
-- metadata is not microscopic;
-- title/body/metadata differ through weight and contrast, not only adjacent font sizes;
-- mixed Chinese/Latin text has usable line height and punctuation rhythm;
-- comparable numbers use `font-variant-numeric: tabular-nums` when appropriate;
-- long labels, values, and localized strings wrap or truncate intentionally;
-- line-height and tracking are chosen, not browser accidents.
-
-System fonts are acceptable for utility screens. A display typeface should be used only when the context earns it and the asset is available reliably.
+System fonts are acceptable for utility screens. Display type requires context and reliable assets.
 
 ## Spacing and rhythm
 
-Use a small spacing scale rather than unrelated values.
+Use a small spacing scale. Create meaningful contrast between tight groups, normal component spacing, and section separation.
 
-A good mobile page usually needs contrast between:
-
-- tight internal groups;
-- normal component spacing;
-- larger section separation.
-
-Avoid a page where every gap is the same. Rhythm should reveal content relationships.
-
-When a heading introduces a group, the space above it should usually be larger than the space between the heading and its content.
+Avoid pages where every gap, card, and section rhythm is identical.
 
 ## Surfaces and depth
 
-Choose one dominant grouping/depth strategy:
-
-- open layout + spacing;
-- dividers;
-- tonal surfaces;
-- restrained borders;
-- subtle shadow layers.
-
-Do not mix every strategy by default.
+Choose one dominant grouping/depth strategy: open layout + spacing, dividers, tonal surfaces, restrained borders, or subtle shadow layers.
 
 Cards should represent meaningful grouping, independence, or interaction. They are not the default wrapper for each section or record.
 
-Nested cards require a strong reason.
-
 ## Shape
 
-Use a small radius scale.
-
-Large rounded rectangles and pills are high-salience shapes. Reserve them for roles that benefit from that shape rather than applying them to every surface.
-
-A pill is most defensible for:
-
-- compact filters/chips;
-- short statuses;
-- segmented selection;
-- tags with bounded text.
-
-Normal buttons, rows, panels, and inputs do not automatically need pill geometry.
+Use a small radius scale. Large rounded rectangles and pills are high-salience shapes; reserve them for roles that benefit from the geometry.
 
 ## Color
 
-Accent color should communicate action, identity, or state.
-
-Check:
-
-- text/background contrast is sufficient;
-- critical states do not rely on color alone;
-- multiple accents are not competing without semantic need;
-- muted text remains readable;
-- dark/light mode comes from the actual use context or project system, not category stereotype.
-
-A domain-derived palette should still behave like a product UI palette.
+Accent color should communicate action, identity, or state. Critical states must not rely on color alone. Domain-derived palettes still need product-UI contrast and restraint.
 
 ## Icons and imagery
 
-Use a coherent icon language.
+Prefer the existing project icon set, a real icon library, or authored SVG for simple product-specific marks. Avoid emoji/Unicode as a production icon system.
 
-Prefer:
-
-- existing project icon set;
-- a real icon library;
-- authored SVG for simple geometric/product-specific marks.
-
-Avoid emoji or unrelated Unicode glyphs as a substitute for an icon system.
-
-Images should carry content or atmosphere the UI cannot communicate better through layout and type. Do not add generic stock-like illustration solely to fill empty space.
+Images should carry content or atmosphere the UI cannot communicate better through layout and type.
 
 ## Interaction states
 
-Relevant controls should account for:
-
-- default;
-- pressed/active;
-- selected;
-- focus-visible when keyboard interaction exists;
-- disabled;
-- loading/submitting where relevant.
+Relevant controls should account for default, pressed/active, selected, focus-visible when applicable, disabled, and loading/submitting where relevant.
 
 Data surfaces should include believable empty/error/loading states when those states materially affect the screen.
 
-Controls should keep the same action vocabulary through the interaction: "Save" should result in "Saved", not a differently named operation.
-
 ## Motion
 
-Prefer response to user action over ambient motion.
-
-A page may have one authored motion moment when the taste profile supports it. Do not give every section the same fade-and-slide entrance.
-
-Avoid `transition: all`.
-
-For frequent task screens, motion should be nearly invisible and fast.
-
-Respect `prefers-reduced-motion`.
+Prefer response to user action over ambient motion. Do not give every section the same entrance animation. Frequent task screens should feel nearly instantaneous. Respect `prefers-reduced-motion`.
 
 ## Browser/WebView surfaces
 
-Remember that mobile product craft includes things the design did not explicitly draw:
+Remember focus rings, text selection, input caret, native form appearance, scroll/overscroll, safe areas, keyboard interaction, and sticky/fixed behavior.
 
-- focus rings;
-- text selection;
-- input caret;
-- native form appearance;
-- scroll behavior;
-- overscroll;
-- safe areas;
-- keyboard interaction;
-- sticky/fixed element behavior.
-
-Theme or normalize these only when necessary. Do not break platform behavior for cosmetic consistency.
+Do not break platform behavior for cosmetic consistency.
 
 ## Content quality
 
-Use realistic content that exercises the layout:
+Use realistic content that exercises long/short names, mixed states, timestamps, edge-case numbers, and localization. A page that only works with perfect demo copy is not finished.
 
-- long and short names;
-- mixed status values;
-- different timestamps;
-- edge-case numbers;
-- empty and error copy when relevant.
+## Authorship floor
 
-A page that only works with perfectly short demo copy is not finished.
+If the contract chose an authored idea, verify that its useful consequence survived implementation. There is no three-instance quota.
 
-## Distinctiveness floor
-
-Before finalizing, identify at least three visible consequences of the chosen signature idea.
-
-If the signature exists only in the design rationale, implementation has drifted back to a template.
-
-The craft floor prevents sloppiness. It does not choose the visual world. When mechanical polish conflicts with the committed product-specific direction, preserve the direction and solve the craft problem inside it.
+If the contract chose restraint, judge the page by hierarchy, continuity, content quality, and craft—not by whether it contains a recognizable visual gimmick.

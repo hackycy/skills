@@ -2,99 +2,55 @@
 
 These are not universal bans. They are common model habits that should not appear merely because they are easy to generate.
 
-When one appears, ask whether it follows from the Visual Contract. If not, replace it with a product-specific decision rather than simply removing decoration.
-
 ## Generic visual defaults
 
-Do not default to:
+Do not default to blue-purple gradients, gradient text, glassmorphism, neon blobs, costume serif/monospace, giant marketing titles, excessive shadows, one large radius everywhere, pills everywhere, colored icon squares, or generic illustration filler.
 
-- blue-purple gradients as identity;
-- gradient text for ordinary headings;
-- glassmorphism without a meaningful layered context;
-- blurred neon blobs as background filler;
-- warm-cream + serif + clay-accent simply because it looks "editorial";
-- near-black + acid accent simply because it looks "technical";
-- giant marketing titles in task screens;
-- excessive soft shadows;
-- every surface floating independently;
-- one large radius repeated everywhere;
-- pills for every button, input, filter, badge, and tab;
-- icons inside colored rounded squares by reflex;
-- generic illustration added only to make a screen feel designed.
-
-Replacement principle: go back to Domain World, hierarchy, and the Signature Idea.
+Replacement principle: return to product truth, hierarchy, and the chosen expression profile.
 
 ## Composition defaults
 
-Avoid:
+Avoid card-per-section, card-per-record, desktop KPI strips on mobile, squeezed desktop navigation, empty hero space, identical section blocks, filters that outweigh content, floating actions that cover content, scan-heavy center alignment, and sheet/modal flows when inline interaction is clearer.
 
-- card-per-section;
-- card-per-record;
-- dashboard KPI strips copied onto mobile;
-- desktop sidebar logic squeezed into phone width;
-- empty hero space that delays useful content;
-- identical section blocks that create template rhythm;
-- filters that visually outweigh the content;
-- floating primary actions that cover content when an in-flow/sticky action is clearer;
-- center alignment in scan-heavy operational screens;
-- modal/sheet flows for choices that can happen more clearly inline.
+Also avoid **method defaults**:
 
-Replacement principle: choose a composition around the primary job and content shape.
+- every page has one giant focal CTA;
+- every page has a special “signature idea”;
+- every signature is repeated three times to prove it exists;
+- every operational page uses the same named composition pattern;
+- every page is visually reinvented despite belonging to an established product.
+
+Replacement principle: choose structure from the actual use mode and inherit good product conventions.
 
 ## Typography defaults
 
-Avoid:
-
-- relying only on font-size changes for hierarchy;
-- arbitrary neighboring sizes such as 15/16/17px without a meaningful scale;
-- weak gray text everywhere;
-- all-caps Latin labels mixed into Chinese UI purely to signal "premium";
-- monospace used as a costume for "technical";
-- oversized numbers with no semantic priority;
-- decorative eyebrow labels above every section heading;
-- generic marketing copy in product UI.
-
-Replacement principle: let weight, contrast, line-height, alignment, and domain vocabulary carry hierarchy.
+Avoid size-only hierarchy, arbitrary neighboring sizes, weak gray everywhere, all-caps Latin used as a premium costume, decorative eyebrow labels everywhere, oversized numbers without semantic priority, and generic marketing copy in product UI.
 
 ## Interaction defaults
 
-Avoid:
+Avoid animation on every component, repeated fade-and-slide entrances, hover-first interactions, ambiguous icon-only primary actions, fake controls, unnecessary skeletons, `transition: all`, and destructive actions styled like routine actions.
 
-- animation on every component;
-- identical fade-and-slide entrance for every section;
-- hover-first interactions on touch devices;
-- ambiguous icon-only primary actions;
-- fake controls;
-- loading skeletons for content that would not plausibly load that way;
-- `transition: all`;
-- destructive actions styled like routine actions.
-
-Replacement principle: motion and states should explain cause, consequence, and priority.
+Do not implement filters/tabs/sheets/toggles merely because they were listed as examples in design guidance.
 
 ## Surface defaults
 
-Avoid:
+Avoid border + shadow + tint on ordinary cards, heavy borders where spacing already groups content, nested rounded cards, decorative progress rings without comparative value, color stripes on every record, and unrelated background textures.
 
-- border + shadow + tinted background on the same ordinary card;
-- heavy borders where spacing already communicates grouping;
-- nested rounded cards;
-- decorative progress rings with no comparative advantage;
-- side accent stripes added to every callout/record merely for color;
-- background grids/stripes/noise with no connection to the product world.
+## Domain-costume default
 
-Replacement principle: choose one depth/grouping strategy and make it serve the structure.
+Do not turn domain objects into literal visual motifs just because Domain World found them. Product-specificity can be structural and linguistic.
 
 ## De-template audit
 
-When the rendered page still feels generic, do not add more decoration.
+Ask:
 
-Ask, in order:
+1. Is the dominant outcome/use mode legible?
+2. Did implementation preserve the chosen structural logic?
+3. If an authored idea was chosen, is it useful rather than decorative?
+4. If no authored idea was chosen, does the page still feel deliberate?
+5. Does typography create hierarchy?
+6. Is rhythm driven by content importance?
+7. Could the same screenshot belong unchanged to an unrelated product?
+8. Does this page still look like the same product as neighboring screens when it should?
 
-1. Is the primary job visible immediately?
-2. Did the chosen composition survive implementation?
-3. Is the signature idea visible in at least three places/states?
-4. Does typography create a real hierarchy?
-5. Is the rhythm varied according to content importance?
-6. Could the same screenshot belong to an unrelated product?
-
-If the answer to the last question is yes, revisit Domain World and Signature Idea rather than polishing shadows and radii.
+If generic, redesign the most generic layer. If over-authored, simplify before adding more ideas.

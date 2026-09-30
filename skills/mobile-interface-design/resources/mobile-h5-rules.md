@@ -10,210 +10,94 @@ For standalone HTML, include a viewport configuration equivalent to:
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 ```
 
-Design phone-first.
+Design phone-first. Around 390px is a useful review baseline, not a design canvas. Spot-check narrower and wider common phone widths such as ~375px and ~430px, and honor product-specific device constraints when known.
 
-Primary review width: 390px.
-Spot-check approximately 375px and 430px.
-
-Never implement the page itself as a fixed `width: 390px` canvas.
+Never implement the page itself as a fixed-width phone canvas.
 
 ## Height and safe areas
 
-Prefer dynamic viewport units where appropriate:
+Prefer dynamic viewport units where appropriate, e.g. `min-height: 100dvh`.
 
-```css
-min-height: 100dvh;
-```
-
-Account for notched devices when content touches screen edges:
-
-```css
-padding-bottom: env(safe-area-inset-bottom);
-padding-top: env(safe-area-inset-top);
-```
-
-Do not double-apply safe-area padding when the host app already provides it. Inspect project context.
+Account for safe areas when content touches screen edges. Do not double-apply safe-area padding when the host app already provides it.
 
 ## Touch interaction
 
-Interactive targets should generally offer at least ~44px usable touch area even when the visible glyph is smaller.
+Interactive targets should generally offer about 44px of usable touch area when practical, even when the visible glyph is smaller. This is a mobile ergonomic target, not a requirement that every visible control be 44px tall.
 
-Do not depend on hover for essential controls.
+Do not depend on hover for essential controls. Provide visible pressed/active/selected states. Avoid overlapping enlarged hit areas.
 
-Provide visible pressed/active/selected states.
+Consider thumb reach for frequent actions and the viewport cost of fixed chrome.
 
-Avoid overlapping enlarged hit areas.
+## Early viewport
 
-For frequent actions, consider thumb reach and how much fixed chrome occupies the lower viewport. A control being "mobile-sized" does not automatically make it ergonomically placed.
+Useful content, context, state, or action should normally appear early. Do not spend the first viewport on empty hero space, oversized titles, filters that dominate content, or branding that delays the user's purpose.
 
-## First viewport
-
-On a product screen, useful task information should normally appear before decorative or identity-heavy content.
-
-Do not spend the first viewport on:
-
-- an empty hero;
-- an oversized page title;
-- filters whose visual weight exceeds the data;
-- branding that delays the primary job.
-
-Exceptions require a product reason, not a visual preference.
+The first viewport does not always need a primary CTA; reading, monitoring, browsing, and conversation screens may earn space differently.
 
 ## Typography
 
-Choose type scale from the Visual Contract rather than using one global mobile scale.
+Choose type scale from the Visual Contract and surrounding product system. Ensure readable primary text, non-microscopic metadata, intentional wrapping/truncation, suitable Chinese/mixed-language line height, and stable numeric alignment where comparison matters.
 
-Ensure:
-
-- primary text is comfortably readable;
-- secondary metadata is not microscopic;
-- line height supports Chinese and mixed-language text when present;
-- long labels wrap or truncate intentionally;
-- important numeric values use stable alignment where comparison matters;
-- dynamic numbers use tabular numerals when useful.
-
-Use system fonts by default when external fonts are unavailable or unreliable. If using web fonts, provide sensible fallbacks and do not block the core UI on font load.
+Use system fonts when external fonts are unavailable/unreliable; do not block core UI on font load.
 
 ## Layout
 
 Use normal flow, grid, and flexbox before absolute positioning.
 
-Avoid:
+Avoid accidental horizontal overflow, squeezed desktop multi-column layouts, fixed heights around dynamic text, unnecessary fixed UI, floating actions covering content, and negative-margin/calc hacks that escape a broken layout.
 
-- accidental horizontal overflow;
-- desktop multi-column layouts squeezed into mobile;
-- fixed heights around dynamic text;
-- unnecessary fixed elements competing for viewport space;
-- floating primary actions that cover list content;
-- negative-margin/calc hacks used to escape a broken parent layout.
+If bottom navigation or sticky actions are justified, reserve content space so the last content is not obscured.
 
-If bottom navigation or sticky actions are used, reserve content padding so the last content is not obscured.
-
-Horizontal scroll is acceptable for content that benefits from it, such as a deliberate chip row or carousel. It must not be a workaround for page overflow.
+Horizontal scroll is acceptable for deliberate content such as chip rows or carousels, not as a workaround for page overflow.
 
 ## Forms and keyboards
 
-Use correct input types and autocomplete behavior where possible.
+Use correct input types and autocomplete behavior. Keep labels understandable after typing, errors near fields and not color-only, relevant loading/disabled/submitting states, keyboard-safe focused inputs, and confirmation proportional to destructive/irreversible risk.
 
-Ensure:
-
-- labels remain understandable after typing;
-- errors appear near the field and are not color-only;
-- disabled/loading/submitting states are represented when relevant;
-- sticky submit actions do not hide the focused input behind the keyboard when avoidable;
-- multi-step forms preserve context and progress;
-- destructive or irreversible submission gets appropriate confirmation.
-
-Do not replace native/headless form primitives with inaccessible custom controls merely for visual consistency.
+Do not replace accessible native/headless primitives merely for visual consistency.
 
 ## Lists and repeated records
 
-Choose open lists, grouped rows, cards, or table-like alignment based on content.
+Choose open lists, grouped rows, selective cards, or table-like alignment based on content. Do not default every record to a floating card.
 
-Do not default every repeated item to a floating card.
-
-For high-frequency operational lists, optimize scan paths:
-
-- stable identifier positions;
-- status near the identifier it modifies;
-- predictable row anatomy;
-- restrained separators;
-- high-priority state visible without opening the row;
-- row actions that do not compete with the data.
+For high-frequency lists, favor stable identifiers, state near the identifier it modifies, predictable row anatomy, restrained separators, visible high-priority state, and row actions that do not compete with data.
 
 ## Navigation
 
-Use mobile-native navigation patterns when suitable:
+Choose navigation from the actual information architecture and existing product behavior.
 
-- back navigation for deep flows;
-- bottom navigation for 3-5 top-level destinations;
-- tabs/segmented controls for sibling views;
-- bottom sheets for contextual choices.
+Back navigation, bottom navigation, tabs, segmented controls, and bottom sheets are possible tools—not required mobile ingredients.
 
-Avoid desktop sidebars unless the product context specifically requires them.
-
-Bottom navigation should not become a universal default. A short focused flow may need only back/close and a primary action.
+Bottom navigation is appropriate only for a small set of stable top-level destinations that users switch among repeatedly. A focused flow may need only back/close and an in-flow action.
 
 ## Sticky and fixed UI
 
-Fixed/sticky elements are expensive on a phone because they permanently consume viewport area.
+Fixed/sticky elements permanently consume scarce viewport height. Use them only when persistence saves repeated effort or protects critical context.
 
-Use them when persistence saves repeated effort:
-
-- top-level navigation;
-- frequent primary actions;
-- critical context;
-- filters used repeatedly while scrolling.
-
-Check:
-
-- safe areas;
-- keyboard behavior;
-- content padding;
-- stacking;
-- nested scroll containers.
+Check safe areas, keyboard behavior, content padding, stacking, and nested scroll containers.
 
 ## Color and accessibility
 
-Do not rely on color alone for critical states.
-
-Maintain sufficient text/background contrast. Critical operational text and actions should favor readability over subtlety.
-
-Use semantic state meaning consistently.
-
-Focus-visible styles still matter on mobile web because keyboards, switches, accessibility tools, and desktop testing may interact with the same surface.
+Do not rely on color alone for critical states. Maintain sufficient contrast. Focus-visible styles still matter on mobile web.
 
 ## Motion
 
-Prefer CSS transitions/animations for simple H5 interactions.
-
-Motion should follow the Taste Profile and explain:
-
-- cause/effect;
-- hierarchy;
-- continuity;
-- state change.
-
-Avoid perpetual animation on frequent task screens unless it communicates live state.
-
-Avoid `transition: all`.
-
-Support reduced motion for meaningful animation:
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
+Motion should follow the expression profile and explain cause/effect, hierarchy, continuity, or meaningful state change. Avoid perpetual motion on frequent task screens. Avoid `transition: all`. Support reduced motion.
 
 ## JavaScript
 
-Implement interactions the user can reasonably expect:
+Implement only interactions implied by the requirement or necessary for the chosen flow. Examples include filters, tabs, toggles, menus/sheets, validation, or loading/submitting states; these examples are **not a checklist**.
 
-- filters;
-- tabs;
-- toggles;
-- menus/sheets;
-- form validation;
-- loading/submitting demo states when useful.
-
-Keep demo data separate enough that backend wiring is straightforward.
-
-Do not add heavy frontend dependencies solely for cosmetic effects.
+Keep demo data separable from backend wiring. Do not add heavy dependencies solely for cosmetic effects.
 
 ## Existing frameworks
 
 Inside an existing app:
 
-- reuse routing and state patterns;
-- prefer existing accessible primitives/components when they do not force a poor result;
+- reuse routing/state patterns;
+- prefer existing accessible primitives/components when suitable;
 - do not replace the stack for one page;
-- preserve API contracts;
-- preserve accessibility and keyboard behavior;
-- use existing semantic tokens when they express the intended direction.
+- preserve API contracts and accessibility behavior;
+- inherit product-wide semantic tokens and controls when they support the intended direction.
 
-Existing components are tools, not an excuse to reproduce a weak composition unchanged.
+Existing components are tools, not an excuse to reproduce weak composition unchanged.

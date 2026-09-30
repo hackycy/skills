@@ -1,8 +1,6 @@
 # Sample Requests and Calibration
 
-These examples show intended reasoning behavior. They are not visual templates.
-
-Do not copy their visual solutions into unrelated products.
+These examples demonstrate reasoning shape, not reusable visual answers. They intentionally avoid supplying a finished signature motif that can be copied into unrelated tasks.
 
 ## 1. Operational alarm page
 
@@ -13,30 +11,28 @@ Do not copy their visual solutions into unrelated products.
 ### Expected internal calibration
 
 ```text
-PRIMARY JOB
-triage unresolved alarms
+USE MODE
+scan-led + task-led: triage unresolved alarms
 
-DOMAIN WORLD
-equipment plates, severity lamps, timestamps, acknowledgement state, field inspection marks
+PRODUCT TRUTH
+severity, device identity, alarm message, time, acknowledgement state
 
 COMPOSITION SEARCH
-A status-first: severity summary -> filter -> aligned alarm stream
-B device-first: device groups -> nested alarms
-C time-first: event timeline
+compare at least two structurally different ways of leading with urgency vs device context
 
-CHOOSE
-A; fastest for urgent scanning
+EXPRESSION
+restrained / dense / stable / minimal motion
 
-SIGNATURE
-a severity rail that aligns summary, filters, and records
+AUTHORED-IDEA GATE
+optional; only use a special structural motif if it makes severity easier to scan
 
 REJECT
-card-per-alarm -> open aligned rows
-large dashboard KPIs -> compact severity summary
-decorative dark-tech chrome -> restrained field-tool surfaces
+giant dashboard KPIs
+card-per-alarm
+ornamental dark-tech styling
 ```
 
-Expected implementation: high density, explicit status/action states, no card-per-record default, signature visible across at least three parts of the screen.
+Expected implementation: high density, explicit state/action distinction, and no decorative motif required simply to make the page “distinctive”.
 
 ## 2. Consumer coffee membership home
 
@@ -47,30 +43,23 @@ Expected implementation: high density, explicit status/action states, no card-pe
 ### Expected internal calibration
 
 ```text
-PRIMARY JOB
-understand membership progress and choose the next useful reward action
+USE MODE
+browse-led with a clear progress/reward outcome
 
-DOMAIN WORLD
-cup fill, roast label, stamp accumulation, receipt marks, ceramic, roasted brown, milk foam
+PRODUCT MATERIAL
+membership progress, reward thresholds, benefits, purchase history; coffee vocabulary may inform tone without literal skeuomorphism
 
 COMPOSITION SEARCH
-A balance-card-first
-B progress-object-first
-C promotional-carousel-first
+compare progress-led, benefits-led, and history-led emphasis if structure is open
 
-CHOOSE
-B; membership value is accumulation, not banking
+EXPRESSION
+balanced-to-expressive / balanced density / varied rhythm / functional motion
 
-SIGNATURE
-accumulated-fill progress language reused in hero, reward thresholds, and redeem feedback
-
-REJECT
-fintech balance card -> tactile progress focal object
-promo carousel -> quieter benefit groups
-uniform rounded panels -> mixed open space + selective surfaces
+AUTHORED-IDEA GATE
+may be justified, but there is no requirement to invent a coffee-themed motif
 ```
 
-Expected implementation: warmer and more expressive than an operations page, but still a usable recurring app screen.
+Expected implementation: recurring product screen, not a campaign landing page; continuity with the existing brand/app system takes precedence over page-level novelty.
 
 ## 3. Finance detail page
 
@@ -81,28 +70,20 @@ Expected implementation: warmer and more expressive than an operations page, but
 ### Expected internal calibration
 
 ```text
-PRIMARY JOB
-verify what happened to one transaction and find the appropriate next action
+USE MODE
+read-led + task-led: verify one transaction, then act if necessary
 
-DOMAIN WORLD
-receipt, ledger line, settlement state, merchant identity, payment instrument, refund status
+ATTENTION
+transaction identity/state first; refund is available but should not visually equal identity unless context demands it
 
-COMPOSITION SEARCH
-A amount-first receipt
-B action-first support screen
-C timeline-first transaction history
+EXPRESSION
+restrained / sparse-to-balanced / stable / minimal motion
 
-CHOOSE
-A; transaction identity and state should resolve before action
-
-SIGNATURE
-receipt-like alignment and stable value columns, not literal paper decoration
-
-TASTE
-low motion, moderate density, strong numeric hierarchy, restrained semantic color
+AUTHORED-IDEA GATE
+likely no page-specific signature; precision and continuity may be the mature choice
 ```
 
-Expected implementation: conservative motion, clear state, precise terminology, refund action visible but not visually equal to the transaction identity.
+Expected implementation: clear state, precise language, conservative motion, and no forced receipt metaphor unless it improves comprehension.
 
 ## 4. Running activity home
 
@@ -113,30 +94,18 @@ Expected implementation: conservative motion, clear state, precise terminology, 
 ### Expected internal calibration
 
 ```text
-PRIMARY JOB
-understand today's training context and start or resume a run
+USE MODE
+task-led + scan-led: understand today's training context and start/resume activity
 
-DOMAIN WORLD
-lane marks, split times, cadence, route traces, reflective gear, lap timing
+PRODUCT MATERIAL
+training plan, weekly load, recent run, route/split/cadence language
 
 COMPOSITION SEARCH
-A KPI-dashboard
-B training-plan-first
-C recent-run-first
+question whether today's plan, recent activity, or readiness should lead based on actual product priority
 
-CHOOSE
-B; today's plan should determine the page, not aggregate metrics
-
-SIGNATURE
-split/lap typography and track-like progression marks reused across plan, weekly load, and recent run
-
-REJECT
-four KPI cards -> integrated weekly training strip
-generic neon fitness dark mode -> use-scene-driven palette
-floating start FAB over content -> anchored thumb-reachable primary action
+AUTHORED-IDEA GATE
+optional; domain-specific data treatment may be enough without a decorative running motif
 ```
-
-Expected implementation: athletic information hierarchy without turning into a desktop analytics dashboard.
 
 ## 5. Booking / local service
 
@@ -147,30 +116,18 @@ Expected implementation: athletic information hierarchy without turning into a d
 ### Expected internal calibration
 
 ```text
-PRIMARY JOB
-make a confident appointment choice with minimal backtracking
+USE MODE
+form-led: make a confident appointment choice with minimal backtracking
 
-DOMAIN WORLD
-service menu, availability windows, staff identity, chair/station, duration, confirmation
+STRUCTURE
+derive grouping from dependencies between store/staff/service/time rather than automatically choosing a multi-step wizard
 
-COMPOSITION SEARCH
-A all-fields form
-B step-first progressive booking
-C calendar-first dense planner
+FIRST VIEWPORT
+should establish where the user is in the booking context; no requirement for a large CTA if choice must happen first
 
-CHOOSE
-B unless the product context shows expert repeat usage
-
-SIGNATURE
-availability is treated as a time rhythm shared by date selection, staff availability, and confirmation summary
-
-REJECT
-long generic form -> progressive grouped choices
-modal for every choice -> inline/sheet only when it reduces complexity
-decorative lifestyle hero -> useful context in first viewport
+AUTHORED-IDEA GATE
+usually restraint; selection clarity matters more than novelty
 ```
-
-Expected implementation: clear current step/context, touch-friendly time slots, selected/disabled states, and a confirmation summary that uses the same language as the selection flow.
 
 ## 6. Redesign existing code
 
@@ -180,13 +137,13 @@ Expected implementation: clear current step/context, touch-friendly time slots, 
 
 ### Expected behavior
 
-1. inspect current behavior, validation, data semantics, and stack;
+1. inspect current behavior, validation, data semantics, stack, and neighboring screens;
 2. preserve product truth and interaction contracts;
-3. build Domain World from the actual product context;
-4. explore 2-3 structural alternatives only if layout change is compatible with behavior;
-5. commit a new page-specific Visual Contract;
-6. implement without breaking function;
-7. render-review and run the replacement/signature/squint tests;
-8. run the static validator when applicable.
+3. inherit good product-wide visual conventions;
+4. search alternatives only when the structure is genuinely open and compatible with behavior;
+5. commit a page-aware Visual Contract;
+6. run the Authored-Idea Gate instead of forcing a signature;
+7. implement without breaking function;
+8. render-review, run replacement/continuity/squint tests, and validate statically when applicable.
 
-A redesign is not "change colors and radius". It should improve hierarchy, composition, type, rhythm, states, and domain specificity while preserving behavior.
+A redesign is not “change colors and radius”, but neither is it permission to invent a new mini-brand for one page.

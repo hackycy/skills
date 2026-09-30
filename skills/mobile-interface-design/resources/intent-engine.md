@@ -8,40 +8,37 @@ Do not expose this analysis unless the user asks for design rationale.
 
 Identify a concrete person-in-context.
 
-Weak:
+Weak: `operations user`
 
-> operations user
+Stronger: `a maintenance technician checking unresolved equipment alarms while walking the floor`
 
-Stronger:
+The use scene influences density, reachability, motion, copy, and what deserves early viewport space.
 
-> a maintenance technician checking unresolved equipment alarms while walking the floor
+## Dominant outcome or use mode
 
-Weak:
+Do not force every screen into one primary action. First decide what kind of attention the screen needs.
 
-> consumer
+Common modes include:
 
-Stronger:
+- **task-led** — complete a clear action;
+- **scan-led** — repeatedly inspect many similar items;
+- **compare-led** — compare alternatives or values;
+- **monitor-led** — maintain awareness of changing state;
+- **browse-led** — discover and explore;
+- **read-led** — understand content with minimal chrome;
+- **conversation-led** — follow and respond to an exchange;
+- **form-led** — enter/verify information safely.
 
-> a returning member opening the app in a queue to see whether a reward is available
-
-The use scene influences density, reachability, motion, copy, and what belongs in the first viewport.
-
-## Primary job
-
-Express the single most important job as a verb phrase:
+Express the dominant outcome as a verb phrase or state of awareness, for example:
 
 - triage urgent alarms;
-- find and purchase an item;
-- verify a transaction;
-- submit a field inspection;
+- understand whether anything needs intervention;
 - compare appointment slots;
 - read and save an article;
-- scan inventory quickly;
-- start today's training.
+- verify a transaction;
+- continue a conversation.
 
-If several jobs compete, identify one primary and demote the rest.
-
-The first viewport should make the primary job or its key state obvious.
+If multiple jobs coexist, identify which one sets the page's attention strategy and which are supporting. Do not demote legitimate parallel scan anchors merely to satisfy “one job”.
 
 ## Usage frequency
 
@@ -59,33 +56,19 @@ Frequent interfaces can support higher density and usually benefit from less dec
 - time-sensitive;
 - high-risk / error-sensitive.
 
-Higher pressure means:
-
-- less ambiguity;
-- more stable alignment;
-- clearer state/action distinction;
-- more conservative motion;
-- stronger confirmation around destructive or irreversible actions.
+Higher pressure usually means less ambiguity, stable alignment, clearer state/action distinction, conservative motion, and confirmation proportional to irreversible risk.
 
 ## Information density
 
-Estimate required density from the task and content.
+Estimate density from task and content, not category stereotype:
 
-- low: one focal object or decision;
-- medium: mixed content and several actions;
-- high: repetitive records, monitoring, comparison, operations.
-
-Density is a product decision, not an aesthetic preference.
+- sparse: one focal object, decision, or narrative;
+- balanced: mixed content and actions;
+- dense: repetitive records, comparison, monitoring, operations.
 
 ## Emotional character
 
-How much identity/mood should the interface communicate?
-
-- low: operations, settings, high-risk utilities;
-- medium: finance, productivity, booking;
-- high: lifestyle, entertainment, campaigns, editorial, discovery commerce.
-
-Emotional expression should not obscure operational meaning.
+Determine how much identity/mood the screen can support. Operational or high-risk surfaces often need more restraint; discovery or infrequent consumer moments may permit more expression. Treat this as a task-derived tendency, not a category lookup table.
 
 ## Dominant content shape
 
@@ -103,51 +86,36 @@ Identify what the page is mostly made of:
 - steps/progress;
 - route/journey.
 
-Composition should follow content shape rather than forcing all content into cards.
+Composition should follow content shape rather than forcing everything into cards.
 
 ## Action structure
 
-Identify:
+Identify primary, secondary, destructive, repeated row-level, and passive/read-only actions.
 
-- primary action;
-- secondary actions;
-- destructive actions;
-- repeated row-level actions;
-- passive/read-only states.
+Ask whether an action should be always visible, contextual, inline after required information, sticky near the thumb, or absent because the screen is mainly informational.
 
-Ask whether the primary action should be:
+Do not add a floating action merely because mobile apps often have one.
 
-- always visible;
-- contextual;
-- inline after required information;
-- sticky near the thumb;
-- absent because the screen is primarily informational.
+## First-viewport value
 
-Do not use a floating action merely because mobile apps often have one.
-
-## First-viewport contract
-
-Internally complete:
+Do not require every screen to expose a CTA or complete the job above the fold. Instead complete this internally:
 
 ```text
-Within the first viewport, the user must be able to understand:
+The first viewport earns its space by making the user understand:
 - ...
 
-and must be able to do:
+and, when appropriate, enabling:
 - ...
 ```
 
-This contract helps prevent decorative headers, oversized titles, and filter chrome from consuming the screen.
+Useful first-viewport value can be context, state, content, orientation, or action.
 
 ## Decision heuristics
 
-- Operational + frequent + high density -> compact hierarchy, stable scan paths, strong states, minimal ornament.
-- Commerce + exploratory + image-heavy -> stronger imagery and browse rhythm, selective promotional emphasis.
-- Finance + error-sensitive -> precise terminology, controlled color, strong numeric hierarchy, conservative motion.
-- Content + reading -> typography and reading rhythm dominate chrome.
-- Form + high risk -> progressive grouping, inline validation, explicit completion state, minimal distraction.
-- Campaign + rare + emotional -> more expressive composition and motion may be justified.
-- Travel/journey + time-sensitive -> current position and next action should dominate decorative destination content.
-- Field use + movement/poor lighting -> larger targets, clear contrast, short labels, restrained motion.
+Heuristics are tendencies, not templates. Derive the final composition from the actual use scene.
 
-These are tendencies, not templates.
+- high pressure + repeated scanning -> stable alignment, strong state cues, low decorative friction;
+- reading -> typography and content rhythm dominate chrome;
+- high-risk form -> progressive grouping, clear validation, explicit completion state;
+- movement/poor lighting -> larger reachable targets, high contrast, short labels, restrained motion;
+- exploratory browsing -> discovery rhythm may matter more than an early CTA.
