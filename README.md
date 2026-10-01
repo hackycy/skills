@@ -18,6 +18,7 @@ Learn more about the CLI usage at [skills](https://github.com/vercel-labs/skills
 
 - [superpowers](https://github.com/obra/superpowers)
 - [mattpocock-skills](https://github.com/mattpocock/skills)
+- [ponytail](https://github.com/DietrichGebert/ponytail)
 - [baoyu-skills](https://github.com/JimLiu/baoyu-skills)
 - [impeccable](https://github.com/pbakaus/impeccable)
 - [awesome-design-md](https://github.com/VoltAgent/awesome-design-md)
