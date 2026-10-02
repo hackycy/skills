@@ -1,8 +1,6 @@
 # Implementation Plan Schema
 
-`implementation-plan.md` 是决策文档到执行账本之间的稳定计划层。它描述要做什么、按什么顺序、如何证明完成；不记录当前状态、每轮进度或临时调试结果。状态和证据只进入 `goal-runbook.md`。
-
-新生成的计划不包含 `Current Execution State`、`active`、`passed` 或 `blocked`。如果输入是旧计划并已经包含状态，goal-loop 只在初始化时按 runbook schema 导入并校验这些状态；导入后不再回写计划。
+`implementation-plan.md` 是决策文档到执行状态之间的稳定合同层。它描述要做什么、按什么顺序、如何证明完成；不记录当前状态、每轮进度或临时调试结果。当前状态进入 `goal/runbook.md`，执行历史和证据进入 `goal/history/G<n>.md`。
 
 ## 顶层结构
 
@@ -27,7 +25,7 @@
 
 ## Non-Negotiable Rules
 
-只写跨多个 Gate 都必须保持的不变量，例如单一状态源、切换边界、兼容性、回退原则或禁止的双轨行为。项目特有的规则应放在对应 Gate 的 `Constraints`。
+只写跨多个 Gate 都必须保持的不变量，例如单一状态源、切换边界、兼容性、回退原则或禁止的双轨行为。项目特有的规则放在对应 Gate 的 `Constraints`。
 
 ## Gate Overview
 
@@ -80,7 +78,6 @@
 #### Repository
 
 1. `<准确命令或脚本；执行时机和顺序>`
-2. `<准确命令或脚本；执行时机和顺序>`
 
 #### Manual acceptance
 
@@ -88,7 +85,10 @@
 
 ### Evidence rule
 
-<每条 Exit condition 由哪些 Directed、Repository 或 Manual 证据证明>
+| Exit | Required evidence |
+| --- | --- |
+| E1 | <Directed / Repository / Manual 中能够证明 E1 的具体证据> |
+| E2 | <能够证明 E2 的具体证据> |
 
 ### Stop conditions
 
@@ -100,20 +100,23 @@
 
 ### Exit conditions
 
-- <可观察、可证明的条件，逐项编号>
+- `E1`: <可观察、可证明的条件>
+- `E2`: <可观察、可证明的条件>
 ```
 
-### 计划约束
+## 计划约束
 
 - `Objective`、`Scope boundary`、`Constraints`、`Slice policy`、`Verification`、`Evidence rule`、`Stop conditions`、`Rollback` 和 `Exit conditions` 都必须存在。
+- 每个 Gate 的 Exit id 从 `E1` 开始连续编号，不跨 Gate 复用编号语义。
+- `Evidence rule` 必须覆盖每个 Exit id，不能出现无对应 Exit 的多余行。
 - `Verification` 只能写仓库真实存在或决策文档明确提供的入口；不得写固定的跨项目命令。
-- `Exit conditions` 必须可由 `Evidence rule` 证明，不能只写“代码完成”或“测试通过”。
-- 人工验收是 Gate 合同的一部分；需要用户确认时，写清交接入口、自动化完成边界、最小验收清单和明确结果的形式。人工验收待确认会终止当前 Goal 但不改变 Gate 状态；只有新的 Goal 读取明确结果后，才可满足对应 Exit condition 或进入修复。
-- 计划不得包含 `active`、`passed`、`blocked` 等执行状态，也不得追加 Progress Log。
+- `Exit conditions` 必须可由 Evidence rule 证明，不能只写“代码完成”或“测试通过”。
+- 人工验收是 Gate 合同的一部分；需要用户确认时，写清验收入口、自动化完成边界、最小验收清单和明确结果形式。
+- 计划不得包含 `active`、`passed`、`blocked` 等执行状态，也不得包含 slice history、Current Checkpoint 或 Progress Log。
 
 ## Definition Of Done
 
-列出整个 effort 的最终条件，例如所有 Gate 通过、公共契约稳定、迁移/删除边界完成、人工验收完成或发布证据齐全。每项都必须能回溯到一个或多个 Gate Exit。
+列出整个 effort 的最终条件，例如所有 Gate 通过、公共契约稳定、迁移/删除边界完成、人工验收完成或发布证据齐全。每项必须能回溯到一个或多个 Gate Exit。
 
 ## Explicitly Out Of Scope
 

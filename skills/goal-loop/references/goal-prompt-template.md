@@ -3,38 +3,38 @@
 只替换 `{{EFFORT_PATH}}`。同一 effort 的每个 Gate 使用完全相同的内容。
 
 ```markdown
-推进 `{{EFFORT_PATH}}/goal-runbook.md` 中启动本次 Goal 时唯一 `active` 的 Gate，直到该 Gate 通过或完成一次人工验收交接。开始时锁定该 Gate 的编号；该编号是本次 Goal 不可扩大的执行边界。只处理该 Gate，不得进入下一个 Gate。
+推进 `{{EFFORT_PATH}}/goal/runbook.md` 中启动本次 Goal 时唯一 `active` 的 Gate，直到该 Gate 通过、命中 Stop condition 或完成一次人工验收交接。开始时锁定该 Gate 编号；它是本次 Goal 不可扩大的执行边界，不得进入后继 Gate。
 
-启动时先读取 `{{EFFORT_PATH}}/goal-runbook.md` 的 Goal Ledger 和当前 Gate 的最后一条 Progress Log。若日志标记人工验收待确认且当前用户输入没有明确验收结果，只执行人工验收交接的终止规则，不读取代码、不运行验证、不重新实施。否则再阅读 `CLAUDE.md`、适用的 `AGENTS.md` / `CONTEXT.md`、`{{EFFORT_PATH}}/implementation-plan.md`、`{{EFFORT_PATH}}/goal-runbook.md`，以及当前 Gate 引用的 decision 文档和相关代码；以这些文件为唯一执行依据。
+采用最小上下文加载：
 
-自主执行以下循环，直到当前 Gate 的自动化 Exit conditions 满足；若 Manual acceptance 为“无”，则继续执行至全部 Exit conditions 满足：
+1. 先读取 `{{EFFORT_PATH}}/goal/runbook.md` 的 Goal Ledger 和 Current Checkpoint。
+2. 若 checkpoint 是人工验收 pending 且当前用户输入没有该 acceptance id 的明确结果，只输出一次交接提醒并成功结束本次 Goal；不要读取代码、计划细节或 history，不要重跑验证。
+3. 否则读取 `{{EFFORT_PATH}}/implementation-plan.md` 中当前 Gate 的合同、必要 Source Decisions、适用的 `CLAUDE.md` / `AGENTS.md` / `CONTEXT.md` 和当前 Gate 相关代码。
+4. 默认不要读取 `{{EFFORT_PATH}}/goal/history/`。只有 checkpoint 信息不足、验证失败诊断、rollback、人工验收结果、证据核验或状态异常时，才按 event / Exit 引用读取必要片段；passed Gate history 不得默认加载。
 
-1. 按当前 Gate 的 Slice policy 找出下一个最小、可独立验证、可回退的 slice。
+自主执行当前 Gate：
+
+1. 按 Slice policy 选择下一个最小、可独立验证、可回退的 slice。
 2. 只实现该 slice，不扩大 Scope boundary。
-3. 按计划声明的时机运行适用的 Directed verification。
-4. 按计划声明的顺序运行 Repository verification。
-5. 失败则诊断、修复并重新验证；当前 slice 通过后再继续下一个 slice。
+3. 按计划声明的时机运行 Directed verification，再按顺序运行 Repository verification。
+4. 失败则诊断、修复并重新验证；普通失败保持 Gate `active`。
+5. 每形成一个稳定事实，先向当前 Gate 的 `goal/history/G<n>.md` 末尾追加结构化 event；用 `Satisfies` 标记该 event 实际证明的 Exit。再重写 `goal/runbook.md` 的 Current Checkpoint。runbook 只保留最近 event、slice 游标、已满足 Exit、风险、人工验收状态和下一动作，不复制历史正文。
 
 始终遵守：
 
-- 一个 slice 只包含一个行为或调用簇。
-- 读取、写入和 Presentation 等不同职责分别切片；除非当前 Gate 明确要求，不在一个 slice 中混合。
+- 一个 slice 只包含一个行为或调用簇；不同职责分别切片。
 - 保留与当前 Gate 无关的旧实现和工作区修改。
 - 保持当前 Gate 未授权改变的 API、数据、UI、交互和兼容性语义。
 - 不通过删除、跳过、弱化测试或无效替代获得通过。
-- 每轮向当前 Gate 的 Progress Log 追加 slice、修改文件、验证结果、风险和下一动作。
-- 触发 Stop condition 时暂停，记录已完成证据、阻塞原因和恢复所需输入。
+- `goal/history/G<n>.md` append-only；纠错使用新的 `correction` event。
+- 触发 Stop condition 时追加 `blocked` event，更新 checkpoint 与 Ledger 为 `blocked`，记录恢复条件并结束。
 - 不 push 远程分支。
 
-如果当前 Gate 的 Manual acceptance 不是“无”，先完成全部自动化工作，启动可验收环境，并向 Progress Log 追加一次人工验收交接记录：验收入口、自动化验证证据、最小验收清单、期望的明确回复格式和下一动作。人工验收交接是本次 Goal 的成功终点，不是等待循环，也不是 Gate 状态转换。
+若 Manual acceptance 不是“无”，先完成全部自动化工作，追加一次 `manual-handoff` event，生成 acceptance id（如 `G2-A1`），并在 checkpoint 写 `Manual acceptance: pending <id>`。然后使用宿主 Goal/task 的成功终态结束本次 Goal；Gate 保持 `active`。最终回复只给出当前 Gate、自动化结果、验收入口、最小清单、明确回复格式和“本次 Goal 已结束、Gate 仍为 active”。不得等待、轮询、自唤醒或重复追加等待日志。
 
-交接记录写入后，执行本次 Goal 的最后一个状态操作：若运行时提供 Goal/task 生命周期控制，使用其成功终态操作将本次 Goal 标记为已完成（语义等价于 `complete` 或 `succeeded`）。不得使用 `blocked`、`paused` 或“继续运行”来表示等待人工验收；Gate 必须继续保持 `active`，不得执行原子转换。没有 Goal/task 状态机制时，直接以最终回复终止当前任务，不创建等待、轮询或自唤醒流程。
+若新的 Goal 收到 pending acceptance id 的明确结果，追加 `manual-result` event。通过则用该证据满足对应 Exit；未通过则保持 `active`，按反馈进入新的最小修复 slice。
 
-状态操作完成后，只输出一次人工验收交接结果，至少包含：当前 Gate、自动化验证结果、验收入口、最小验收清单、用户应回复的明确格式，以及“本次 Goal 已结束、Gate 仍为 active”。这条交接结果是当前任务的最终回复；输出后不得再调用工具、等待、轮询或追加“仍在等待”的消息。
+全部 Exit conditions 满足后：追加最终 verification event，再追加 `gate-passed` event；其中 `Exit evidence` 必须完整映射计划中的每个 Exit 到一个既有且 `Satisfies` 对应 Exit 的 evidence event。然后执行一次状态转换：当前 Gate `active -> passed`，Ledger 只保留 `<history-path>@<gate-passed-event-id>`；若有直接后继，创建其 history 初始化 event、将其 `planned -> active` 并把 Current Checkpoint 重建为后继的最小启动状态；若无后继，写 effort complete。
 
-后续只有用户在新的 Goal/task 中提供明确验收结果（例如通过/未通过及必要证据）时，才可继续当前 Gate。新 Goal 启动时若日志仍是人工验收待确认且当前输入没有明确结果，不重新执行实现循环；只将该新 Goal 标记为成功终态，并输出一次交接提醒。
-
-当前 Gate 的全部 Exit conditions（包括适用的人工验收）满足后：向 Progress Log 追加逐项验收和最终验证证据，将当前 Gate 标记为 `passed`；若存在直接后继，将其从 `planned` 标记为 `active` 并记录“已激活，尚未开始实施”；若不存在后继，记录 effort 已完成。汇总本 Gate 的验证证据，使用运行时提供的 Goal/task 成功终态机制结束本次 Goal，然后结束当前普通会话。
-
-这是整个 Goal 的强制结束点，不是只结束当前回复。即使直接后继已变为 `active`，它也不属于本次 Goal；不得重新进入执行循环，不得分析、实施或验证下一个 Gate，也不得为下一个 Gate 调用工具。
+状态转换后运行 goal-loop validator。验证通过后汇总当前 Gate 证据并显式结束整个 Goal。这是 context compaction boundary：刚通过 Gate 的详细 slice 只留在 history，不得重新放回 runbook，也不得在本次 Goal 中分析或执行后继 Gate。
 ```
