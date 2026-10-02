@@ -1,5 +1,5 @@
-0fd03ade0f1c66b5a23dc707fe1be4bdb11012ddd723a6b4c2b213fb7a42abf2  ./README.md
-d6c38cf810e1bd613e98289c2648424d83819acbe7d57c81008801ac5abaa890  ./SKILL.md
+17f6fe48d4be90bee45c68616049ad3bc3d31d4310788e578908e27729927200  ./README.md
+22b9dd0560b747241b62139e66ff4995aeb669908429836afe58666a82d84ccc  ./SKILL.md
 e6635045e1d2478ec4ca712d8c0e1dfcef8bb7b5b1e8e3bb560d37fe399a9e72  ./VERSION
 6e7aeb44c05c2e6a52bf8c592e36219a87ff64339f78e2f6c418a587ed39b546  ./agents/openai.yaml
 15b35557e9d2be9489fa74dbc37a2f43cfc0ce2ce4f893ea36af336073d4b7b0  ./scripts/governance.py
@@ -8,7 +8,7 @@ e6635045e1d2478ec4ca712d8c0e1dfcef8bb7b5b1e8e3bb560d37fe399a9e72  ./VERSION
 888f4897eb58e0a5c29cee822454d0c7607c2898acacfa6edce1d69b94ab7626  ./templates/manifest.json
 231a3bbf8dbb70d97b57e3136428c40a973c44874ad52d9015a0de4e6d8492f0  ./templates/project/.agents/AGENTS.md
 12104cff2ad72ec7ede517c4d8bf568ca1fe7b51789a69c9039fdd6fae2eaf1f  ./templates/project/.agents/notes/AGENTS.md
-25693c11622ffaad92e009b8dde25d01f4fd839d3f420030cfec3b9890b914f0  ./templates/project/.agents/notes/README.md
+4ace25904766fe2a4eff61146d496a3f56ac748db22ce38bd16ef13fc0a8a13f  ./templates/project/.agents/notes/README.md
 2c087790590728ce55480202f96ef420ab308449b93445301e3c461854956bd5  ./templates/project/.agents/notes/archived/AGENTS.md
 75c634df536c1dd673ac4399e1f66b4495935dc34052abeaef9bafc01db90d89  ./templates/project/.agents/notes/archived/manifest.json
 b640053da1c23f849a1ba86bf572f1e26e246f0375b85d67c23470811621c726  ./templates/project/.agents/notes/implemented/AGENTS.md
@@ -20,15 +20,15 @@ b640053da1c23f849a1ba86bf572f1e26e246f0375b85d67c23470811621c726  ./templates/pr
 c26270cc5e5e4836f3e9b55a11bf890ad85a5bafed4d3ec32909a81cee37d23b  ./templates/project/.agents/scripts/verify_agent_notes.py
 7fa51c4c1c73331305c2e2fc4006cf657ba8503cd4b5a2bc729a919010f9f947  ./templates/project/.agents/skills/agent-note-maintenance/SKILL.md
 7acd6d584fe74e4f64ba9468104ea3a06e24bd8811beecd90927f835f67d90ef  ./templates/project/.agents/skills/agent-note-maintenance/agents/openai.yaml
-b3c5c31e58ccd88f01fb5281c827ac847a9d8f69ad917051cc0db9797e228bb5  ./templates/project/.agents/skills/agent-note/SKILL.md
+1d91370e846fc11b5cde4d14d7a408197912f5148569cd9893a55b52a49b8472  ./templates/project/.agents/skills/agent-note/SKILL.md
 3704192b9537a51e89c04fa3e58f9efb0087c36fb985c6423593f2d6cf87d744  ./templates/project/.agents/skills/agent-note/agents/openai.yaml
 18dd94c1d797cffde459312c65e49ba77f3c8541880aad45ddc20e651fdf1df4  ./templates/project/.agents/skills/agent-note/templates/implemented.md
 2b0c0ed4420634e3d08df7935334965740f1d53e27f00ed57dc3ac51b1e0b920  ./templates/project/.agents/skills/agent-note/templates/proposed.md
 0a2b6a42b39b54aab8f65698166dbe9473924cd220bdfb2c3f1259eb8cb7c131  ./templates/project/.agents/skills/agent-note/templates/rejected.md
-87a9f6ca7d98406b062cce0393a2b6f6676088c5597d83b75a5feb66f055eb3b  ./templates/project/.agents/skills/project-governance/SKILL.md
+511e1dc672c3888b1e08bf9370934e6495fa5cc7b85965f32aa8e550c9db8f15  ./templates/project/.agents/skills/project-governance/SKILL.md
 1be446f7944595c23c7c815eff15e343e714903ca42778896168b77478c98e68  ./templates/project/.agents/skills/project-governance/agents/openai.yaml
 7c5bb704b3d48bc37d381e21d06af0bfe151ab90d3fa32c4d027b08d8411100c  ./templates/project/.claude/skills/agent-note-maintenance/SKILL.md
 700908445c1d58627cf92f6a163269b7aa0c26bfb277e142504eb351e7203ff3  ./templates/project/.claude/skills/agent-note/SKILL.md
 e189d1356b2850812bdab8c6f5468054faa5eac9c2e9a250dcc4913fc20afffa  ./templates/project/.claude/skills/project-governance/SKILL.md
-accdf6cf9fa2d9fc671b40eaad57df45fda141b9bc0795dd4cc43ba920d734e7  ./templates/root/AGENTS.block.md
+5de82e594583298a3272775c493c017be5a5ab619d3cc06f0f8cc9278f9e1874  ./templates/root/AGENTS.block.md
 7a488afd8c6c4f065760eba3491084f629e4bf30e3b4c52ca42e5123af78e8d3  ./tests/test_governance.py

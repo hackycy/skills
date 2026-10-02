@@ -12,7 +12,7 @@ Agent Note 是给未来工程师和 Agent 阅读的长期 RFC/ADR 类决策记�
 .agents/notes/<lifecycle>/<class>/YYYY-MM-DD-topic.md
 ```
 
-正文默认简体中文；文件名 topic 使用英文小写 kebab-case。机器字段使用固定英文键。新 Note 模板包含 `REQUIRED` 占位符，在真实内容填写完成前 verifier 会故意失败，防止空壳 Note 进入主分支。
+正文默认简体中文；文件名 topic 使用英文小写 kebab-case。机器字段使用固定英文键。Agent Note 模板包含 `REQUIRED` 占位符，在真实内容填写完成前 verifier 会故意失败，防止空壳 Note 进入主分支。
 
 规范 header：
 
@@ -27,7 +27,11 @@ Related: none | .agents/notes/...,.agents/notes/...
 ## 问题
 ```
 
-`Scope / Supersedes / Related` 是新 Note 的推荐结构化元数据；旧 Note 可以没有这些字段。关系路径使用 repo-relative `.agents/notes/...`，这样 lifecycle 移动不会改变引用语义。
+`Scope / Supersedes / Related` 是 Agent Note 的推荐结构化元数据；已有 Note 可以没有这些字段。关系路径使用 repo-relative `.agents/notes/...`，这样 lifecycle 移动不会改变引用语义。
+
+## 措辞
+
+标题和正文使用稳定的职责、结构或行为名称，直接描述决策及其适用条件，不因重构使用“新布局”“新结构”“新版”等相对措辞。说明迁移差异或历史决策时，明确涉及的版本、对象和变化；supersession 通过具体 Note 路径和结构化关系表达。
 
 ## 生命周期
 
@@ -69,7 +73,7 @@ Related: none | .agents/notes/...,.agents/notes/...
 
 允许在必需章节之间插入真正有用的技术章节，但 H2 标题不得重复。verifier 会忽略 fenced code block 内的伪 heading，并检查 header 唯一性、章节顺序、内容非空、占位符、关系和活跃 Note 的相对 Markdown 链接。
 
-## Archive：冻结而不是“旧目录”
+## Archive：冻结历史
 
 `archived` 保留 implemented 结构，并在 `Status: implemented` 下一行加入：
 

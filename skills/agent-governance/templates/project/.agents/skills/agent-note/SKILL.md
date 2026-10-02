@@ -6,6 +6,8 @@ description: 创建、更新或转换项目中的单语 Agent Note。适用于�
 
 Agent Note 只保存未来仍可能需要重新理解的长期工程 rationale，不保存实现流水账、聊天过程或 chain-of-thought。
 
+撰写或修改 Note 时遵循 [Agent Notes 措辞规则](../../notes/README.md#措辞)。
+
 ## 创建前
 
 先搜索 `.agents/notes/` 中的活跃记录，按主题、Scope、关键机制、路径/symbol、ownership boundary 和 rejected alternative 判断：独立补充、重复 authority、部分 supersession 或完全 supersession。重复 authority 优先更新已有 Note。
@@ -19,7 +21,7 @@ python3 .agents/scripts/new_agent_note.py \
   --root .
 ```
 
-新模板故意带 `REQUIRED` 占位符，因此“只创建没填写”一定不会通过治理检查。填写稳定英文 `Scope`；`Supersedes/Related` 使用 repo-relative `.agents/notes/...` 路径或 `none`。
+模板包含 `REQUIRED` 占位符，因此“只创建没填写”一定不会通过治理检查。填写稳定英文 `Scope`；`Supersedes/Related` 使用 repo-relative `.agents/notes/...` 路径或 `none`。
 
 ## 生命周期转换
 

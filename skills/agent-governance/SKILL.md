@@ -6,6 +6,8 @@ description: 仅当用户明确要求建立、接管、同步、检查、修复�
 
 本 Skill 只处理治理体系本身。普通编码、功能实现、Bug 修复、代码审查以及日常 Agent Note 创建不调用本 Skill；项目安装治理体系后，日常决策记录优先使用项目内 `.agents/skills/`。
 
+治理文档和回复使用稳定的职责、结构或行为名称，直接描述当前规则和可观察结果，不因重构使用“新布局”“新结构”“新版”等相对措辞。确需说明同步差异、兼容边界或历史决策时，明确涉及的版本、对象和变化。
+
 ## 开始治理前
 
 1. 确认仓库根目录。
@@ -44,7 +46,7 @@ python3 scripts/governance.py doctor --project-root /path/to/repo
 健康状态：
 
 - `healthy`：治理规则和当前 bundle 一致；
-- `sync-needed`：有新模板、project override 候选或 orphaned managed path，但没有结构损坏；
+- `sync-needed`：有模板更新、project override 候选或 orphaned managed path，但没有结构损坏；
 - `conflicted`：framework-managed 本地修改或 adopted-local 尚未决议；
 - `broken`：缺失治理资产、Note/verifier/archive seal 等硬约束失败。
 
@@ -58,10 +60,10 @@ python3 scripts/governance.py upgrade --project-root /path/to/repo
 
 - framework-managed 且项目未修改：安全更新；
 - 本地修改：保留本地并写 `.incoming`，进入 conflict；
-- `project-override`：本地内容继续有效；新模板只作为 available update 提示，不把项目判为 conflict；
+- `project-override`：本地内容继续有效；模板更新只作为 available update 提示，不把项目判为 conflict；
 - `detached`：框架停止管理该路径；
 - project-owned 数据不覆盖；
-- 从 manifest 消失的旧路径只报告，不自动删除；
+- 从 manifest 移除的托管路径只报告，不自动删除；
 - 真实 Agent Notes 与 archive seal 永远不在普通模板同步范围。
 
 ## 冲突决议
@@ -121,7 +123,7 @@ Agent Note 只记录未来维护者或 Agent 可能重新理解的长期工程�
 
 正文默认简体中文，filename 为英文 kebab-case。生命周期：`proposed / implemented / rejected / archived`；分类封闭集合：`feature / bug-fix / simplification / architecture / process / testing`。
 
-新 Note 模板包含 `REQUIRED` 占位符；未填写真实内容时 verifier 必须失败。新模板支持 `Scope / Supersedes / Related` 结构化关系，但旧 Note 可不含这些字段。
+Agent Note 模板包含 `REQUIRED` 占位符；未填写真实内容时 verifier 必须失败。模板支持 `Scope / Supersedes / Related` 结构化关系；这些字段为推荐元数据，已有 Note 可不含这些字段。
 
 ### Archive
 

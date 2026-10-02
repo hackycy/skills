@@ -24,7 +24,7 @@ description: 维护仓库的 Agent 工程治理边界，包括 AGENTS.md 路由�
 
 `framework.json` 是安装状态，不是治理 schema。canonical lifecycle/class 由 verifier 和当前框架 manifest 决定，手工修改 state 不能扩展 taxonomy。
 
-归档历史必须 hash-sealed；新 Note 的 REQUIRED 占位符必须全部填完；活跃 Note 的相对 Markdown 链接和结构化关系目标必须存在。
+归档历史必须 hash-sealed；Note 的 REQUIRED 占位符必须全部填完；活跃 Note 的相对 Markdown 链接和结构化关系目标必须存在。
 
 ## 校验
 

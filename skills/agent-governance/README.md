@@ -6,14 +6,14 @@
 
 仍处于未正式发布阶段，`VERSION` 和 `templates/manifest.json -> framework.version` 固定为 `0.0.1`。内部迭代依赖模板 hash、ownership 与当前内容同步，不建立虚构的预发布 migration 历史。
 
-## 本版增强目标
+## 治理约束
 
-这版在原有 `init / adopt / status / upgrade / doctor`、baseline hash、managed block 和 `.incoming` 保护之上，把此前只存在于文案中的规则升级为 repository invariants：
+`init / adopt / status / upgrade / doctor` 通过 baseline hash、managed block 和 `.incoming` 保护项目内容，并检查以下 repository invariants：
 
 - fence-aware 严格 Note parser：精确 header、唯一 Status、章节顺序、重复 H2、forbidden heading；
-- 新 Note 空壳阻断：模板 `REQUIRED` 占位符与空章节不能通过；
+- Note 空壳阻断：模板 `REQUIRED` 占位符与空章节不能通过；
 - 活跃 Note 相对 Markdown link 与结构化关系目标检查；
-- canonical lifecycle/class 不再信任可手改的 `framework.json`；
+- canonical lifecycle/class 由 manifest 和 verifier 定义，不依赖可手改的 `framework.json`；
 - `archived/manifest.json` SHA-256 seal，archive 后正文不可悄悄改写；
 - `archive_agent_note.py` 统一归档流程，并阻止仍有 active inbound reference 的归档；
 - `governance_check.py` 作为本地和 CI 的单一 gate；
@@ -37,7 +37,7 @@ ownership：
 
 - `framework-managed`：框架可在 baseline 未被本地改写时安全更新；
 - `adopted-local`：接管时发现既有本地内容，必须显式决议；
-- `project-override`：项目明确保留本地版本；框架新变化仅生成候选更新；
+- `project-override`：项目明确保留本地版本；框架变化仅生成候选更新；
 - `detached`：框架停止管理；
 - `project-owned`：框架只负责首次 seed，之后内容由项目维护，例如 archive manifest。
 
