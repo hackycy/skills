@@ -40,7 +40,7 @@
 - 每个执行事件先追加到当前 Gate history，再用该事件结果重写 Current Checkpoint。
 - Gate 通过后只在 Ledger 保留 `gate-passed` event locator；详细 slice 留在 history，后续 Goal 默认不读取。
 - 人工验收待确认时 Gate 保持 `active`，checkpoint 记录 acceptance id；当前 Goal 结束，不等待或轮询。
-- 当前 Gate 通过后只激活直接后继并结束本次 Goal；直接后继由新的 Goal 执行。
+- 当前 Gate 通过后只激活直接后继并结束本次 Goal；直接后继由后续 Goal 执行。
 ```
 
 不要在此重写项目约束、验证命令、回退策略或 Gate 合同。
@@ -92,7 +92,7 @@ checkpoint 是可重写压缩状态，不是历史。正常执行只保留继续
 ```markdown
 - Manual acceptance: `pending G2-A1`
 - Last event: `G2-E0013`
-- Next action: 等待用户在新的 Goal 中明确回复 G2-A1 的结果。
+- Next action: 等待用户在后续 Goal 中明确回复 G2-A1 的结果。
 ```
 
 blocked 时：
@@ -126,7 +126,7 @@ effort 完成时：
 - `Last event` 必须存在于对应 history。
 - `Satisfied exits` 只列计划真实存在且已有 history 证据的 Exit。
 - checkpoint 不复制已完成 slice 的逐条过程，只能做压缩摘要；历史事实通过 event id 引用。
-- 正常执行更新 checkpoint 时允许重写旧 checkpoint；不得为了“保留历史”追加第二份 checkpoint。
+- 正常执行更新 checkpoint 时允许重写现有 checkpoint；不得为了“保留历史”追加第二份 checkpoint。
 
 ## 原子状态转换
 

@@ -58,7 +58,7 @@ event id 固定为 `G<n>-E<4位连续序号>`，从 `E0001` 开始。允许类�
 - `blocked`：命中计划 Stop condition；
 - `resumed`：阻塞解除；
 - `manual-handoff`：自动化结束并交给人工验收；
-- `manual-result`：新的 Goal 收到明确人工验收结果；
+- `manual-result`：后续 Goal 收到明确人工验收结果；
 - `rollback`：执行计划声明的回退；
 - `gate-passed`：全部 Exit evidence 完成后的最终事件。
 
@@ -107,7 +107,7 @@ Slice id 在 Gate 内使用 `S1`、`S2`…。一个 slice 只包含一个行为�
 - Result: 自动化边界完成；验收入口为 <URL/入口>。
 - Satisfies: `none`
 - Risk: none
-- Next: 用户在新的 Goal 中回复 `G2-A1: pass` 或 `G2-A1: fail - <原因>`。
+- Next: 用户在后续 Goal 中回复 `G2-A1: pass` 或 `G2-A1: fail - <原因>`。
 ```
 
 runbook 同时写：
@@ -134,7 +134,7 @@ Gate 通过时不重写历史摘要，而是追加最终 `gate-passed` 事件：
 - Satisfies: `none`
 - Exit evidence: `E1=G2-E0008; E2=G2-E0011; E3=G2-E0015`
 - Risk: none
-- Next: activate G3 in a new Goal.
+- Next: activate G3 in a subsequent Goal.
 ```
 
 规则：

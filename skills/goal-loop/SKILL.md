@@ -38,11 +38,13 @@ disable-model-invocation: true
 
 项目命令与技术约束只写入计划，不进入固定 prompt。
 
+生成的计划、运行状态、固定 prompt 和最终回复应直接描述目标结构、行为或可观察结果。不得因重构而使用“新布局”“新结构”“新版”等相对措辞作为名称或描述；使用具体的职责、结构或行为名称。确需说明迁移差异或记录历史事实时，明确涉及的对象和变化。
+
 ## 编译轻量运行状态
 
 完整读取 [`references/runbook-schema.md`](references/runbook-schema.md) 和 [`references/history-schema.md`](references/history-schema.md)。
 
-新布局固定为：
+目录结构固定为：
 
 ```text
 <effort>/
@@ -99,7 +101,7 @@ Goal 启动采用最小加载：
 5. Current Checkpoint 重建为后继 Gate 的最小启动状态；若无后继则写 effort 完成；
 6. 显式结束当前 Goal，不得执行后继 Gate。
 
-Gate 通过后，其旧 slice 不得继续驻留 runbook。这是强制的 context compaction boundary。
+Gate 通过后，其已完成 slice 不得继续驻留 runbook。这是强制的 context compaction boundary。
 
 ## 人工验收
 
@@ -112,7 +114,7 @@ Gate 通过后，其旧 slice 不得继续驻留 runbook。这是强制的 conte
 3. Gate 继续保持 `active`；
 4. 当前 Goal 使用宿主成功终态结束，不等待、不轮询、不自唤醒。
 
-新 Goal 若发现 checkpoint 仍是 pending 且当前用户输入没有明确验收结果，只输出一次交接提醒并结束；不要加载代码或重跑验证。用户给出明确结果后，history 追加 `manual-result` 事件，再继续满足 Exit 或进入修复。
+后续 Goal 若发现 checkpoint 仍是 pending 且当前用户输入没有明确验收结果，只输出一次交接提醒并结束；不要加载代码或重跑验证。用户给出明确结果后，history 追加 `manual-result` 事件，再继续满足 Exit 或进入修复。
 
 ## 固定 prompt 与验证
 
