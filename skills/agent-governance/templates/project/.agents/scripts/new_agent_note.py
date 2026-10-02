@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从项目内模板创建单文件 Agent Note。仅使用 Python 标准库。"""
+"""从项目内模板并发安全地创建单文件 Agent Note。仅使用 Python 标准库。"""
 from __future__ import annotations
 
 import argparse
@@ -9,9 +9,6 @@ from pathlib import Path
 
 CLASSES = ("feature", "bug-fix", "simplification", "architecture", "process", "testing")
 LIFECYCLES = ("proposed", "implemented", "rejected")
-
-
-
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
@@ -41,16 +38,21 @@ def main() -> int:
 
     target_dir = root / ".agents" / "notes" / args.lifecycle / args.note_class
     target = target_dir / f"{args.date}-{slug}.md"
-    if target.exists():
-        p.error(f"目标 Note 已存在：{target}")
-
-    text = template.read_text(encoding="utf-8").replace("{{TITLE}}", args.title.strip())
     target_dir.mkdir(parents=True, exist_ok=True)
-    target.write_text(text, encoding="utf-8")
+    text = template.read_text(encoding="utf-8").replace("{{TITLE}}", args.title.strip())
+
+    try:
+        # mode='x' 使用 O_EXCL：多个 Agent 同时创建同名 Note 时只有一个能成功。
+        with target.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+            handle.flush()
+    except FileExistsError:
+        p.error(f"目标 Note 已存在（可能由另一个 Agent 刚刚创建）：{target}")
 
     print("已创建 Agent Note：")
     print(f"  - {target}")
-    print("下一步：先完成 supersession 检查，再填写真实决策内容，最后运行 verify_agent_notes.py。")
+    print("该模板故意包含 REQUIRED 占位符；在完成 supersession 检查并填写真实内容前，治理校验会失败。")
+    print("完成后运行：python3 .agents/scripts/governance_check.py --root .")
     return 0
 
 

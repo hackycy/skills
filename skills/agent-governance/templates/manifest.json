@@ -89,6 +89,11 @@
       "strategy": "replace-if-unmodified"
     },
     {
+      "source": "project/.agents/notes/archived/manifest.json",
+      "target": ".agents/notes/archived/manifest.json",
+      "strategy": "seed-project-owned"
+    },
+    {
       "source": "project/.agents/skills/agent-note/SKILL.md",
       "target": ".agents/skills/agent-note/SKILL.md",
       "strategy": "replace-if-unmodified"
@@ -129,6 +134,16 @@
       "strategy": "replace-if-unmodified"
     },
     {
+      "source": "project/.agents/scripts/archive_agent_note.py",
+      "target": ".agents/scripts/archive_agent_note.py",
+      "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "project/.agents/scripts/governance_check.py",
+      "target": ".agents/scripts/governance_check.py",
+      "strategy": "replace-if-unmodified"
+    },
+    {
       "source": "project/.agents/skills/agent-note/agents/openai.yaml",
       "target": ".agents/skills/agent-note/agents/openai.yaml",
       "strategy": "replace-if-unmodified"
@@ -157,6 +172,13 @@
       "source": "project/.claude/skills/project-governance/SKILL.md",
       "target": ".claude/skills/project-governance/SKILL.md",
       "strategy": "replace-if-unmodified"
+    },
+    {
+      "source": "integrations/github-actions.yml",
+      "target": ".github/workflows/agent-governance.yml",
+      "strategy": "replace-if-unmodified",
+      "optional": true,
+      "integration": "github-actions"
     }
   ],
   "user_owned_globs": [
@@ -164,6 +186,9 @@
     ".agents/notes/implemented/*/*.md",
     ".agents/notes/rejected/*/*.md",
     ".agents/notes/archived/*/*.md"
+  ],
+  "user_owned_files": [
+    ".agents/notes/archived/manifest.json"
   ],
   "note_classes": [
     "feature",

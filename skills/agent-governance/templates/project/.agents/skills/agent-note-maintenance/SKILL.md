@@ -8,29 +8,35 @@ description: 仅在用户明确要求维护 Agent Notes 时使用，包括审计
 
 ## Supersession 审计
 
-对每个新建或修改的 Note，按决策主题、关键机制、symbol/path、rejected alternative 和 ownership boundary 搜索活跃 Note。
+按 Scope、决策主题、关键机制、symbol/path、rejected alternative 和 ownership boundary 搜索活跃 Note，并分类为：
 
-对关联 Note 分为：
-
-- **keep active**：仍然独立约束未来选择；
-- **partial supersession**：两者都保留，并交叉链接具体边界；
-- **full supersession**：新 authority 已吸收旧 Note 所有仍有用的命题；
-- **obsolete proposal**：转 rejected 或删除，不留下未解决冲突；
-- **obsolete rejection**：旧警告已经不再现实或有用时删除。
+- **keep active**：仍独立约束未来选择；
+- **duplicate authority**：合并到已有 owner；
+- **partial supersession**：两者都保留，并用正文/`Related` 说明边界；
+- **full supersession**：新 authority 吸收旧 Note 仍有用的命题，并用 `Supersedes` 记录关系；
+- **obsolete proposal**：转 rejected 或删除；
+- **obsolete rejection**：guardrail 不再现实或有用时删除。
 
 ## Implemented Note 去留
 
-只有当记录最终证明只是机械/琐碎修改、没有长期 rationale 时才删除。只要 alternatives、兼容语义、trust/ownership、negative guarantee 或 reintroduction condition 仍能指导工作，就继续保持 active。
+只要 alternatives、兼容语义、trust/ownership、negative guarantee、reintroduction condition 或长期验证仍能指导未来工作，就继续保持 active。年龄和字数不能决定 archive。
 
-只有在“决策有历史价值，但已经不是当前 authority，也基本不会继续指导未来设计”时 archive。年龄和字数只能帮助发现候选，不能直接决定 archive。
+只有当“决策有历史价值，但已经不是当前 authority、也基本不会继续指导未来设计”时 archive。
 
-## 归档流程
+## 归档
 
-1. 确认 Note 已 implemented 且不再是当前 authority。
-2. 把单个 `.md` 文件从 `implemented/<class>/` 移到 `archived/<class>/`。
-3. 在 `Status: implemented` 下增加 `Archived: YYYY-MM-DD`。
-4. 修复活跃入站链接：优先指向当前 authority；只有明确历史引用才指向 archive。
-5. 完成归档后将该文件视为冻结内容。
-6. 运行 verifier。
+先修复所有活跃入站引用：当前规则应指向新的 authority；只有明确的历史引用才应该继续指向 archive。然后运行：
 
-不要 archive 活跃 proposal。不会继续推进的 proposal 应转 rejected，或在从未形成长期价值时直接删除。
+```bash
+python3 .agents/scripts/archive_agent_note.py \
+  .agents/notes/implemented/<class>/YYYY-MM-DD-topic.md \
+  --root .
+```
+
+归档脚本负责 lifecycle move、`Archived:` 日期和 `archived/manifest.json` SHA-256 seal。不要手工修改 archive manifest，不要给后来改写过的历史重新 seal。
+
+最后运行：
+
+```bash
+python3 .agents/scripts/governance_check.py --root .
+```
