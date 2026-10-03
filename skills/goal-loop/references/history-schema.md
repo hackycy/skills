@@ -1,68 +1,61 @@
 # Goal History Schema
 
-`goal/history/G<n>.md` 是单个 Gate 的 append-only 冷历史。它记录可追溯事实，不决定 Gate 当前状态；Gate 状态只由 `goal/runbook.md` 的 Goal Ledger 决定。
+`goal/history/G<n>.md` 是单个 Gate 的 append-only 证据历史。它记录执行事实和 Exit evidence，不决定 Gate 当前状态；Gate 状态由 `goal/runbook.md` 的 Goal Ledger 决定。
+
+Schema: `goal-loop/history-v2`
 
 ## 生命周期
 
-- Gate 第一次从 `planned` 变为 `active` 时创建文件并追加 `initialized` 事件。
-- `active` / `blocked` 期间只在文件末尾追加事件，不改写已有字节。
-- Gate `passed` 后文件进入 cold history；后续 Goal 默认不加载。
-- 历史事实需要修正时追加 `correction` 事件，引用被修正 event id；不得悄悄修改旧事件。
+- Gate 从 `planned` 进入 `active` 时创建文件并追加 `initialized` event。
+- `active` / `blocked` 期间只在文件末尾追加 event；历史事实需要修正时追加 `correction`，不得改写旧 event。
+- 每个 event 包含 `Prev event hash` 与 `Event hash`。validator 重算 hash chain，并要求 runbook 的 `History head` 等于 history tail hash。
+- Gate `passed` 后 history 进入冷存储；后续 Goal 默认不加载。
+- hash chain 用于发现控制面内部的历史改写或断链；需要抵抗能够同时重写全部控制文件的修改时，应依赖 Git commit、只读存储或其他外部不可变锚点。
 
 ## 文件结构
 
 ```markdown
 # G2: <名称> History
 
-Schema: `goal-loop/history-v1`
+Schema: `goal-loop/history-v2`
 Plan contract: `implementation-plan.md` -> `G2: <名称>`
 
 ## Events
 
 ### G2-E0001 · initialized
 
-- At: `2026-10-02`
-- Type: `initialized`
-- Slice: `none`
+- At: 2026-10-03
+- Type: initialized
+- Slice: none
 - Changed: none
 - Verification: none
 - Result: Gate activated; implementation has not started.
-- Satisfies: `none`
+- Satisfies: none
 - Risk: none
-- Next: <第一个 slice 或准备动作>
-
-### G2-E0002 · slice
-
-- At: `2026-10-02`
-- Type: `slice`
-- Slice: `S1`
-- Changed: `src/a.ts`, `src/b.ts`
-- Verification: `directed-parser=PASS`
-- Result: <可观察结果>
-- Satisfies: `E1`
-- Risk: none
-- Next: <下一动作>
+- Next: select the first slice from the Gate contract
+- Prev event hash: none
+- Event hash: <64 位小写十六进制>
 ```
 
-事件永远追加在 `## Events` 之后；文件不维护需要重写的“当前状态表”。
-
-## Event 规则
+## Event id 与字段
 
 event id 固定为 `G<n>-E<4位连续序号>`，从 `E0001` 开始。允许类型：
 
 - `initialized`：Gate 激活；
-- `slice`：一个最小 slice 完成或形成稳定检查点；
+- `slice`：一个最小 slice 完成并形成稳定事实；
 - `verification`：独立验证结果；
-- `failure`：验证或实现失败以及已知诊断；
-- `correction`：修正旧 event 的事实，不删除旧 event；
+- `failure`：实现或验证失败及已知诊断；
+- `checkpoint`：在稳定且已验证的恢复点结束当前 Goal，Gate 保持 `active`；
+- `correction`：修正既有 event；
 - `blocked`：命中计划 Stop condition；
 - `resumed`：阻塞解除；
-- `manual-handoff`：自动化结束并交给人工验收；
-- `manual-result`：后续 Goal 收到明确人工验收结果；
-- `rollback`：执行计划声明的回退；
-- `gate-passed`：全部 Exit evidence 完成后的最终事件。
+- `manual-handoff`：自动化边界完成并交给人工验收；
+- `manual-result`：收到明确的人工验收结果；
+- `rollback`：执行计划声明的回退动作；
+- `contract-reconciled`：合同输入文件变化后，显式确认计划合同仍有效并刷新 baseline；
+- `gate-passed`：全部 Exit evidence 完成后的状态转换摘要。
 
-每个事件至少记录：
+每个 event 至少记录：
 
 - `At`
 - `Type`
@@ -73,41 +66,57 @@ event id 固定为 `G<n>-E<4位连续序号>`，从 `E0001` 开始。允许类�
 - `Satisfies`
 - `Risk`
 - `Next`
+- `Prev event hash`
+- `Event hash`
 
-`Satisfies` 只能写当前 Gate 计划中真实存在的 Exit id；没有时写 `none`。字段内容应简短，不得把整个对话、思考过程或无关代码摘录写入 history。目标是记录事实和证据，不是 Agent 日记。
+`Satisfies` 只能写当前 Gate 真实存在的 Exit id；没有时写 `none`。字段只记录事实和证据，不记录思考过程或完整对话。
 
-## Slice 与 checkpoint
+`Event hash` 使用以下 canonical payload 的 SHA-256：event id、event type，以及除 `Event hash` 外按字段名排序的字段键值。`Prev event hash` 参与当前 event hash 计算；首个 event 使用 `none`。
 
-Slice id 在 Gate 内使用 `S1`、`S2`…。一个 slice 只包含一个行为或调用簇。
+## checkpoint event
 
-完成事件后，runbook checkpoint 只保留：
+当一个稳定、已验证的 slice 已完成，而下一 slice 不适合在当前 Goal 的剩余上下文或工具预算中完整完成时，可以追加：
 
-- 最近 event id；
-- 最近完成 slice / 当前 slice；
-- 已由 event `Satisfies` 证明的 Exit id；
-- 当前风险 / blocker；
-- manual acceptance；
-- 下一动作。
+```markdown
+### G2-E0010 · checkpoint
 
-不要把 event 正文复制到 checkpoint。
+- At: 2026-10-03
+- Type: checkpoint
+- Slice: none
+- Changed: none
+- Verification: repository=PASS
+- Result: S6 已完成并验证；执行状态可从 S7 恢复。
+- Satisfies: none
+- Risk: none
+- Next: execute S7 from the current Gate contract
+- Prev event hash: <G2-E0009 hash>
+- Event hash: <当前 event hash>
+```
+
+随后重写 runbook checkpoint，运行 validator，并以 Gate 仍为 `active` 的状态成功结束当前 Goal。`checkpoint` 不是失败，也不是 `blocked`。
+
+## correction 与证据失效
+
+`correction` 必须引用一个更早的 event：
+
+```markdown
+- Corrects: G2-E0008
+- Evidence effect: invalidate
+```
+
+`Evidence effect` 只允许：
+
+- `retain`：修正描述性事实，但被引用 event 仍可作为 Exit evidence；
+- `invalidate`：被引用 event 不再计入有效 Exit evidence。
+
+如果 correction 本身重新证明某个 Exit，可以在 correction 的 `Satisfies` 中写对应 Exit id。validator 计算的是 effective evidence，而不是所有历史 `Satisfies` 的简单并集。
 
 ## Manual acceptance
 
-`manual-handoff` 事件增加稳定 acceptance id：
+`manual-handoff` 必须带稳定 acceptance id：
 
 ```markdown
-### G2-E0013 · manual-handoff
-
-- At: `2026-10-02`
-- Type: `manual-handoff`
-- Slice: `none`
-- Acceptance: `G2-A1`
-- Changed: none
-- Verification: `repository=PASS`
-- Result: 自动化边界完成；验收入口为 <URL/入口>。
-- Satisfies: `none`
-- Risk: none
-- Next: 用户在后续 Goal 中回复 `G2-A1: pass` 或 `G2-A1: fail - <原因>`。
+- Acceptance: G2-A1
 ```
 
 runbook 同时写：
@@ -116,44 +125,33 @@ runbook 同时写：
 - Manual acceptance: `pending G2-A1`
 ```
 
-收到结果时追加 `manual-result`；通过时该 event 的 `Satisfies` 写它实际证明的 Exit。不得修改 handoff 事件。
+`manual-result` 必须引用同一个 `Acceptance`。每个 acceptance id 只能 handoff 一次、result 一次。待验收期间 Gate 保持 `active`，当前 Goal 结束且不轮询。
+
+## blocked / resumed
+
+`blocked` 只用于计划声明的 Stop condition。history 状态转换必须满足：
+
+```text
+active -> blocked -> resumed -> active
+```
+
+不能在没有 `blocked` 的情况下追加 `resumed`；Ledger 从 `blocked` 返回 `active` 时必须已有对应的 `resumed` event。
 
 ## Gate 通过事件
 
-Gate 通过时不重写历史摘要，而是追加最终 `gate-passed` 事件：
+`gate-passed` 必须是 passed Gate 的唯一且最后一个 event，并包含完整映射：
 
 ```markdown
-### G2-E0016 · gate-passed
-
-- At: `2026-10-02`
-- Type: `gate-passed`
-- Slice: `none`
-- Changed: none
-- Verification: `final-repository=PASS`
-- Result: all Gate exit conditions satisfied.
-- Satisfies: `none`
-- Exit evidence: `E1=G2-E0008; E2=G2-E0011; E3=G2-E0015`
-- Risk: none
-- Next: activate G3 in a subsequent Goal.
+- Exit evidence: E1=G2-E0008; E2=G2-E0011; E3=G2-E0015
 ```
 
 规则：
 
-- `Exit evidence` 的 Exit id 必须与 plan 当前 Gate 的 Exit conditions 完全一致。
-- 每个 evidence event 必须已存在于本文件，且该 event 的 `Satisfies` 包含对应 Exit。
-- `gate-passed` 不能引用自己作为 Exit evidence。
-- Goal Ledger 的 `Unlock evidence` 写为 `goal/history/G2.md@G2-E0016`。
-- `gate-passed` 是状态转换摘要，不替代被引用的验证/人工证据。
+- Exit id 必须与计划当前 Gate 的 Exit conditions 完全一致。
+- 每个 evidence event 必须存在、未被 invalidating correction 失效，并且其 `Satisfies` 包含对应 Exit。
+- `gate-passed` 不能引用自己作为 evidence。
+- Goal Ledger 的 `Unlock evidence` 使用 `goal/history/G2.md@G2-E0016#<event-hash>`，同时绑定 event id 与 event hash。
 
 ## 读取策略
 
-正常 Goal 不读取完整 history。只在以下情况按需读取相关 event：
-
-- checkpoint 引用不足以继续；
-- 验证失败需要定位最近修改；
-- rollback；
-- 人工验收结果处理；
-- validator 报告 event / evidence 引用异常；
-- 用户要求审计历史。
-
-passed Gate history 默认不读。历史很大时，应优先按 event id、Exit id 或最近相关 slice 定位，而不是从头读取。
+正常 Goal 不读取完整 history。只在 checkpoint 信息不足、验证失败诊断、rollback、人工验收结果处理、证据核验、baseline reconcile、validator 报错或用户要求审计时，按 event id / Exit id 读取必要片段。passed Gate history 默认不加载。

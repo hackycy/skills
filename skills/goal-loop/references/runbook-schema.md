@@ -1,142 +1,177 @@
 # Goal Runbook Schema
 
-`goal/runbook.md` 是轻量热状态。稳定 Gate 合同保留在 `implementation-plan.md`；完整 slice、失败诊断、验证过程和人工验收事件保留在 `goal/history/G<n>.md`。runbook 不得充当 append-only 日志。
+`goal/runbook.md` 是轻量热状态。Gate 合同保留在 `implementation-plan.md`；完整 slice、失败诊断、验证过程和人工验收事件保留在 `goal/history/G<n>.md`。
+
+Schema: `goal-loop/runbook-v3`
 
 ## 顶层结构
 
 固定顺序：
 
 1. `# <effort 名称> Goal Runbook`
-2. `Schema: \`goal-loop/runbook-v2\``
-3. `## Source Baseline`
-4. `## State Rules`
-5. `## Goal Ledger`
-6. `## Current Checkpoint`
+2. `Schema: \`goal-loop/runbook-v3\``
+3. `Revision: \`<非负整数>\``
+4. `## Contract Baseline`
+5. `## State Rules`
+6. `## Goal Ledger`
+7. `## Current Checkpoint`
 
-## Source Baseline
+## Revision
+
+`Revision` 是运行态的 optimistic concurrency token。任何 state mutation 都必须读取当前 Revision，并通过 `goal_loop_ctl.py --expected-revision <n>` 提交。成功操作把 Revision 增加 1；不匹配的写入必须拒绝。
+
+`bootstrap` 创建 Revision `0`。
+
+## Contract Baseline
+
+固定为：
 
 ```markdown
-| Path | SHA-256 |
-| --- | --- |
-| `<repo-relative-effort>/implementation-plan.md` | `<64 位小写十六进制>` |
+## Contract Baseline
+
+- Manifest: `goal/contract-baseline.json`
+- Manifest SHA-256: `<64 位小写十六进制>`
+```
+
+`goal/contract-baseline.json` 使用 schema `goal-loop/contract-baseline-v1`：
+
+```json
+{
+  "files": [
+    {
+      "path": "docs/spec.md",
+      "sha256": "<64-hex>"
+    },
+    {
+      "path": "efforts/example/implementation-plan.md",
+      "sha256": "<64-hex>"
+    }
+  ],
+  "schema": "goal-loop/contract-baseline-v1"
+}
 ```
 
 规则：
 
-- 路径相对仓库根目录，使用 POSIX 分隔符并按字典序排列。
-- 包含 effort 的 `implementation-plan.md` 以及实际参与计划的上下文、map/spec、ADR、decision、issue 和验收依赖文档。Baseline 路径一律相对仓库根目录；runbook/history 内部运行态引用则相对 effort。
-- 哈希覆盖原始字节。
-- 验证时路径集合和哈希必须一致；漂移时保持 Ledger 与 checkpoint 原样并停止。
-- 排除 `goal/` 下所有运行态文件和便利性派生产物。
+- 路径相对仓库根目录、使用 POSIX 分隔符、按字典序排列且不得重复。
+- 路径集合必须精确等于 `implementation-plan.md` 的 `Contract Sources` 加上计划文件自身。
+- 每个哈希覆盖对应文件原始字节。
+- runbook 中保存 manifest 文件自身的 SHA-256。
+- 合同输入漂移时 validator 失败，Ledger 和 checkpoint 保持不变。
+- 如果 `implementation-plan.md` 内容发生变化，必须重新审查和编译 Gate 合同；`reconcile-baseline` 不允许只刷新计划文件哈希。
+- 如果计划文件未变化、Contract Sources 路径集合未变化，并且操作者明确确认现有 Gate 合同仍有效，可运行 `reconcile-baseline --confirm-plan-valid --reason ...`。该操作刷新合同输入哈希、追加 `contract-reconciled` event、更新 History head 和 Revision。
 
 ## State Rules
 
-生成的 runbook 只写以下规则：
-
-```markdown
-- `implementation-plan.md` 是 Gate 合同唯一来源；本账本只保存当前状态和压缩 checkpoint。
-- `goal/history/G<n>.md` 是对应 Gate 的 append-only 事件与证据历史；默认不进入 Goal 启动上下文。
-- 一次只执行 Goal Ledger 中唯一 `active` 的 Gate；`blocked` 只用于计划声明的 Stop condition。
-- 每个执行事件先追加到当前 Gate history，再用该事件结果重写 Current Checkpoint。
-- Gate 通过后只在 Ledger 保留 `gate-passed` event locator；详细 slice 留在 history，后续 Goal 默认不读取。
-- 人工验收待确认时 Gate 保持 `active`，checkpoint 记录 acceptance id；当前 Goal 结束，不等待或轮询。
-- 当前 Gate 通过后只激活直接后继并结束本次 Goal；直接后继由后续 Goal 执行。
-```
-
-不要在此重写项目约束、验证命令、回退策略或 Gate 合同。
+runbook 必须逐字包含 validator 中定义的八条 State Rules。控制脚本每次写 runbook 时会按固定顺序重新生成这些规则。项目约束、验证命令、回退策略或 Gate 合同不得写入此处。
 
 ## Goal Ledger
 
 固定表格：
 
 ```markdown
-| Gate | Status | Depends on | Plan contract | History | Unlock evidence |
-| --- | --- | --- | --- | --- | --- |
-| G0: <名称> | active | none | `implementation-plan.md` -> `G0: <名称>` | `goal/history/G0.md` | no predecessor |
-| G1: <名称> | planned | G0 | `implementation-plan.md` -> `G1: <名称>` | — | G0 pending |
+| Gate | Status | Depends on | Plan contract | History | History head | Unlock evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| G0: Prepare | active | none | `implementation-plan.md -> G0: Prepare` | `goal/history/G0.md` | `<tail-hash>` | `no predecessor` |
+| G1: Finish | planned | G0 | `implementation-plan.md -> G1: Finish` | `—` | `—` | `G0 pending` |
 ```
 
 规则：
 
 - Gate 从 G0 连续编号；G0 无依赖，每个后继只依赖紧邻前驱。
-- 状态仅允许 `planned`、`active`、`blocked`、`passed`。
-- 合法形状只有 `passed* active planned*`、`passed* blocked planned*` 或 `passed+`。
-- `active` / `blocked` Gate 必须有 history 文件；`passed` Gate 必须有 history 和 `gate-passed` event locator。
-- `planned` Gate 尚未激活时不要求创建 history。
-- `Plan contract` 编号和名称必须与计划标题完全一致。
-- `Unlock evidence` 对 passed Gate 使用 `<history-path>@<gate-passed-event-id>`；后继激活时记录同一个前驱 locator。
+- 状态只允许 `planned`、`active`、`blocked`、`passed`。
+- 合法形状只有 `passed* active planned*`、`passed* blocked planned*` 或全部 `passed`。
+- `active` / `blocked` / `passed` Gate 必须有 history；`History head` 必须等于 history tail event hash。
+- `planned` Gate 的 History 和 History head 必须为空标记。
+- `passed` Gate 必须有且只有一个最终 `gate-passed` event。
+- passed Gate 的 `Unlock evidence` 使用 `<history-path>@<gate-passed-event-id>#<event-hash>`。
+- 后继 Gate 激活时复用直接前驱的 `Unlock evidence`。
 
 ## Current Checkpoint
 
-checkpoint 是可重写压缩状态，不是历史。正常执行只保留继续当前 Gate 所需事实。
-
-当前 Gate 存在时：
+存在当前 Gate 时：
 
 ```markdown
 ## Current Checkpoint
 
 - Gate: `G2: <名称>`
 - History: `goal/history/G2.md`
+- History head: `<tail-hash>`
 - Last event: `G2-E0012`
 - Last completed slice: `S8`
 - Current slice: `S9`
 - Satisfied exits: `E1, E2`
 - Manual acceptance: `none`
 - Blocker: `none`
-- Risks: <无或压缩后的当前风险>
-- Next action: <一个明确动作>
+- Risks: `<压缩后的当前风险或 none>`
+- Next action: `<一个明确动作>`
 ```
 
-人工验收交接后：
+约束：
+
+- `Last event` 必须等于当前 history 的 tail event，而不仅仅是“存在于 history”。
+- `History head` 必须等于 tail event 的 `Event hash`。
+- `Satisfied exits` 必须与当前 history 的 effective evidence 精确一致；`all` 等价于计划中全部 Exit，不能绕过 evidence 校验。
+- pending manual acceptance 必须与 history 中唯一未解决的 acceptance id 一致。
+- checkpoint 只保存继续执行需要的压缩事实，不复制事件正文。
+
+人工验收 pending 时：
 
 ```markdown
 - Manual acceptance: `pending G2-A1`
-- Last event: `G2-E0013`
-- Next action: 等待用户在后续 Goal 中明确回复 G2-A1 的结果。
+- Next action: `wait for explicit result for G2-A1`
 ```
 
-blocked 时：
+blocked 时必须有非空 `Blocker`；恢复时必须先追加 `resumed` event，再把 Ledger 改回 `active` 并清空 Blocker。
+
+完成态：
 
 ```markdown
-- Gate: `G2: <名称>`
-- Blocker: <命中的 Stop condition 与恢复所需输入>
-- Next action: <恢复后第一个动作>
-```
-
-effort 完成时：
-
-```markdown
-## Current Checkpoint
-
 - Gate: `none`
 - History: `none`
-- Last event: `<最后 Gate 的 gate-passed event>`
+- History head: `<最后 Gate 的 gate-passed hash>`
+- Last event: `<最后 Gate 的 gate-passed event id>`
 - Last completed slice: `none`
 - Current slice: `none`
 - Satisfied exits: `all`
 - Manual acceptance: `none`
 - Blocker: `none`
-- Risks: none
-- Next action: effort complete
+- Risks: `none`
+- Next action: `effort complete`
 ```
 
-约束：
+## 稳定 checkpoint 与 Goal 结束
 
-- checkpoint 必须与 Ledger 中唯一 `active` / `blocked` Gate 对齐；完成态则 Ledger 全部 `passed`。
-- `Last event` 必须存在于对应 history。
-- `Satisfied exits` 只列计划真实存在且已有 history 证据的 Exit。
-- checkpoint 不复制已完成 slice 的逐条过程，只能做压缩摘要；历史事实通过 event id 引用。
-- 正常执行更新 checkpoint 时允许重写现有 checkpoint；不得为了“保留历史”追加第二份 checkpoint。
+稳定且已验证的 slice 完成后，如果下一 slice 不适合在当前 Goal 的剩余上下文或工具预算中完整完成，使用 control script 追加 `checkpoint` event、刷新 runbook 并运行 validator。validator 通过后当前 Goal 可以成功结束，Gate 保持 `active`。后续 Goal 从该 checkpoint 开始，不需要加载完整 history。
 
-## 原子状态转换
+## 状态写入与事务恢复
 
-Gate 通过时：
+所有运行态修改使用 `scripts/goal_loop_ctl.py`。脚本：
 
-1. 当前 history 追加最终 verification event，并用 `Satisfies` 标明它证明的 Exit。
-2. history 追加 `gate-passed` event；其 `Exit evidence` 字段必须完整映射计划全部 Exit 到既有 evidence event。
-3. Ledger 当前 Gate `active -> passed`，Unlock evidence 写为 `<history-path>@<gate-passed-event-id>`。
-4. 若存在后继：创建其 history 初始化 event，`planned -> active`，Current Checkpoint 重建为后继的最小启动状态。
-5. 若无后继：Current Checkpoint 切为 effort complete。
-6. 运行 validator；通过后显式结束整个 Goal，不执行后继。
+1. 校验当前控制面；
+2. 校验 `--expected-revision`；
+3. 对 history / runbook / baseline 等目标文件生成完整目标字节；
+4. 写入 `goal/.goal-loop-transaction.json`；
+5. 使用原子文件替换写入目标内容；
+6. 运行 validator；
+7. 成功后删除 transaction journal；失败则恢复操作前字节。
 
-普通验证失败保持当前 Gate `active`，只追加 history event 并更新 checkpoint。源码漂移、状态无效或证据缺失时不得转换状态。
+如果宿主在多文件提交过程中中断，validator 会报告 pending transaction。运行：
+
+```bash
+python3 <skill-dir>/scripts/goal_loop_ctl.py recover <effort-path>
+```
+
+恢复命令会先尝试完成 transaction 并验证；目标状态无效时恢复操作前状态。
+
+## Gate 通过
+
+`pass-gate` 操作负责：
+
+1. 确认当前 Gate 为 `active`，没有 pending manual acceptance，并且所有 Exit 都有 effective evidence；
+2. 追加最终 `verification` event；
+3. 追加唯一的 `gate-passed` event，并完整映射 Exit evidence；
+4. 把当前 Ledger 行改为 `passed`，写入 event locator 与 History head；
+5. 有直接后继时创建其 `initialized` history、把后继改为 `active`、重建 checkpoint；没有后继时写 effort complete；
+6. Revision 增加 1，完成 transaction 并运行 validator；
+7. 当前 Goal 结束，不执行后继 Gate。

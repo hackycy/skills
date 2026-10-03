@@ -1,48 +1,55 @@
 ---
 name: goal-loop
-description: 将已收敛的 map、ADR、spec 或 implementation plan 编译为 Gate 合同、轻量运行账本、按 Gate 归档的执行历史和跨轮复用的固定执行提示词。
+description: 将已收敛的 map、ADR、spec 或 implementation plan 编译为 Gate 合同、精确合同输入基线、可恢复运行账本、按 Gate 归档的证据历史和跨轮复用的固定执行提示词。
 disable-model-invocation: true
 ---
 
 # Goal Loop
 
-把已收敛的决策文档编译成执行控制面。核心原则是让 Gate 同时成为执行边界和上下文压缩边界：当前状态保持小而稳定，历史证据按 Gate 冷存储，需要追溯时再按引用读取。
+把已收敛的决策文档编译成长期 Agent 执行控制面。Gate 是执行边界和上下文压缩边界；稳定 slice 也可以成为跨 Goal 的恢复边界。模型判断语义事实，控制脚本负责运行态写入和状态转换。
 
-生成四类工件：
+生成五类工件：
 
-- `implementation-plan.md`：稳定的 Gate 合同，回答做什么、边界是什么、如何验证和何时停止。
-- `goal/runbook.md`：唯一的当前执行状态，只保存 Source Baseline、Goal Ledger 和当前 Gate checkpoint；不得累积完整执行历史。
-- `goal/history/G<n>.md`：对应 Gate 的 append-only 执行事件与 Exit evidence。历史默认不进入启动上下文。
-- `goal/prompt.md`：方便人工复制的固定入口，只指向计划和轻量 runbook；不绑定具体 Gate，不复制合同或历史。
+- `implementation-plan.md`：稳定 Gate 合同；
+- `goal/contract-baseline.json`：合同输入文件及 SHA-256；
+- `goal/runbook.md`：唯一当前状态、Revision、Goal Ledger 和压缩 checkpoint；
+- `goal/history/G<n>.md`：按 Gate 分离、带 event hash chain 的 append-only 证据历史；
+- `goal/prompt.md`：跨 Gate 固定执行入口。
 
-本 skill 只建立或验证执行控制面，不实施 Gate，不重做已批准决策。
+本 skill 只建立、恢复、reconcile 或验证执行控制面，不实施 Gate，不重做已经批准的产品决策。
 
-## 定位输入
+## 定位与收敛条件
 
-用户提供 effort 目录、`map.md`、ADR/spec 或已有 `implementation-plan.md`。解析 Git 仓库根目录并定位 effort；无法唯一定位时停止，列出检查过的路径。
+用户提供 effort 目录、`map.md`、ADR/spec 或已有 `implementation-plan.md`。解析 Git 仓库根目录并唯一定位 effort；无法唯一定位时停止并列出检查过的路径。
 
 读取适用的 `CLAUDE.md`、`AGENTS.md`、`CONTEXT.md` / `CONTEXT-MAP.md`，以及 effort 中的 map、spec、implementation plan 和它们链接的本地 ADR、decision、issue 与验收依赖。`CONTEXT.md` 只提供术语和领域事实，不单独产生 Gate。
 
 支持两种已收敛入口：
 
-- **Decision-only**：Gate、范围、验证和 Exit 能从已接受 ADR、spec 或已解决 issue 得到。
+- **Decision-only**：Gate、范围、验证和 Exit 能从已接受 ADR、spec 或已解决 issue 得到；
 - **Wayfinder**：map 的 `Not yet specified` 为空或明确为“无”，参与执行顺序和验收的 decision 全部已解决。
 
-本地决策链接缺失、ADR 未接受、decision 未解决，或文档仍有 `TBD`、`TODO`、open question、pending decision 时停止，逐项报告缺口。不得用经验补齐产品决定、验收政策或回退边界。
+本地决策链接缺失、ADR 未接受、decision 未解决，或仍有 `TBD`、`TODO`、open question、pending decision 时停止并逐项报告缺口。不得用经验补齐产品决定、验收政策或回退边界。
 
-## 编译计划
+## 编译 implementation plan
 
-若 `implementation-plan.md` 不存在，完整读取 [`references/implementation-plan-schema.md`](references/implementation-plan-schema.md)，从已收敛决策生成计划。若已存在，只读取和验证，不覆盖。
+若 `implementation-plan.md` 不存在，完整读取 [`references/implementation-plan-schema.md`](references/implementation-plan-schema.md) 并从已收敛决策生成计划。若已存在，只读取和验证，不覆盖。
 
-计划独占所有稳定 Gate 合同：Objective、Inputs、Scope boundary、Constraints、Slice policy、Verification、Evidence rule、Stop conditions、Rollback 和 Exit conditions。Exit conditions 使用 Gate 内连续的 `E1`、`E2`… 标识；Evidence rule 必须逐项说明这些 Exit 所需证据。
+计划必须包含 `Contract Sources`，精确列出实际参与 Gate 合同形成的仓库文件。Gate 合同独占 Purpose、Inputs、Objective、Scope boundary、Constraints、Slice policy、Verification、Evidence rule、Stop conditions、Rollback 和 Exit conditions。Exit id 在 Gate 内从 `E1` 连续编号，Evidence rule 必须逐项覆盖。
 
-项目命令与技术约束只写入计划，不进入固定 prompt。
+项目命令和技术约束只写入计划，不进入固定 prompt。
 
-生成的计划、运行状态、固定 prompt 和最终回复应直接描述目标结构、行为或可观察结果。不得因重构而使用“新布局”“新结构”“新版”等相对措辞作为名称或描述；使用具体的职责、结构或行为名称。确需说明迁移差异或记录历史事实时，明确涉及的对象和变化。
+文档、UI 文案、脚本输出和最终回复直接描述具体结构、行为或可观察结果。不得因重构使用“新布局”“新结构”“新版”等相对名称；说明差异时明确文件、字段、状态或行为以及具体变化。
 
-## 编译轻量运行状态
+## 编译执行控制面
 
-完整读取 [`references/runbook-schema.md`](references/runbook-schema.md) 和 [`references/history-schema.md`](references/history-schema.md)。
+完整读取：
+
+- [`references/runbook-schema.md`](references/runbook-schema.md)
+- [`references/history-schema.md`](references/history-schema.md)
+- [`references/contract-baseline-schema.md`](references/contract-baseline-schema.md)
+- [`references/control-script.md`](references/control-script.md)
+- [`references/goal-prompt-template.md`](references/goal-prompt-template.md)
 
 目录结构固定为：
 
@@ -50,6 +57,7 @@ disable-model-invocation: true
 <effort>/
 ├── implementation-plan.md
 └── goal/
+    ├── contract-baseline.json
     ├── runbook.md
     ├── prompt.md
     └── history/
@@ -58,76 +66,81 @@ disable-model-invocation: true
         └── ...
 ```
 
-`goal/runbook.md` 是热状态，不是日志。它只能包含：
+使用确定性 bootstrap：
 
-1. schema version；
-2. 源码基线；
-3. 稳定状态规则；
-4. 唯一 Goal Ledger；
-5. 当前 `active` / `blocked` Gate 的 checkpoint，或 effort 完成标记。
+```bash
+python3 <skill-dir>/scripts/goal_loop_ctl.py bootstrap <effort-path>
+```
 
-禁止在 runbook 中追加每个 slice 的完整过程、失败调试记录、已通过 Gate 的详细历史或重复 Gate 合同。
+bootstrap 从 `Contract Sources + implementation-plan.md` 生成 baseline，创建 Revision `0` 的 runbook、G0 initialized history、History head 和固定 prompt，并在提交后运行 validator。不得手工计算 event hash、Revision 或 Gate 状态转换。
 
-`goal/history/G<n>.md` 是冷历史。Gate 第一次变为 `active` 时创建；之后只追加结构化事件。`passed` Gate 的详细过程只保留在对应 history 文件中，后续 Goal 默认不得读取。
+## Contract Baseline
 
-每次 slice 或重要状态事件完成后：
+每次执行前运行 validator。baseline 路径集合、每个合同输入文件哈希和 manifest 自身哈希必须一致。
 
-1. 向当前 Gate history 追加一个事件；
-2. 用该事件结果重写 runbook 的 Current Checkpoint；
-3. checkpoint 只保存继续执行所需的压缩事实、最近事件引用、已满足 Exit、风险、人工验收状态和下一动作；
-4. 不把历史正文复制回 runbook。
+漂移处理遵守 [`references/contract-baseline-schema.md`](references/contract-baseline-schema.md)：
 
-## 上下文加载规则
+- `implementation-plan.md` 内容变化：重新审查并编译 Gate 合同；
+- Contract Sources 路径集合变化：重新审查并编译计划；
+- 计划内容和路径集合均未变化：只有明确确认现有 Gate 合同仍有效后，才能使用 `reconcile-baseline` 刷新输入哈希。
 
-Goal 启动采用最小加载：
+漂移未解决前保持 Ledger 与 checkpoint 不变，不实施 Gate。
 
-1. 先读 `goal/runbook.md`，锁定唯一 `active` Gate；若为 `blocked`，只处理恢复条件。
-2. 读 `implementation-plan.md` 中当前 Gate 的合同和必要的 Source Decisions。
-3. 读当前 Gate checkpoint 指向的必要代码入口。
-4. 默认不读取 `goal/history/`。
-5. 只有在 checkpoint 信息不足、验证失败需要诊断、执行 rollback、核验证据、处理人工验收结果或状态一致性异常时，才按 event / Exit 引用读取当前 Gate history 的必要片段。
-6. `passed` Gate history 永不默认加载；只有当前 Gate 合同明确依赖其证据且 runbook 引用不足时才读取。
+## 运行态只通过 control script 写入
 
-因此历史规模可以随项目增长，但正常启动上下文应主要由 `runbook + 当前 Gate contract + 当前代码` 决定，而不是由累计 slice 数决定。
+`goal/runbook.md` 是热状态，不是日志；`goal/history/G<n>.md` 是冷历史。所有运行态修改使用 [`scripts/goal_loop_ctl.py`](scripts/goal_loop_ctl.py)，并携带当前 runbook Revision。陈旧 Revision 必须拒绝。
 
-## Gate 通过即压缩
+控制脚本负责 `record`、`correct`、`block` / `resume`、`manual-handoff` / `manual-result`、`pass-gate`、`reconcile-baseline` 与 `recover`。多文件操作使用 transaction journal；宿主中断留下 `goal/.goal-loop-transaction.json` 时，先执行 `recover`，不得继续 Gate 实现。
 
-当前 Gate 满足全部 Exit conditions 后，在同一次状态转换中：
+## 最小上下文加载
 
-1. history 追加最终验证事件，并在相关事件的 `Satisfies` 字段标明所证明的 Exit；
-2. history 追加 `gate-passed` 事件，其中 `Exit evidence` 显式映射每个 Exit 到既有 evidence event；
-3. Ledger 将当前 Gate 改为 `passed`，并仅保留 `gate-passed` event locator；
-4. 若有后继，创建其 history 初始化事件并将后继改为 `active`；
-5. Current Checkpoint 重建为后继 Gate 的最小启动状态；若无后继则写 effort 完成；
-6. 显式结束当前 Goal，不得执行后继 Gate。
+Goal 启动：
 
-Gate 通过后，其已完成 slice 不得继续驻留 runbook。这是强制的 context compaction boundary。
+1. 读取 `goal/runbook.md`，锁定唯一 `active` Gate 和 Revision；`blocked` 时只处理恢复条件。
+2. 运行 validator；pending transaction 或 Contract Baseline drift 优先处理。
+3. 人工验收 pending 且没有明确结果时，只输出一次验收提醒并结束；不加载代码、Gate 细节或完整 history。
+4. 否则读取当前 Gate contract、必要 Source Decisions、适用治理文件和 checkpoint 指向的代码入口。
+5. 默认不读取 `goal/history/`；只在诊断、rollback、correction、人工验收结果、证据核验、baseline reconcile 或状态异常时按 event / Exit 引用读取必要片段。
+6. passed Gate history 不默认加载。
 
-## 人工验收
+正常启动上下文主要由 `runbook + 当前 Gate contract + 当前代码` 决定，而不是累计 slice 数。
 
-人工验收仍是 Gate 合同的一部分，但等待状态不进入 Gate 状态枚举。
+## 稳定 slice checkpoint
 
-自动化工作完成后：
+Gate 不要求在一次 Goal 内执行完。完成一个稳定、可独立验证、可恢复的 slice 后，如果下一 slice 不适合在当前 Goal 的剩余上下文或工具预算中完整完成：
 
-1. history 追加一次 `manual-handoff` 事件，生成稳定 acceptance id，例如 `G2-A1`；
-2. Current Checkpoint 记录 `Manual acceptance: pending G2-A1`、最后事件和下一动作；
-3. Gate 继续保持 `active`；
-4. 当前 Goal 使用宿主成功终态结束，不等待、不轮询、不自唤醒。
+1. 完成本 slice 验证；
+2. 使用 `record --type checkpoint` 持久化恢复点；
+3. 让 checkpoint 只保留最近 event、slice 游标、effective satisfied exits、风险、人工验收状态和下一动作；
+4. 运行 validator；
+5. 以 Gate 仍为 `active` 的状态成功结束当前 Goal。
 
-后续 Goal 若发现 checkpoint 仍是 pending 且当前用户输入没有明确验收结果，只输出一次交接提醒并结束；不要加载代码或重跑验证。用户给出明确结果后，history 追加 `manual-result` 事件，再继续满足 Exit 或进入修复。
+`checkpoint` 不是失败，也不是 `blocked`。
 
-## 固定 prompt 与验证
+## append-only evidence
 
-完整读取 [`references/goal-prompt-template.md`](references/goal-prompt-template.md)，只替换 `{{EFFORT_PATH}}`，写入 `goal/prompt.md`。
+history 使用连续 event id、`Prev event hash` 和 `Event hash`；runbook Ledger 与 Current Checkpoint 保存 history tail hash。validator 重算 hash chain，并要求 `Last event == history tail`、`History head == tail hash`。
 
-固定 prompt 必须保持跨 Gate 相同，不出现具体 Gate 名称，也不展开项目合同。它只描述最小加载、slice 循环、history event、checkpoint 更新、人工验收和单 Gate 终止行为。
+历史事实错误时追加 `correction`，不得改写旧 event。`Evidence effect: invalidate` 会使被修正 event 不再计入 effective Exit evidence。`Satisfied exits` 必须与 effective evidence 精确一致；`all` 不能绕过证据检查。
 
-生成或人工修改控制面后运行：
+hash chain 用于发现控制面内部断链或未同步改写。需要抵抗能够同时重写全部控制文件的修改时，应使用 Git commit、只读存储或其他外部不可变锚点。
+
+## Stop condition、人工验收与 Gate pass
+
+`blocked` 只用于计划声明的 Stop condition；恢复必须通过 `resume` 追加 `resumed` event。
+
+人工验收通过稳定 acceptance id 关联 handoff 与 result。等待期间 Gate 保持 `active`，当前 Goal 结束，不等待、不轮询、不自唤醒。
+
+当前 Gate 的 effective evidence 覆盖全部 Exit 且没有 pending manual acceptance 后，使用 `pass-gate`。该操作追加最终 verification 和唯一 gate-passed event，记录完整 Exit evidence，把当前 Gate 改为 `passed`，只激活直接后继或写 effort complete，更新 History head / Revision，并运行 validator。操作完成后结束当前 Goal，不执行后继 Gate。
+
+## 验证
+
+生成、恢复、baseline reconcile 或任何人工修改后运行：
 
 ```bash
 python3 <skill-dir>/scripts/validate_goal_loop.py <effort-path>
 ```
 
-validator 负责检查 schema version、Gate/状态形状、线性依赖、Source Baseline、checkpoint 与当前 Gate 对齐、history/event 引用、passed Gate 的完整 Exit→event 映射。校验失败时保持状态不转换，先修复控制面。
+validator 检查 plan Contract Sources、Contract Baseline、固定 prompt、State Rules、Revision、线性 Ledger、checkpoint、event hash chain、effective evidence、correction、blocked/resumed、manual acceptance、Gate pass evidence 和 pending transaction。
 
-最终回复说明是编译还是验证，给出计划、runbook、history 目录和固定 prompt 路径，并输出 prompt 内容。只优化工件时不得实施 Gate。
+最终回复说明完成的是编译、reconcile、恢复或验证，并给出计划、baseline、runbook、history 目录和固定 prompt 路径。只优化控制面时不得实施 Gate。
