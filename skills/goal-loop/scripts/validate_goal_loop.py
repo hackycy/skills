@@ -4,18 +4,18 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
 
-RUNBOOK_SCHEMA = "goal-loop/runbook-v3"
-HISTORY_SCHEMA = "goal-loop/history-v2"
-BASELINE_SCHEMA = "goal-loop/contract-baseline-v1"
-PROMPT_SCHEMA = "goal-loop/prompt-v2"
-TRANSACTION_SCHEMA = "goal-loop/transaction-v1"
+RUNBOOK_SCHEMA = "goal-loop/runbook"
+HISTORY_SCHEMA = "goal-loop/history"
+BASELINE_SCHEMA = "goal-loop/contract-baseline"
+PROMPT_SCHEMA = "goal-loop/prompt"
+TRANSACTION_SCHEMA = "goal-loop/transaction"
 
 REQUIRED_GATE_HEADINGS = (
     "Purpose",
@@ -58,7 +58,17 @@ ALLOWED_EVENT_TYPES = {
     "gate-passed",
 }
 
-EMPTY_MARKERS = {"none", "—", "-", ""}
+EMPTY_MARKERS = {"none", "无", "—", "-", ""}
+CHECK_ID_RE = re.compile(r"^[DRM]\d+$")
+STOP_ID_RE = re.compile(r"^SC\d+$")
+
+
+@dataclass(frozen=True)
+class VerificationCheck:
+    id: str
+    kind: str
+    description: str
+    inputs: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -66,6 +76,10 @@ class Gate:
     number: int
     name: str
     exits: list[str]
+    checks: dict[str, VerificationCheck] = field(default_factory=dict)
+    evidence_rules: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    stop_conditions: dict[str, str] = field(default_factory=dict)
+    body: str = ""
 
     @property
     def id(self) -> str:
@@ -98,7 +112,6 @@ class Event:
     event_id: str
     event_type: str
     fields: dict[str, str]
-    satisfies: list[str]
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -134,10 +147,16 @@ def section(text: str, heading: str, next_level: int = 2) -> str | None:
     return match.group(1).strip() if match else None
 
 
-def parse_markdown_table(text: str, heading: str) -> list[list[str]]:
-    body = section(text, heading)
-    if body is None:
-        return []
+def subsection(text: str, heading: str, level: int = 4) -> str | None:
+    prefix = "#" * level
+    pattern = re.compile(
+        rf"(?ms)^{re.escape(prefix + ' ' + heading)}\s*\n(.*?)(?=^{re.escape(prefix + ' ')}|\Z)"
+    )
+    match = pattern.search(text)
+    return match.group(1).strip() if match else None
+
+
+def parse_table_from_body(body: str) -> list[list[str]]:
     rows: list[list[str]] = []
     for line in body.splitlines():
         stripped = line.strip()
@@ -150,8 +169,108 @@ def parse_markdown_table(text: str, heading: str) -> list[list[str]]:
     return rows
 
 
+def parse_markdown_table(text: str, heading: str) -> list[list[str]]:
+    body = section(text, heading)
+    return parse_table_from_body(body or "")
+
+
 def unquote_code(value: str) -> str:
-    return value.strip().replace("`", "")
+    value = value.strip()
+    if value.startswith("`") and value.endswith("`") and len(value) >= 2:
+        return value[1:-1]
+    return value.replace("`", "")
+
+
+def parse_input_patterns(value: str, errors: list[str], *, gate_id: str, check_id: str) -> tuple[str, ...]:
+    raw = value.strip()
+    if raw.lower() in EMPTY_MARKERS:
+        return ()
+    raw = raw.replace("<br>", ",").replace("<br/>", ",").replace("<br />", ",")
+    items: list[str] = []
+    for part in raw.split(","):
+        item = unquote_code(part.strip())
+        if not item:
+            continue
+        posix = item.replace("\\", "/")
+        if Path(posix).is_absolute() or posix.startswith("../") or "/../" in posix:
+            errors.append(f"plan: {gate_id} check {check_id} Evidence inputs must be repository-relative: {item}")
+            continue
+        if posix.startswith("goal/") or "/goal/" in posix:
+            errors.append(f"plan: {gate_id} check {check_id} Evidence inputs must not include goal runtime artifacts: {item}")
+            continue
+        items.append(posix)
+    return tuple(items)
+
+
+def _parse_verification_checks(gate_id: str, body: str, errors: list[str]) -> dict[str, VerificationCheck]:
+    verification_match = re.search(r"(?ms)^### Verification\s*\n(.*?)(?=^### |\Z)", body)
+    if not verification_match:
+        return {}
+    verification = verification_match.group(1)
+    checks: dict[str, VerificationCheck] = {}
+    specs = [
+        ("Directed", "D", "Check"),
+        ("Repository", "R", "Command"),
+        ("Manual acceptance", "M", "Scenario"),
+    ]
+    for heading, prefix, description_header in specs:
+        sub = subsection(verification, heading, 4)
+        if sub is None:
+            continue
+        rows = parse_table_from_body(sub)
+        if not rows:
+            continue
+        expected_header = ["ID", description_header, "Evidence inputs"]
+        if rows[0] != expected_header:
+            errors.append(
+                f"plan: {gate_id} Verification/{heading} table header must be {expected_header}; got {rows[0]}"
+            )
+            continue
+        for row in rows[1:]:
+            if len(row) != 3:
+                errors.append(f"plan: {gate_id} malformed Verification/{heading} row: {row}")
+                continue
+            check_id = unquote_code(row[0])
+            if not re.fullmatch(rf"{prefix}\d+", check_id):
+                errors.append(f"plan: {gate_id} {heading} check id must match {prefix}<n>: {check_id}")
+                continue
+            if check_id in checks:
+                errors.append(f"plan: {gate_id} duplicate verification check id {check_id}")
+                continue
+            description = unquote_code(row[1]).strip()
+            if not description:
+                errors.append(f"plan: {gate_id} check {check_id} description must not be empty")
+                continue
+            inputs = parse_input_patterns(row[2], errors, gate_id=gate_id, check_id=check_id)
+            checks[check_id] = VerificationCheck(check_id, heading, description, inputs)
+    return checks
+
+
+def _parse_stop_conditions(gate_id: str, body: str, errors: list[str]) -> dict[str, str]:
+    match = re.search(r"(?ms)^### Stop conditions\s*\n(.*?)(?=^### |\Z)", body)
+    if not match:
+        return {}
+    raw = match.group(1).strip()
+    if raw.lower() in EMPTY_MARKERS or re.fullmatch(r"-\s*(?:无|none)\s*", raw, flags=re.I):
+        return {}
+    conditions: dict[str, str] = {}
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("-"):
+            continue
+        m = re.match(r"^-\s+`(SC\d+)`:\s+(.+)$", stripped)
+        if m:
+            cid, desc = m.group(1), m.group(2).strip()
+            if cid in conditions:
+                errors.append(f"plan: {gate_id} duplicate Stop condition id {cid}")
+            conditions[cid] = desc
+        else:
+            errors.append(f"plan: {gate_id} Stop conditions must use `SC<n>` ids: {stripped}")
+    if conditions:
+        expected = [f"SC{i}" for i in range(1, len(conditions) + 1)]
+        if list(conditions) != expected:
+            errors.append(f"plan: {gate_id} Stop condition ids must be continuous from SC1; got {list(conditions)}")
+    return conditions
 
 
 def parse_plan(text: str, errors: list[str]) -> Plan:
@@ -159,23 +278,22 @@ def parse_plan(text: str, errors: list[str]) -> Plan:
     contract_sources: list[str] = []
     if len(contract_rows) < 2:
         errors.append("plan: Contract Sources table missing or empty")
+    elif contract_rows[0] != ["Path", "Role"]:
+        errors.append("plan: Contract Sources header must be Path | Role")
     else:
-        if contract_rows[0] != ["Path", "Role"]:
-            errors.append("plan: Contract Sources header must be Path | Role")
-        else:
-            for row in contract_rows[1:]:
-                if len(row) != 2:
-                    errors.append(f"plan: malformed Contract Sources row: {row}")
-                    continue
-                path = unquote_code(row[0])
-                if not path:
-                    errors.append("plan: Contract Sources path must not be empty")
-                    continue
-                if Path(path).is_absolute() or path.startswith("../") or "/../" in path:
-                    errors.append(f"plan: Contract Sources path must be repository-relative: {path}")
-                if path.startswith("goal/") or "/goal/" in path:
-                    errors.append(f"plan: runtime artifact must not appear in Contract Sources: {path}")
-                contract_sources.append(path)
+        for row in contract_rows[1:]:
+            if len(row) != 2:
+                errors.append(f"plan: malformed Contract Sources row: {row}")
+                continue
+            path = unquote_code(row[0])
+            if not path:
+                errors.append("plan: Contract Sources path must not be empty")
+                continue
+            if Path(path).is_absolute() or path.startswith("../") or "/../" in path:
+                errors.append(f"plan: Contract Sources path must be repository-relative: {path}")
+            if path.startswith("goal/") or "/goal/" in path:
+                errors.append(f"plan: runtime artifact must not appear in Contract Sources: {path}")
+            contract_sources.append(path)
     if contract_sources != sorted(contract_sources):
         errors.append("plan: Contract Sources paths must be lexicographically sorted")
     if len(contract_sources) != len(set(contract_sources)):
@@ -190,39 +308,82 @@ def parse_plan(text: str, errors: list[str]) -> Plan:
     for index, match in enumerate(gate_matches):
         number = int(match.group(1))
         name = match.group(2).strip()
+        gate_id = f"G{number}"
         body_start = match.end()
         body_end = gate_matches[index + 1].start() if index + 1 < len(gate_matches) else len(text)
         body = text[body_start:body_end]
 
         for heading in REQUIRED_GATE_HEADINGS:
             if not re.search(rf"(?m)^### {re.escape(heading)}\s*$", body):
-                errors.append(f"plan: G{number} missing '### {heading}'")
+                errors.append(f"plan: {gate_id} missing '### {heading}'")
 
         exit_match = re.search(r"(?ms)^### Exit conditions\s*\n(.*?)(?=^### |\Z)", body)
         exits = re.findall(r"(?m)^-\s+`(E\d+)`:\s+.+$", exit_match.group(1) if exit_match else "")
         expected = [f"E{i}" for i in range(1, len(exits) + 1)]
         if not exits:
-            errors.append(f"plan: G{number} has no numbered Exit conditions")
+            errors.append(f"plan: {gate_id} has no numbered Exit conditions")
         elif exits != expected:
-            errors.append(f"plan: G{number} Exit ids must be continuous from E1; got {exits}")
+            errors.append(f"plan: {gate_id} Exit ids must be continuous from E1; got {exits}")
+
+        checks = _parse_verification_checks(gate_id, body, errors)
+        if not checks:
+            errors.append(f"plan: {gate_id} must declare at least one Verification check using D<n>, R<n>, or M<n>")
+        expected_by_kind: dict[str, list[str]] = {"D": [], "R": [], "M": []}
+        for cid in checks:
+            expected_by_kind[cid[0]].append(cid)
+        for prefix, ids in expected_by_kind.items():
+            if ids:
+                expected_ids = [f"{prefix}{i}" for i in range(1, len(ids) + 1)]
+                if ids != expected_ids:
+                    errors.append(f"plan: {gate_id} {prefix} check ids must be continuous from {prefix}1; got {ids}")
 
         evidence_match = re.search(r"(?ms)^### Evidence rule\s*\n(.*?)(?=^### |\Z)", body)
-        evidence_exits: list[str] = []
-        if evidence_match:
-            for line in evidence_match.group(1).splitlines():
-                cells = [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
-                if cells and re.fullmatch(r"E\d+", cells[0] if cells else ""):
-                    evidence_exits.append(cells[0])
-        normalized_evidence = sorted(set(evidence_exits), key=lambda x: int(x[1:]))
-        if exits and normalized_evidence != exits:
-            errors.append(
-                f"plan: G{number} Evidence rule must cover exactly {exits}; got {normalized_evidence}"
+        evidence_rows = parse_table_from_body(evidence_match.group(1) if evidence_match else "")
+        evidence_rules: dict[str, tuple[str, ...]] = {}
+        if not evidence_rows:
+            errors.append(f"plan: {gate_id} Evidence rule table missing or empty")
+        elif evidence_rows[0] != ["Exit", "Required checks"]:
+            errors.append(f"plan: {gate_id} Evidence rule header must be Exit | Required checks; got {evidence_rows[0]}")
+        else:
+            for row in evidence_rows[1:]:
+                if len(row) != 2:
+                    errors.append(f"plan: {gate_id} malformed Evidence rule row: {row}")
+                    continue
+                exit_id = unquote_code(row[0])
+                raw_checks = [unquote_code(x.strip()) for x in row[1].replace("<br>", ",").split(",") if x.strip()]
+                if exit_id not in exits:
+                    errors.append(f"plan: {gate_id} Evidence rule references unknown Exit {exit_id}")
+                    continue
+                if not raw_checks:
+                    errors.append(f"plan: {gate_id} {exit_id} requires at least one verification check")
+                    continue
+                unknown = [cid for cid in raw_checks if cid not in checks]
+                if unknown:
+                    errors.append(f"plan: {gate_id} {exit_id} references unknown checks {unknown}")
+                if len(raw_checks) != len(set(raw_checks)):
+                    errors.append(f"plan: {gate_id} {exit_id} contains duplicate Required checks")
+                evidence_rules[exit_id] = tuple(raw_checks)
+            if set(evidence_rules) != set(exits):
+                errors.append(f"plan: {gate_id} Evidence rule must cover exactly {exits}; got {sorted(evidence_rules)}")
+            unused = [cid for cid in checks if not any(cid in reqs for reqs in evidence_rules.values())]
+            if unused:
+                errors.append(f"plan: {gate_id} verification checks are not referenced by any Exit: {unused}")
+
+        stops = _parse_stop_conditions(gate_id, body, errors)
+        gates.append(
+            Gate(
+                number=number,
+                name=name,
+                exits=exits,
+                checks=checks,
+                evidence_rules=evidence_rules,
+                stop_conditions=stops,
+                body=body.strip(),
             )
+        )
 
-        gates.append(Gate(number=number, name=name, exits=exits))
-
-    expected_numbers = list(range(len(gates)))
     numbers = [gate.number for gate in gates]
+    expected_numbers = list(range(len(gates)))
     if numbers != expected_numbers:
         errors.append(f"plan: Gate numbers must be continuous from G0; got {numbers}")
 
@@ -238,9 +399,7 @@ def parse_plan(text: str, errors: list[str]) -> Plan:
         "Explicitly Out Of Scope",
     ]
     if top_headings != expected_top_headings:
-        errors.append(
-            f"plan: top-level sections must be exactly {expected_top_headings}; got {top_headings}"
-        )
+        errors.append(f"plan: top-level sections must be exactly {expected_top_headings}; got {top_headings}")
 
     overview_rows = parse_markdown_table(text, "Gate Overview")
     if len(overview_rows) < 2:
@@ -248,12 +407,10 @@ def parse_plan(text: str, errors: list[str]) -> Plan:
     elif overview_rows[0] != ["Gate", "Name", "Unlock condition", "Outcome"]:
         errors.append("plan: Gate Overview header must be Gate | Name | Unlock condition | Outcome")
     else:
-        overview_pairs = [(unquote_code(row[0]), unquote_code(row[1])) for row in overview_rows[1:] if len(row) >= 2]
+        pairs = [(unquote_code(row[0]), unquote_code(row[1])) for row in overview_rows[1:] if len(row) >= 2]
         expected_pairs = [(gate.id, gate.name) for gate in gates]
-        if overview_pairs != expected_pairs:
-            errors.append(
-                f"plan: Gate Overview Gate/Name rows must match Gate detail headings; expected {expected_pairs}, got {overview_pairs}"
-            )
+        if pairs != expected_pairs:
+            errors.append(f"plan: Gate Overview Gate/Name rows must match Gate detail headings; expected {expected_pairs}, got {pairs}")
 
     return Plan(gates=gates, contract_sources=contract_sources)
 
@@ -300,15 +457,7 @@ def parse_ledger(runbook: str, errors: list[str]) -> list[LedgerRow]:
     if len(rows) < 2:
         errors.append("runbook: Goal Ledger table missing or empty")
         return []
-    expected = [
-        "Gate",
-        "Status",
-        "Depends on",
-        "Plan contract",
-        "History",
-        "History head",
-        "Unlock evidence",
-    ]
+    expected = ["Gate", "Status", "Depends on", "Plan contract", "History", "History head", "Unlock evidence"]
     if rows[0] != expected:
         errors.append(f"runbook: Goal Ledger header must be {expected}")
         return []
@@ -332,17 +481,8 @@ def parse_checkpoint(runbook: str, errors: list[str]) -> dict[str, str]:
         if match:
             values[match.group(1).strip()] = unquote_code(match.group(2).strip())
     required = (
-        "Gate",
-        "History",
-        "History head",
-        "Last event",
-        "Last completed slice",
-        "Current slice",
-        "Satisfied exits",
-        "Manual acceptance",
-        "Blocker",
-        "Risks",
-        "Next action",
+        "Gate", "History", "History head", "Last event", "Last completed slice", "Current slice",
+        "Satisfied exits", "Manual acceptance", "Blocker", "Risks", "Next action",
     )
     for key in required:
         if key not in values:
@@ -378,7 +518,7 @@ def parse_history_text(text: str, gate: Gate, source_name: str, errors: list[str
         errors.append(f"history: {source_name} Plan contract does not match '{gate.label}'")
 
     matches = list(re.finditer(r"(?m)^### (G\d+-E\d{4}) · ([a-z-]+)\s*$", text))
-    event_ids = [match.group(1) for match in matches]
+    event_ids = [m.group(1) for m in matches]
     expected_ids = [f"{gate.id}-E{i:04d}" for i in range(1, len(event_ids) + 1)]
     if event_ids != expected_ids:
         errors.append(f"history: {source_name} event ids must be continuous; got {event_ids}")
@@ -388,23 +528,13 @@ def parse_history_text(text: str, gate: Gate, source_name: str, errors: list[str
         errors.append(f"history: {source_name} first event must be initialized")
 
     required_fields = {
-        "At",
-        "Type",
-        "Slice",
-        "Changed",
-        "Verification",
-        "Result",
-        "Satisfies",
-        "Risk",
-        "Next",
-        "Prev event hash",
-        "Event hash",
+        "At", "Type", "Slice", "Changed", "Verification", "Result", "Risk", "Next",
+        "Prev event hash", "Event hash",
     }
-
     events: dict[str, Event] = {}
     previous_hash = "none"
     handoffs: set[str] = set()
-    resolved_acceptances: set[str] = set()
+    resolved: set[str] = set()
     mode = "active"
     passed_seen = 0
 
@@ -415,77 +545,81 @@ def parse_history_text(text: str, gate: Gate, source_name: str, errors: list[str
         body = text[body_start:body_end]
         fields: dict[str, str] = {}
         for line in body.splitlines():
-            field_match = re.match(r"^-\s+([^:]+):\s*(.*?)\s*$", line.strip())
-            if field_match:
-                fields[field_match.group(1).strip()] = unquote_code(field_match.group(2).strip())
+            fm = re.match(r"^-\s+([^:]+):\s*(.*?)\s*$", line.strip())
+            if fm:
+                fields[fm.group(1).strip()] = unquote_code(fm.group(2).strip())
 
         if heading_type not in ALLOWED_EVENT_TYPES:
             errors.append(f"history: {source_name} event {event_id} has invalid type '{heading_type}'")
         if fields.get("Type") != heading_type:
-            errors.append(
-                f"history: {source_name} event {event_id} Type '{fields.get('Type')}' != heading '{heading_type}'"
-            )
+            errors.append(f"history: {source_name} event {event_id} Type '{fields.get('Type')}' != heading '{heading_type}'")
         missing = sorted(required_fields - set(fields))
         if missing:
             errors.append(f"history: {source_name} event {event_id} missing fields {missing}")
 
         prev = fields.get("Prev event hash", "")
         if prev != previous_hash:
-            errors.append(
-                f"history: {source_name} event {event_id} Prev event hash '{prev}' != expected '{previous_hash}'"
-            )
+            errors.append(f"history: {source_name} event {event_id} Prev event hash '{prev}' != expected '{previous_hash}'")
         event_hash = fields.get("Event hash", "")
         expected_hash = compute_event_hash(event_id, heading_type, fields)
         if event_hash != expected_hash:
-            errors.append(
-                f"history: {source_name} event {event_id} Event hash mismatch: expected {expected_hash}, got {event_hash}"
-            )
+            errors.append(f"history: {source_name} event {event_id} Event hash mismatch: expected {expected_hash}, got {event_hash}")
         if re.fullmatch(r"[0-9a-f]{64}", event_hash):
             previous_hash = event_hash
 
-        satisfies_raw = fields.get("Satisfies", "none")
-        satisfies: list[str] = []
-        if satisfies_raw not in EMPTY_MARKERS:
-            satisfies = [item.strip() for item in satisfies_raw.split(",") if item.strip()]
-            unknown = [item for item in satisfies if item not in gate.exits]
-            if unknown:
-                errors.append(
-                    f"history: {source_name} event {event_id} Satisfies unknown Exit ids {unknown}"
-                )
-            if len(satisfies) != len(set(satisfies)):
-                errors.append(f"history: {source_name} event {event_id} has duplicate Satisfies ids")
+        check_id = fields.get("Check")
+        if check_id:
+            check = gate.checks.get(check_id)
+            if check is None:
+                errors.append(f"history: {source_name} event {event_id} references unknown Check {check_id}")
+            else:
+                if heading_type == "verification" and check.kind not in {"Directed", "Repository"}:
+                    errors.append(f"history: {source_name} event {event_id} verification cannot use {check.kind} Check {check_id}")
+                if heading_type in {"manual-handoff", "manual-result"} and check.kind != "Manual acceptance":
+                    errors.append(f"history: {source_name} event {event_id} manual event requires a Manual acceptance Check")
+                if check.kind == "Repository" and heading_type == "verification":
+                    if not fields.get("Output artifact") or not fields.get("Output SHA-256"):
+                        errors.append(f"history: {source_name} event {event_id} Repository Check requires output artifact metadata")
+            outcome = fields.get("Outcome")
+            if outcome not in {"pass", "fail"} and heading_type != "manual-handoff":
+                errors.append(f"history: {source_name} event {event_id} Check requires Outcome pass or fail")
+            if outcome == "pass":
+                snapshot = fields.get("Evidence snapshot", "")
+                if not re.fullmatch(r"[0-9a-f]{64}", snapshot):
+                    errors.append(f"history: {source_name} event {event_id} passing Check requires Evidence snapshot")
 
         acceptance = fields.get("Acceptance")
         if heading_type == "manual-handoff":
-            if not acceptance or not re.fullmatch(rf"{gate.id}-A\d+", acceptance):
+            valid_acceptance = bool(acceptance and re.fullmatch(rf"{gate.id}-M\d+", acceptance))
+            if not valid_acceptance:
                 errors.append(f"history: {source_name} event {event_id} manual-handoff requires valid Acceptance")
             elif acceptance in handoffs:
                 errors.append(f"history: {source_name} duplicate Acceptance id '{acceptance}'")
             else:
                 handoffs.add(acceptance)
+            if not check_id or check_id not in gate.checks or not check_id.startswith("M"):
+                errors.append(f"history: {source_name} event {event_id} manual-handoff requires a Manual acceptance Check")
+            elif acceptance != f"{gate.id}-{check_id}":
+                errors.append(f"history: {source_name} event {event_id} Acceptance must be '{gate.id}-{check_id}'")
         elif heading_type == "manual-result":
             if not acceptance or acceptance not in handoffs:
-                errors.append(
-                    f"history: {source_name} event {event_id} manual-result must reference a prior Acceptance"
-                )
-            elif acceptance in resolved_acceptances:
+                errors.append(f"history: {source_name} event {event_id} manual-result must reference a prior Acceptance")
+            elif acceptance in resolved:
                 errors.append(f"history: {source_name} Acceptance '{acceptance}' resolved more than once")
             else:
-                resolved_acceptances.add(acceptance)
-        elif acceptance and not re.fullmatch(rf"{gate.id}-A\d+", acceptance):
-            errors.append(f"history: {source_name} event {event_id} invalid Acceptance id '{acceptance}'")
+                resolved.add(acceptance)
+            if not check_id or check_id not in gate.checks or gate.checks[check_id].kind != "Manual acceptance":
+                errors.append(f"history: {source_name} event {event_id} manual-result requires a Manual acceptance Check")
+            elif acceptance != f"{gate.id}-{check_id}":
+                errors.append(f"history: {source_name} event {event_id} manual-result Acceptance/Check mismatch")
 
         if heading_type == "correction":
             corrects = fields.get("Corrects", "")
             if corrects not in events:
-                errors.append(
-                    f"history: {source_name} event {event_id} correction must reference a prior event in Corrects"
-                )
+                errors.append(f"history: {source_name} event {event_id} correction must reference a prior event in Corrects")
             effect = fields.get("Evidence effect", "")
             if effect not in {"retain", "invalidate"}:
-                errors.append(
-                    f"history: {source_name} event {event_id} Evidence effect must be retain or invalidate"
-                )
+                errors.append(f"history: {source_name} event {event_id} Evidence effect must be retain or invalidate")
 
         if heading_type == "blocked":
             if mode != "active":
@@ -503,7 +637,7 @@ def parse_history_text(text: str, gate: Gate, source_name: str, errors: list[str
         elif mode == "passed":
             errors.append(f"history: {source_name} event {event_id} appears after gate-passed")
 
-        events[event_id] = Event(event_id=event_id, event_type=heading_type, fields=fields, satisfies=satisfies)
+        events[event_id] = Event(event_id, heading_type, fields)
 
     if passed_seen > 1:
         errors.append(f"history: {source_name} contains multiple gate-passed events")
@@ -518,29 +652,47 @@ def parse_history(path: Path, gate: Gate, errors: list[str]) -> dict[str, Event]
 
 
 def tail_event(events: dict[str, Event]) -> Event | None:
-    if not events:
-        return None
-    return next(reversed(events.values()))
+    return next(reversed(events.values())) if events else None
 
 
 def invalidated_evidence_events(events: dict[str, Event]) -> set[str]:
+    """Return invalidated non-correction events with correction-of-correction semantics.
+
+    A correction can itself be invalidated by a later correction. We evaluate from newest to oldest;
+    an invalidated correction has no effect on its target.
+    """
     invalidated: set[str] = set()
-    for event in events.values():
-        if event.event_type == "correction" and event.fields.get("Evidence effect") == "invalidate":
+    items = list(events.values())
+    for event in reversed(items):
+        if event.event_type != "correction" or event.event_id in invalidated:
+            continue
+        if event.fields.get("Evidence effect") == "invalidate":
             target = event.fields.get("Corrects")
             if target:
                 invalidated.add(target)
     return invalidated
 
 
-def effective_satisfied_exits(events: dict[str, Event]) -> set[str]:
+def latest_effective_check_events(events: dict[str, Event], gate: Gate) -> dict[str, Event]:
     invalidated = invalidated_evidence_events(events)
-    result: set[str] = set()
-    for event_id, event in events.items():
-        if event_id in invalidated or event.event_type == "gate-passed":
+    latest: dict[str, Event] = {}
+    for event in events.values():
+        if event.event_id in invalidated:
             continue
-        result.update(event.satisfies)
-    return result
+        check_id = event.fields.get("Check")
+        if check_id in gate.checks and event.fields.get("Outcome") in {"pass", "fail"}:
+            latest[check_id] = event
+    return latest
+
+
+def effective_satisfied_exits(events: dict[str, Event], gate: Gate) -> set[str]:
+    latest = latest_effective_check_events(events, gate)
+    passed = {cid for cid, event in latest.items() if event.fields.get("Outcome") == "pass"}
+    return {
+        exit_id
+        for exit_id, required in gate.evidence_rules.items()
+        if required and all(cid in passed for cid in required)
+    }
 
 
 def unresolved_acceptances(events: dict[str, Event]) -> set[str]:
@@ -555,14 +707,22 @@ def unresolved_acceptances(events: dict[str, Event]) -> set[str]:
     return handoffs - resolved
 
 
-def parse_exit_evidence(value: str) -> dict[str, str]:
-    mapping: dict[str, str] = {}
+def parse_exit_evidence(value: str) -> dict[str, list[tuple[str | None, str]]]:
+    mapping: dict[str, list[tuple[str | None, str]]] = {}
     for item in value.split(";"):
         item = item.strip()
         if not item or "=" not in item:
             continue
-        exit_id, event_id = item.split("=", 1)
-        mapping[exit_id.strip()] = event_id.strip()
+        exit_id, raw_refs = item.split("=", 1)
+        refs: list[tuple[str | None, str]] = []
+        for ref in raw_refs.split(","):
+            ref = ref.strip()
+            if "@" in ref:
+                check_id, event_id = ref.split("@", 1)
+                refs.append((check_id.strip(), event_id.strip()))
+            elif ref:
+                refs.append((None, ref))
+        mapping[exit_id.strip()] = refs
     return mapping
 
 
@@ -603,23 +763,14 @@ def load_baseline_manifest(path: Path, errors: list[str]) -> dict[str, object] |
         return None
     if data.get("schema") != BASELINE_SCHEMA:
         errors.append(f"baseline: manifest schema must be '{BASELINE_SCHEMA}'")
-    files = data.get("files")
-    if not isinstance(files, list):
+    if not isinstance(data.get("files"), list):
         errors.append("baseline: manifest files must be a list")
         return None
     return data
 
 
-def validate_baseline(
-    effort: Path,
-    repo_root: Path,
-    plan_path: Path,
-    plan: Plan,
-    runbook_text: str,
-    errors: list[str],
-    *,
-    allow_baseline_drift: bool,
-) -> None:
+def validate_baseline(effort: Path, repo_root: Path, plan_path: Path, plan: Plan, runbook_text: str,
+                      errors: list[str], *, allow_baseline_drift: bool) -> None:
     manifest_rel, manifest_digest = parse_contract_baseline(runbook_text, errors)
     if not manifest_rel:
         return
@@ -630,30 +781,25 @@ def validate_baseline(
     if re.fullmatch(r"[0-9a-f]{64}", manifest_digest) and sha256(manifest_path) != manifest_digest:
         errors.append("baseline: manifest content does not match runbook Manifest SHA-256")
 
-    raw_files = manifest.get("files", [])
     entries: list[tuple[str, str]] = []
-    for item in raw_files if isinstance(raw_files, list) else []:
+    for item in manifest.get("files", []):  # type: ignore[union-attr]
         if not isinstance(item, dict):
             errors.append("baseline: each manifest file entry must be an object")
             continue
-        path = item.get("path")
-        digest = item.get("sha256")
+        path, digest = item.get("path"), item.get("sha256")
         if not isinstance(path, str) or not isinstance(digest, str):
             errors.append("baseline: each manifest entry requires string path and sha256")
             continue
         entries.append((path, digest))
-
     paths = [path for path, _ in entries]
     if paths != sorted(paths):
         errors.append("baseline: manifest paths must be lexicographically sorted")
     if len(paths) != len(set(paths)):
         errors.append("baseline: manifest contains duplicate paths")
-
-    expected_plan_path = repo_relative(plan_path, repo_root)
-    expected_paths = sorted({expected_plan_path, *plan.contract_sources})
+    expected_plan = repo_relative(plan_path, repo_root)
+    expected_paths = sorted({expected_plan, *plan.contract_sources})
     if paths != expected_paths:
         errors.append(f"baseline: manifest paths must exactly match Contract Sources plus plan: expected {expected_paths}, got {paths}")
-
     for rel, expected_digest in entries:
         if not re.fullmatch(r"[0-9a-f]{64}", expected_digest):
             errors.append(f"baseline: invalid SHA-256 for {rel}")
@@ -667,6 +813,11 @@ def validate_baseline(
             errors.append(f"baseline: drift detected for {rel}: expected {expected_digest}, got {actual}")
 
 
+def prompt_schema(text: str) -> str | None:
+    match = re.search(r"(?m)^Prompt schema:\s+`([^`]+)`\s*$", text)
+    return match.group(1) if match else None
+
+
 def validate_prompt(effort: Path, repo_root: Path, errors: list[str]) -> None:
     prompt_path = effort / "goal" / "prompt.md"
     if not prompt_path.exists():
@@ -677,14 +828,102 @@ def validate_prompt(effort: Path, repo_root: Path, errors: list[str]) -> None:
         errors.append(f"prompt: skill template missing {template_path.as_posix()}")
         return
     effort_rel = repo_relative(effort, repo_root)
-    if effort_rel == ".":
-        effort_rel = "."
     expected = template_path.read_text(encoding="utf-8").replace("{{EFFORT_PATH}}", effort_rel)
     actual = prompt_path.read_text(encoding="utf-8")
-    if actual != expected:
-        errors.append("prompt: goal/prompt.md must exactly match the fixed template after EFFORT_PATH substitution")
-    if f"Prompt schema: `{PROMPT_SCHEMA}`" not in actual:
+    schema = prompt_schema(actual)
+    if schema != PROMPT_SCHEMA:
         errors.append(f"prompt: must declare Prompt schema `{PROMPT_SCHEMA}`")
+    if actual != expected:
+        errors.append("prompt: goal/prompt.md must exactly match the current fixed template after EFFORT_PATH substitution")
+
+
+def _safe_runtime_path(effort: Path, rel: str) -> Path | None:
+    try:
+        candidate = (effort / rel).resolve()
+        candidate.relative_to(effort.resolve())
+    except (ValueError, OSError):
+        return None
+    return candidate
+
+
+def validate_evidence_artifacts(effort: Path, histories: dict[str, dict[str, Event]], errors: list[str]) -> None:
+    for gate_id, events in histories.items():
+        for event in events.values():
+            rel = event.fields.get("Output artifact")
+            digest = event.fields.get("Output SHA-256")
+            if not rel and not digest:
+                continue
+            if not rel or not digest:
+                errors.append(f"evidence: {event.event_id} must contain both Output artifact and Output SHA-256")
+                continue
+            if not rel.startswith("goal/evidence/"):
+                errors.append(f"evidence: {event.event_id} Output artifact must be under goal/evidence/")
+                continue
+            path = _safe_runtime_path(effort, rel)
+            if path is None or not path.exists():
+                errors.append(f"evidence: {event.event_id} output artifact missing: {rel}")
+                continue
+            if not re.fullmatch(r"[0-9a-f]{64}", digest):
+                errors.append(f"evidence: {event.event_id} Output SHA-256 is invalid")
+            elif sha256(path) != digest:
+                errors.append(f"evidence: {event.event_id} output artifact hash mismatch: {rel}")
+
+
+def expand_evidence_inputs(repo_root: Path, patterns: tuple[str, ...]) -> tuple[list[tuple[str, str]], list[str]]:
+    entries: dict[str, str] = {}
+    missing: list[str] = []
+    for pattern in patterns:
+        matches = glob.glob(str(repo_root / pattern), recursive=True)
+        file_matches: list[Path] = []
+        for raw in matches:
+            path = Path(raw)
+            if path.is_dir():
+                file_matches.extend(p for p in path.rglob("*") if p.is_file())
+            elif path.is_file():
+                file_matches.append(path)
+        safe_files: list[Path] = []
+        for path in file_matches:
+            try:
+                rel = path.resolve().relative_to(repo_root.resolve()).as_posix()
+            except ValueError:
+                continue
+            if rel.startswith(".git/") or "/goal/" in f"/{rel}/":
+                continue
+            safe_files.append(path)
+        if not safe_files:
+            missing.append(pattern)
+            continue
+        for path in safe_files:
+            rel = path.resolve().relative_to(repo_root.resolve()).as_posix()
+            entries[rel] = sha256(path)
+    return sorted(entries.items()), missing
+
+
+def evidence_snapshot(repo_root: Path, check: VerificationCheck) -> tuple[str, list[str]]:
+    entries, missing = expand_evidence_inputs(repo_root, check.inputs)
+    payload = {
+        "check": check.id,
+        "kind": check.kind,
+        "description": check.description,
+        "inputs": list(check.inputs),
+        "files": [{"path": path, "sha256": digest} for path, digest in entries],
+    }
+    return sha256_bytes(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")), missing
+
+
+def stale_check_evidence(repo_root: Path, gate: Gate, events: dict[str, Event]) -> dict[str, str]:
+    latest = latest_effective_check_events(events, gate)
+    stale: dict[str, str] = {}
+    for check_id, event in latest.items():
+        if event.fields.get("Outcome") != "pass":
+            continue
+        check = gate.checks[check_id]
+        current, missing = evidence_snapshot(repo_root, check)
+        if missing:
+            stale[check_id] = f"evidence input patterns no longer match files: {', '.join(missing)}"
+        elif current != event.fields.get("Evidence snapshot"):
+            stale[check_id] = "evidence inputs changed after the recorded pass"
+    return stale
 
 
 def _valid_ledger_shape(items: list[str]) -> bool:
@@ -696,18 +935,13 @@ def _valid_ledger_shape(items: list[str]) -> bool:
         if status in {"active", "blocked"}:
             return (
                 all(item == "passed" for item in items[:pivot])
-                and all(item == "planned" for item in items[pivot + 1 :])
+                and all(item == "planned" for item in items[pivot + 1:])
                 and sum(item in {"active", "blocked"} for item in items) == 1
             )
     return False
 
 
-def validate(
-    effort: Path,
-    *,
-    allow_baseline_drift: bool = False,
-    allow_pending_transaction: bool = False,
-) -> list[str]:
+def validate(effort: Path, *, allow_baseline_drift: bool = False, allow_pending_transaction: bool = False) -> list[str]:
     errors: list[str] = []
     effort = effort.resolve()
     plan_path = effort / "implementation-plan.md"
@@ -716,7 +950,6 @@ def validate(
 
     if transaction_path.exists() and not allow_pending_transaction:
         errors.append("transaction: pending state transaction exists; run goal_loop_ctl.py recover before execution")
-
     if not plan_path.exists():
         return errors + [f"missing plan: {plan_path}"]
     if not runbook_path.exists():
@@ -732,7 +965,6 @@ def validate(
         errors.append(f"runbook: top-level sections must be exactly {expected_headings}; got {top_headings}")
     if "## Progress Log" in runbook_text or re.search(r"(?m)^### G\d+:", runbook_text):
         errors.append("runbook: execution history must not be embedded in the hot runbook")
-
     schema_match = re.search(r"(?m)^Schema:\s+`([^`]+)`\s*$", runbook_text)
     if not schema_match or schema_match.group(1) != RUNBOOK_SCHEMA:
         errors.append(f"runbook: must declare Schema `{RUNBOOK_SCHEMA}`")
@@ -740,20 +972,11 @@ def validate(
     parse_state_rules(runbook_text, errors)
 
     plan = parse_plan(plan_text, errors)
-    validate_baseline(
-        effort,
-        repo_root,
-        plan_path,
-        plan,
-        runbook_text,
-        errors,
-        allow_baseline_drift=allow_baseline_drift,
-    )
+    validate_baseline(effort, repo_root, plan_path, plan, runbook_text, errors, allow_baseline_drift=allow_baseline_drift)
     validate_prompt(effort, repo_root, errors)
 
     ledger = parse_ledger(runbook_text, errors)
     checkpoint = parse_checkpoint(runbook_text, errors)
-
     if len(ledger) != len(plan.gates):
         errors.append(f"runbook: Ledger has {len(ledger)} Gates but plan has {len(plan.gates)}")
 
@@ -768,11 +991,9 @@ def validate(
         if row.status not in {"planned", "active", "blocked", "passed"}:
             errors.append(f"runbook: {row.gate} invalid status '{row.status}'")
         statuses.append(row.status)
-
         expected_dep = "none" if index == 0 else f"G{index - 1}"
         if row.depends_on != expected_dep:
             errors.append(f"runbook: {row.gate} Depends on must be '{expected_dep}'")
-
         expected_contract = f"implementation-plan.md -> {gate.label}"
         if row.plan_contract != expected_contract:
             errors.append(f"runbook: {row.gate} Plan contract must be '{expected_contract}'")
@@ -781,16 +1002,13 @@ def validate(
             expected_history = f"goal/history/{gate.id}.md"
             if row.history != expected_history:
                 errors.append(f"runbook: {row.gate} History must be '{expected_history}'")
-            history_path = effort / expected_history
-            events = parse_history(history_path, gate, errors)
+            events = parse_history(effort / expected_history, gate, errors)
             histories[gate.id] = events
             tail = tail_event(events)
             if tail and row.history_head != tail.fields.get("Event hash"):
                 errors.append(f"runbook: {row.gate} History head does not match history tail hash")
             if history_mode(events) != row.status:
-                errors.append(
-                    f"runbook: {row.gate} status '{row.status}' does not match history transition state '{history_mode(events)}'"
-                )
+                errors.append(f"runbook: {row.gate} status '{row.status}' does not match history transition state '{history_mode(events)}'")
 
             if row.status == "passed":
                 gate_passed = [event for event in events.values() if event.event_type == "gate-passed"]
@@ -802,27 +1020,25 @@ def validate(
                     passed_event = gate_passed[-1]
                     exit_map = parse_exit_evidence(passed_event.fields.get("Exit evidence", ""))
                     if set(exit_map) != set(gate.exits):
-                        errors.append(
-                            f"history: {gate.id} gate-passed Exit evidence is {sorted(exit_map)}; expected {gate.exits}"
-                        )
+                        errors.append(f"history: {gate.id} gate-passed Exit evidence is {sorted(exit_map)}; expected {gate.exits}")
                     invalidated = invalidated_evidence_events(events)
-                    for exit_id, evidence_event_id in exit_map.items():
-                        if evidence_event_id == passed_event.event_id:
-                            errors.append(f"history: {gate.id} {exit_id} cannot use gate-passed as its own evidence")
-                            continue
-                        if evidence_event_id in invalidated:
-                            errors.append(f"history: {gate.id} {exit_id} references invalidated evidence {evidence_event_id}")
-                            continue
-                        evidence = events.get(evidence_event_id)
-                        if evidence is None:
-                            errors.append(f"history: {gate.id} {exit_id} references missing event {evidence_event_id}")
-                        elif exit_id not in evidence.satisfies:
-                            errors.append(
-                                f"history: {gate.id} {exit_id} evidence event {evidence_event_id} does not Satisfy {exit_id}"
-                            )
-                    expected_locator = (
-                        f"goal/history/{gate.id}.md@{passed_event.event_id}#{passed_event.fields.get('Event hash', '')}"
-                    )
+                    for exit_id, refs in exit_map.items():
+                        required = set(gate.evidence_rules.get(exit_id, ()))
+                        mapped = {cid for cid, _ in refs if cid}
+                        if mapped != required:
+                            errors.append(f"history: {gate.id} {exit_id} Check evidence {sorted(mapped)} != required {sorted(required)}")
+                        for check_id, event_id in refs:
+                            if check_id is None:
+                                errors.append(f"history: {gate.id} {exit_id} evidence must use Check@Event references")
+                                continue
+                            evidence = events.get(event_id)
+                            if event_id in invalidated:
+                                errors.append(f"history: {gate.id} {exit_id} references invalidated evidence {event_id}")
+                            elif evidence is None:
+                                errors.append(f"history: {gate.id} {exit_id} references missing event {event_id}")
+                            elif evidence.fields.get("Check") != check_id or evidence.fields.get("Outcome") != "pass":
+                                errors.append(f"history: {gate.id} {exit_id} evidence {check_id}@{event_id} is not a passing matching Check")
+                    expected_locator = f"goal/history/{gate.id}.md@{passed_event.event_id}#{passed_event.fields.get('Event hash', '')}"
                     if row.unlock_evidence != expected_locator:
                         errors.append(f"runbook: {row.gate} passed Unlock evidence must be '{expected_locator}'")
         else:
@@ -833,9 +1049,9 @@ def validate(
 
         if index > 0 and row.status in {"active", "blocked"} and ledger[index - 1].status == "passed":
             if row.unlock_evidence != ledger[index - 1].unlock_evidence:
-                errors.append(
-                    f"runbook: {row.gate} Unlock evidence must reuse predecessor locator '{ledger[index - 1].unlock_evidence}'"
-                )
+                errors.append(f"runbook: {row.gate} Unlock evidence must reuse predecessor locator '{ledger[index - 1].unlock_evidence}'")
+
+    validate_evidence_artifacts(effort, histories, errors)
 
     if statuses and not _valid_ledger_shape(statuses):
         errors.append(f"runbook: illegal Ledger state shape {statuses}")
@@ -852,57 +1068,41 @@ def validate(
             errors.append(f"runbook: checkpoint Gate '{checkpoint.get('Gate')}' != current '{current.gate}'")
         if checkpoint.get("History") != current.history:
             errors.append(f"runbook: checkpoint History '{checkpoint.get('History')}' != '{current.history}'")
-
         gate_id = current.gate.split(":", 1)[0]
         gate = next((g for g in plan.gates if g.id == gate_id), None)
         events = histories.get(gate_id, {})
         tail = tail_event(events)
         if tail:
             if checkpoint.get("Last event") != tail.event_id:
-                errors.append(
-                    f"runbook: checkpoint Last event '{checkpoint.get('Last event')}' must equal history tail '{tail.event_id}'"
-                )
+                errors.append(f"runbook: checkpoint Last event '{checkpoint.get('Last event')}' must equal history tail '{tail.event_id}'")
             if checkpoint.get("History head") != tail.fields.get("Event hash"):
                 errors.append("runbook: checkpoint History head must equal current history tail hash")
-
         if gate:
-            expected_satisfied = effective_satisfied_exits(events)
+            expected_satisfied = effective_satisfied_exits(events, gate)
             checkpoint_satisfied = parse_checkpoint_exits(checkpoint.get("Satisfied exits", "none"), gate, errors)
             if checkpoint_satisfied != expected_satisfied:
-                errors.append(
-                    f"runbook: checkpoint Satisfied exits {sorted(checkpoint_satisfied)} != effective history evidence {sorted(expected_satisfied)}"
-                )
-
+                errors.append(f"runbook: checkpoint Satisfied exits {sorted(checkpoint_satisfied)} != effective history evidence {sorted(expected_satisfied)}")
         unresolved = unresolved_acceptances(events)
         manual = checkpoint.get("Manual acceptance", "none")
-        pending_match = re.fullmatch(r"pending (G\d+-A\d+)", manual)
+        pending_match = re.fullmatch(r"pending (G\d+-M\d+)", manual)
         if pending_match:
             acceptance = pending_match.group(1)
             if current.status != "active":
                 errors.append("runbook: pending manual acceptance requires Gate status active")
             if unresolved != {acceptance}:
-                errors.append(
-                    f"runbook: pending acceptance '{acceptance}' must match the single unresolved handoff {sorted(unresolved)}"
-                )
+                errors.append(f"runbook: pending acceptance '{acceptance}' must match the single unresolved handoff {sorted(unresolved)}")
         elif unresolved:
             errors.append(f"runbook: unresolved manual acceptance must be represented in checkpoint: {sorted(unresolved)}")
     elif statuses and all(status == "passed" for status in statuses):
         expected_complete = {
-            "Gate": "none",
-            "History": "none",
-            "Last completed slice": "none",
-            "Current slice": "none",
-            "Satisfied exits": "all",
-            "Manual acceptance": "none",
-            "Blocker": "none",
-            "Next action": "effort complete",
+            "Gate": "none", "History": "none", "Last completed slice": "none", "Current slice": "none",
+            "Satisfied exits": "all", "Manual acceptance": "none", "Blocker": "none", "Next action": "effort complete",
         }
         for key, expected in expected_complete.items():
             if checkpoint.get(key) != expected:
                 errors.append(f"runbook: completed effort checkpoint {key} must be '{expected}'")
         if plan.gates:
-            final_gate = plan.gates[-1]
-            final_events = histories.get(final_gate.id, {})
+            final_events = histories.get(plan.gates[-1].id, {})
             tail = tail_event(final_events)
             if not tail or tail.event_type != "gate-passed":
                 errors.append("runbook: completed effort Last event must reference final Gate gate-passed event")
@@ -921,7 +1121,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Validate Goal Loop control-plane artifacts")
     parser.add_argument("effort", type=Path, help="effort directory containing implementation-plan.md and goal/")
     args = parser.parse_args()
-
     errors = validate(args.effort)
     if errors:
         for error in errors:

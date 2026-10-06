@@ -20,8 +20,6 @@
 
 `Contract Sources` 是 `goal/contract-baseline.json` 的机器可校验输入集合。只列实际参与 Gate 合同形成的仓库文件，不包含 `goal/` 下的运行态文件。
 
-使用固定表格：
-
 ```markdown
 | Path | Role |
 | --- | --- |
@@ -29,113 +27,100 @@
 | `docs/spec.md` | 决定行为、验收与兼容性要求 |
 ```
 
-规则：
-
-- `Path` 使用仓库相对 POSIX 路径，按字典序排列且不得重复。
-- 所有用于编译计划的 map、spec、ADR、decision、issue、验收依赖，以及会改变 Gate 合同的适用 `AGENTS.md` / `CLAUDE.md` / `CONTEXT.md` 都必须列出。
-- `implementation-plan.md` 不写入该表；baseline manifest 会自动加入计划文件本身。
-- 只提供术语、且不改变 Gate 合同的上下文文件可以不列入；如果其变化可能改变 Scope、Verification、Stop conditions、Rollback 或 Exit conditions，则必须列入。
-- `goal/` 运行态文件、生成的 prompt、history 和 baseline manifest 不得列入。
-
-## Source Decisions
-
-逐项说明 `Contract Sources` 中哪些文件贡献了哪些已经批准的决定。使用仓库相对路径或本地链接；不复制完整决策正文。
-
-## Outcome
-
-用一段话和可选结构图说明最终可观察结果。Outcome 不写实现步骤，也不把测试命令本身当作结果。
-
-## Non-Negotiable Rules
-
-只写跨多个 Gate 必须保持的不变量，例如单一状态源、兼容性、切换边界、回退原则或禁止的双轨行为。项目特有约束放在对应 Gate 的 `Constraints`。
+路径使用仓库相对 POSIX 路径，按字典序排列且不得重复。所有用于编译计划并可能改变 Scope、Verification、Stop conditions、Rollback 或 Exit conditions 的文件都必须列出。`implementation-plan.md` 由 baseline 自动加入，不写入该表。
 
 ## Gate Overview
 
-使用固定表格，Gate 从 G0 连续编号并按依赖顺序排列：
+Gate 从 G0 连续编号。每个 Gate 只能有一个直接前驱；执行控制面使用线性 Gate 顺序作为恢复边界。
 
 ```markdown
 | Gate | Name | Unlock condition | Outcome |
 | --- | --- | --- | --- |
-| G0 | <名称> | 开始 | <一句话结果> |
-| G1 | <名称> | G0 Exit 全部满足 | <一句话结果> |
+| G0 | Prepare | 开始 | <一句话结果> |
+| G1 | Finish | G0 Exit 全部满足 | <一句话结果> |
 ```
-
-每个 Gate 只能有一个直接前驱。并行决策必须先在决策阶段收敛，再把可执行结果编排为线性 Gate。
 
 ## Gate 详情
 
-```markdown
-## G0: <名称>
-
-### Purpose
-
-<该 Gate 关闭的风险或建立的能力；一个 Gate 只有一个主题>
-
-### Inputs
-
-- `<必须读取的决策文档、代码入口或环境入口>`
-
-### Objective
-
-<一个可验证的执行目标>
-
-### Scope boundary
-
-<本 Gate 允许改变的范围，以及明确留给后继 Gate 的内容>
-
-### Constraints
-
-- <当前 Gate 必须保持的约束；没有时写“无”>
-
-### Slice policy
-
-<按行为、调用簇、数据流或其他领域边界选择最小可回退 slice；一个 slice 只包含一个行为或调用簇。说明什么构成稳定、可恢复的 slice 边界。>
+每个 Gate 必须包含：`Purpose`、`Inputs`、`Objective`、`Scope boundary`、`Constraints`、`Slice policy`、`Verification`、`Evidence rule`、`Stop conditions`、`Rollback` 和 `Exit conditions`。
 
 ### Verification
 
+由此 skill 编译的计划使用稳定 Verification ID。三类检查分别使用 `D<n>`、`R<n>`、`M<n>`，编号在 Gate 内按类别从 1 连续递增。
+
 #### Directed
 
-- <入口、适用条件、执行时机（每个 slice 或 Gate 收尾）、预期证据>
+```markdown
+| ID | Check | Evidence inputs |
+| --- | --- | --- |
+| D1 | 确认迁移后不存在旧字段读取路径 | `src/migration/**`, `tests/migration/**` |
+```
+
+Directed check 由模型判断语义事实，control script 固定 check id、outcome 和 Evidence inputs snapshot。
 
 #### Repository
 
-1. `<准确命令或脚本；执行时机和顺序>`
+```markdown
+| ID | Command | Evidence inputs |
+| --- | --- | --- |
+| R1 | `python -m unittest tests.test_migration` | `src/migration/**`, `tests/test_migration.py` |
+```
+
+Repository check 的 Command 必须是仓库中真实可执行的项目命令。control script 在仓库根目录执行该命令，记录 exit code，并把 stdout/stderr 保存为 `goal/evidence/` artifact。
 
 #### Manual acceptance
 
-- <URL、场景、检查项和用户确认格式；没有时写“无”>
+```markdown
+| ID | Scenario | Evidence inputs |
+| --- | --- | --- |
+| M1 | 用户确认升级后的 dashboard 数据和交互符合 spec | `src/dashboard/**` |
+```
+
+没有人工验收时写“无”，不要创建空表。
+
+`Evidence inputs` 使用仓库相对文件或 glob，可用逗号分隔。没有代码输入的环境检查可以写 `none`。不得引用 `goal/` 运行态文件。
 
 ### Evidence rule
 
-| Exit | Required evidence |
+Evidence rule 使用固定表格：
+
+```markdown
+| Exit | Required checks |
 | --- | --- |
-| E1 | <Directed / Repository / Manual 中能够证明 E1 的具体证据> |
-| E2 | <能够证明 E2 的具体证据> |
+| E1 | D1, R1 |
+| E2 | R2 |
+| E3 | M1 |
+```
+
+规则：
+
+- 每个 Exit 必须至少引用一个当前 Gate 已声明 check。
+- 每个 Verification check 必须至少被一个 Exit 引用。
+- Exit 只能由 Verification check 结果满足。
+- Exit 在其全部 required checks 的最新 effective result 为 pass 时进入 `Satisfied exits`。
+- `pass-gate` 还要求 required passing checks 的 Evidence snapshot 与当前 Evidence inputs 一致。
+
+`Evidence rule` 只接受 `Required checks`。自由文本 `Required evidence` 不属于有效格式。
 
 ### Stop conditions
 
-- <必须停止当前 Gate 的外部依赖、冲突决策、缺失验证或无法安全判断>
+Stop conditions 使用稳定 ID：
 
-### Rollback
+```markdown
+- `SC1`: staging database unavailable
+- `SC2`: migration result conflicts with ADR-012
+```
 
-<唯一 seam、提交边界或可逆动作>
+没有 Stop condition 时写“无”。`block` 只能引用当前 Gate 声明的 `SC<n>`。
 
 ### Exit conditions
 
+```markdown
 - `E1`: <可观察、可证明的条件>
 - `E2`: <可观察、可证明的条件>
 ```
 
-## 计划约束
-
-- `Purpose`、`Inputs`、`Objective`、`Scope boundary`、`Constraints`、`Slice policy`、`Verification`、`Evidence rule`、`Stop conditions`、`Rollback` 和 `Exit conditions` 都必须存在。
-- 每个 Gate 的 Exit id 从 `E1` 开始连续编号；编号语义只在 Gate 内有效。
-- `Evidence rule` 必须覆盖且只覆盖当前 Gate 的 Exit id。
-- `Verification` 只能引用仓库真实存在或决策文档明确提供的入口；不得写跨项目固定命令。
-- `Exit conditions` 必须能够被 Evidence rule 证明，不能只写“代码完成”或“测试通过”。
-- `Slice policy` 必须允许每个稳定 slice 独立验证和恢复；Agent 可在稳定 slice 后持久化 `checkpoint` 并结束当前 Goal，不需要等到整个 Gate 完成。
-- 人工验收是 Gate 合同的一部分；需要用户确认时，写清验收入口、自动化边界、最小验收清单和明确结果格式。
-- 计划不得包含 `active`、`passed`、`blocked` 等运行态状态，也不得包含 Current Checkpoint 或 slice history。
+Exit id 从 E1 连续编号。Exit condition 描述可观察结果，不写“代码完成”或单纯“测试通过”。
 
 ## Definition Of Done
 
@@ -143,4 +128,4 @@
 
 ## Explicitly Out Of Scope
 
-列出决策文档已经明确排除且本 effort 不会实现的工作。尚未决策的事项不得放在这里，应回到决策文档处理。
+只列决策文档明确排除且本 effort 不会实现的工作。尚未决策的事项应回到决策文档处理。
