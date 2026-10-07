@@ -1,49 +1,37 @@
-Prompt schema: `goal-loop/prompt`
-Effort path: `{{EFFORT_PATH}}`
+# Gate 执行入口
 
-推进 `{{EFFORT_PATH}}/goal/runbook.md` 中启动本次 Goal 时唯一 `active` 的 Gate。执行边界是启动时锁定的 Gate；不得进入后继 Gate。
+Effort: `{{EFFORT_PATH}}`
+Python: `{{PYTHON}}`
+Control script: `{{CONTROL_SCRIPT}}`
 
-开始时：
+所有命令使用以上可定位入口，以独立参数传入路径。先运行 status，锁定本次 Goal 启动时的 Gate 和 GateRun。Gate pass 后结束本次 Goal，不在同一 Goal 实施后继。
 
-1. 运行 `goal_loop_ctl.py status {{EFFORT_PATH}}`，确认 Revision、当前 Gate、人工验收状态、Satisfied exits 和 evidence freshness。
-2. 运行 goal-loop validator。存在 pending transaction 时只执行 `recover`；存在 Contract Baseline drift 时停止实现，不读取或修改代码，报告漂移文件。只有 `implementation-plan.md` 和 Contract Sources 路径集合都未变化，并且现有 Gate 合同已经被明确确认仍有效时，才使用 `reconcile-baseline`。
-3. 若 checkpoint 是人工验收 pending，且当前用户输入没有对应 acceptance id 的明确结果，只输出一次验收提醒并成功结束本次 Goal；不要加载代码、Gate 细节或完整 history，不要重跑实现验证。
-4. 否则运行 `goal_loop_ctl.py context {{EFFORT_PATH}}`，只读取当前 Gate 合同、Contract Sources 路径、checkpoint 和当前 Gate 相关代码。默认不读取 passed Gate history。
+## 启动
 
-执行当前 Gate：
+1. 运行 `status`，读取 Revision、合同漂移、pending attempt、checkpoint 和 stale checks。
+2. 完整性错误时停止并诊断。派生视图损坏时用当前 Revision 运行 recover。合同漂移时停止实现，进入合同修订工作流。
+3. M attempt pending 且用户没有对应 attempt 的明确结果时，只提醒其 ID 与受验对象，结束 Goal，不加载代码、不轮询。
+4. R attempt 遗留时使用 recover 确认执行者是否已退出；仍在运行时不得接管或重复执行。D attempt 不能仅凭遗留 ID 推定已完成观察。
+5. 运行 `context`，读取全局约束、当前 Gate 合同和 checkpoint，再读取相关代码。历史只按 commit/attempt 引用按需读取。
 
-1. 按 Slice policy 选择下一个最小、可独立验证、可回退的 slice。
-2. 只实现该 slice，不扩大 Scope boundary。
-3. Exit 证据只能通过当前 Gate 声明的 Verification ID 形成：
-   - Directed check 使用 `verify-directed --check D<n> --outcome pass|fail`；
-   - Repository check 使用 `verify-repository --check R<n>`，由 control script 执行计划中的命令并保存输出 artifact；
-   - Manual acceptance 使用 `manual-handoff --acceptance M<n>`，收到明确结果后使用 `manual-result`。
-4. 普通实现或验证失败保持 Gate `active`；形成稳定事实后通过 control script 追加 event，并携带 runbook 当前 Revision。禁止手工改写 `goal/runbook.md`、`goal/history/G<n>.md` 或 `goal/contract-baseline.json`。
-5. 每次成功 state mutation 后重新读取 Revision。任何陈旧 Revision 写入都必须停止并重新加载 runbook。
-6. 一个稳定、已验证的 slice 完成后，如果下一 slice 不适合在当前 Goal 的剩余上下文或工具预算中完整完成，使用 `record --type checkpoint` 持久化恢复点，运行 validator，并以 Gate 仍为 `active` 的状态成功结束当前 Goal。
+## 实施与验证
 
-证据规则：
+按 slice_policy 选择一个可独立验证、可回退的 slice。保留无关工作区修改，以及当前 Gate 未授权改变的 API、数据、UI 和兼容性语义。不要通过跳过、删除或弱化测试获得通过。
 
-- `D<n>`、`R<n>`、`M<n>` 必须来自当前 Gate 的 Verification 表。
-- 每个 passing check 保存 `Evidence snapshot`，绑定该 check 声明的 Evidence inputs。
-- `R<n>` 的 stdout/stderr 保存到 `goal/evidence/<event>-R<n>.log`，history 保存 artifact SHA-256。
-- `pass-gate` 重新计算当前 Evidence inputs；任何 required check 缺失、最新结果为 fail 或 snapshot stale 时都必须拒绝 Gate pass。
-- 后继 Gate 激活后，passed Gate 的证据保持历史事实；后继实现可以修改相同代码，不要求 passed Gate 的旧 snapshot 与当前仓库持续一致。
+D/M 检查先 `check start --check ID --subject 对象`，固定快照后再检查或交接。观察完成或收到对应人工回复后 `check finish --attempt ID --outcome pass|fail --result 事实`。R 检查通过 `check run --check ID` 执行冻结合同的 argv，不自行替换命令。
 
-始终遵守：
+每次写入携带 `--expected-revision`，之后重新读取 status；退出码 2 也可能已提交结果。陈旧 Revision 时重新加载事实，不盲目重试。失败、stale、取消或中断后修复原因并创建另一 attempt；不能复用通过事实。
 
-- 一个 slice 只包含一个行为或调用簇；不同职责分别切片。
-- 保留与当前 Gate 无关的既有实现和工作区修改。
-- 保持当前 Gate 未授权改变的 API、数据、UI、交互和兼容性语义。
-- 文档、UI 文案和回复直接描述具体结构、行为或可观察结果；需要说明差异时明确对象和变化，不使用依赖重构阶段或发布时间点的相对名称。
-- 不通过删除、跳过、弱化测试或无效替代获得通过。
-- 历史事实错误时使用 `correct` event；需要使旧 evidence 失效时使用 `Evidence effect: invalidate`，不得修改旧 event。
-- 触发 Stop condition 时使用 `block --condition SC<n>`；恢复条件满足后使用 `resume`，不得直接修改 Ledger。
-- 不 push 远程分支。
+status 的 `repository_running` 为 true 时，验证进程仍持有工作区执行锁。取消后的进程退出前，不开始另一项实现或检查；脚本会拒绝新的检查启动。
 
-Gate 通过：
+人工验收交接要明确 attempt ID、待验对象和操作场景，然后结束 Goal。收到对过期对象的结果可以记录，但该结果不能满足当前 Exit。
 
-- 每个 Exit 必须拥有 Evidence rule 中全部 required checks 的 effective passing evidence，并且这些 evidence 在 pass 时没有 stale snapshot。
-- 不存在 unresolved manual acceptance 时才能调用 `pass-gate`。
-- `pass-gate` 记录完整 `Check@Event` Exit evidence，把当前 Gate `active -> passed`，只激活直接后继或写 effort complete，并更新 History head / Revision。
-- `pass-gate` 完成并通过 validator 后结束当前 Goal；不在同一 Goal 中实现后继 Gate。
+稳定且已验证的 slice 完成后，若下一 slice 无法在剩余预算中完整完成，使用 record checkpoint 保存已完成内容、下一动作和风险；Gate 保持 active，结束 Goal。临时错误记录 failure；触发合同 Stop condition 时 block，恢复后 resume。
+
+## 完成
+
+所有 Exit 的当前有效尝试通过后运行 pass-gate。脚本复核输入与 unresolved attempt，记录 evidence 并只激活直接后继。运行 validate 后报告结果，结束 Goal。
+
+使用 correct 补充事实或撤销具体 attempt；通过证据被撤销时会重开依赖 Gate。运行文件由脚本管理，不手改提交记录、对象或视图。合同变化使用 revise-contract 的预览和提交，重新打开不自动回滚代码。
+
+直接描述具体对象、字段与可观察行为，不使用依赖重构阶段或发布时间的相对名称。远程发布遵守用户明确授权与仓库规则。

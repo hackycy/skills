@@ -1,85 +1,58 @@
-# Goal Loop Control Script
+# 控制命令
 
-`scripts/goal_loop_ctl.py` 是运行态文件的唯一写入入口。模型负责语义判断；脚本负责 Revision、event id、hash chain、Verification ID 约束、Repository command 执行、evidence snapshot、Ledger/checkpoint、transaction 和最终验证。
+入口为 `scripts/goal_loop_ctl.py`。以下示例中的 `CTL` 和 `EFFORT` 表示应分别传入的脚本绝对路径和 effort 路径；CLI 的 `--help` 提供参数。
 
-## 只读命令
-
-```bash
-python3 <skill-dir>/scripts/goal_loop_ctl.py status <effort-path>
-python3 <skill-dir>/scripts/goal_loop_ctl.py context <effort-path>
+```text
+python CTL bootstrap EFFORT
+python CTL status EFFORT
+python CTL context EFFORT
+python CTL validate EFFORT
 ```
 
-`status` 输出 Revision、当前 Gate、人工验收、Satisfied exits、Next action 和 stale checks。`context` 输出 checkpoint、Contract Sources 路径和当前 Gate contract，不读取 passed Gate history。
+命令输出 JSON。退出码 0 表示操作成功；1 表示合同、状态、完整性或参数问题；check finish/run 的退出码 2 表示结果不是有效 pass，结果本身已经记录。无论退出码是否为 0，下一次写入前读取 status 的 Revision。
 
-## bootstrap
+## 检查尝试
 
-```bash
-python3 <skill-dir>/scripts/goal_loop_ctl.py bootstrap <effort-path>
+```text
+python CTL check start EFFORT --expected-revision 0 --check D1 --subject "src/reader.py 读取调用"
+python CTL check finish EFFORT --expected-revision 1 --attempt A000001 --outcome pass --result "调用均满足 spec 的空值规则"
+python CTL check run EFFORT --expected-revision 2 --check R1
 ```
 
-创建 Contract Baseline、Revision 0 runbook、G0 history 和固定 prompt。已有 `goal/runbook.md` 时拒绝覆盖。
+D/M 的 start 必须发生在观察或人工交接前。M 的 subject 应描述用户实际看到的文件、构建或部署。将返回的 attempt ID 与受验对象一起交给用户；只有收到该 attempt 的明确结果才能 finish。ID 由脚本返回，示例数字不用于推测。
 
-## verify-directed
-
-```bash
-python3 <skill-dir>/scripts/goal_loop_ctl.py verify-directed <effort-path> \
-  --expected-revision <n> \
-  --check D1 \
-  --outcome pass \
-  --verification "<观察方式>" \
-  --result "<可观察事实>" \
-  --next-action "<明确动作>"
+```text
+python CTL check start EFFORT --expected-revision 4 --check M1 --subject "build abc123，读取页面"
+python CTL check finish EFFORT --expected-revision 5 --attempt A000003 --outcome fail --result "错误详情未显示"
+python CTL check start EFFORT --expected-revision 6 --check M1 --subject "build def456，读取页面"
 ```
 
-只接受当前 Gate 声明的 Directed check，并保存 Evidence inputs snapshot。
+同一 effort 只允许一个未结束尝试。失败后可修复并开始另一 attempt；同一检查开始另一尝试就会替代它之前的通过结果。输入变化后收到的回复仍记录原结果，但 attempt 状态为 stale，不满足 Exit。
 
-## verify-repository
-
-```bash
-python3 <skill-dir>/scripts/goal_loop_ctl.py verify-repository <effort-path> \
-  --expected-revision <n> \
-  --check R1 \
-  --next-action "<明确动作>"
+```text
+python CTL check cancel EFFORT --expected-revision 7 --attempt A000004 --reason "受验构建已撤回"
 ```
 
-脚本从 plan 读取 R1 Command，在仓库根目录执行，记录 exit code，并保存 stdout/stderr artifact。调用者不能替换 command。
+取消不会恢复之前的通过结果。R 取消先提交取消事实，再由执行者终止进程树并归档输出；执行者退出前，runner 锁会阻止再次执行 R、合同修订和恢复接管。
 
-## manual-handoff / manual-result
+## Checkpoint 与 Gate
 
-```bash
-python3 <skill-dir>/scripts/goal_loop_ctl.py manual-handoff <effort-path> \
-  --expected-revision <n> --acceptance M1 --result "ready for M1"
-
-python3 <skill-dir>/scripts/goal_loop_ctl.py manual-result <effort-path> \
-  --expected-revision <n> --acceptance G2-M1 --outcome pass \
-  --result "accepted" --next-action "pass Gate"
+```text
+python CTL record EFFORT --expected-revision 8 --kind checkpoint --result "读取空值 slice 已验证" --last-completed-slice S1 --current-slice S2 --next-action "验证分页行为"
+python CTL block EFFORT --expected-revision 9 --condition SC1 --reason "数据接口离线" --next-action "恢复接口"
+python CTL resume EFFORT --expected-revision 10 --reason "接口可用" --next-action "继续当前 slice"
+python CTL pass-gate EFFORT --expected-revision 11
 ```
 
-## block / resume
+record 的 kind 为 slice、checkpoint、failure 或 rollback。rollback 是实际回退后的事实记录，不自动修改代码。pass-gate 复核全部 Exit 与证据快照，只激活直接后继。
 
-`block` 必须引用当前 Gate 声明的 Stop condition id：
+## Correction
 
-```bash
-python3 <skill-dir>/scripts/goal_loop_ctl.py block <effort-path> \
-  --expected-revision <n> --condition SC1 --next-action "restore dependency"
+```text
+python CTL correct EFFORT --expected-revision 12 --commit 2 --reason "补充检查观察方法"
+python CTL correct EFFORT --expected-revision 13 --commit 2 --revoke-attempt A000001 --reason "该观察未覆盖空值分支"
 ```
 
-恢复条件满足后使用 `resume`。
+撤销只针对具体 attempt，不能通过撤销 correction 重新获得通过。若被撤销结果已用于当前序列中的 passed Gate，将重开该 Gate 及其后继，保留历史。重新验证才能建立有效证据。
 
-## pass-gate
-
-`pass-gate` 要求 required checks 全部 latest effective result 为 pass、没有 unresolved manual acceptance、每个 passing check 的 Evidence snapshot 与当前 Evidence inputs 一致。满足条件后记录完整 `Check@Event` 映射，只激活直接后继。
-
-## reconcile-baseline
-
-只在 `implementation-plan.md` 内容和 Contract Sources 路径集合都未变化、并明确确认现有 Gate 合同仍有效时使用：
-
-```bash
-python3 <skill-dir>/scripts/goal_loop_ctl.py reconcile-baseline <effort-path> \
-  --expected-revision <n> --confirm-plan-valid \
-  --reason "<合同为什么仍有效>" --next-action "<明确动作>"
-```
-
-## Transaction 与 recover
-
-mutation 先写 `goal/.goal-loop-transaction.json`，再原子替换目标文件并运行 validator。journal 同时保存 before/after bytes 和 SHA-256。`recover` 会先验证 journal path、base64 和 bytes hash，再尝试完成目标状态；目标状态无效时恢复操作前状态。
+合同变化使用 [合同修订](contract-revisions.md)；中断与派生视图问题使用 [存储与恢复](storage-and-recovery.md)。

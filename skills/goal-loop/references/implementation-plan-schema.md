@@ -1,131 +1,61 @@
-# Implementation Plan Schema
+# 合同编译
 
-`implementation-plan.md` 是决策文档到执行状态之间的稳定合同层。它描述最终结果、Gate 顺序、每个 Gate 的执行边界和可证明完成条件；不记录当前执行状态、slice 历史或临时调试结果。
+`implementation-plan.md` 保留人类可读说明，包含且只包含一个 `goal-loop-contract` JSON fenced block。块外内容是说明；所有影响行为的约束必须进入块内。编译器冻结计划原始 bytes，并规范化文本换行和首尾空白；argv 的字符原样保留。
 
-## 顶层结构
+以下为完整示例。先确认对应来源、代码和检查脚本真实存在，再按项目决策编写；不要照搬示例的产品选择。
 
-按以下顺序写入：
+````markdown
+# Example Implementation Plan
 
-1. `# <effort 名称> Implementation Plan`
-2. `## Contract Sources`
-3. `## Source Decisions`
-4. `## Outcome`
-5. `## Non-Negotiable Rules`
-6. `## Gate Overview`
-7. 按执行顺序排列的 Gate 详情
-8. `## Definition Of Done`
-9. `## Explicitly Out Of Scope`
-
-## Contract Sources
-
-`Contract Sources` 是 `goal/contract-baseline.json` 的机器可校验输入集合。只列实际参与 Gate 合同形成的仓库文件，不包含 `goal/` 下的运行态文件。
-
-```markdown
-| Path | Role |
-| --- | --- |
-| `docs/decisions/ADR-001.md` | 决定数据边界与回退策略 |
-| `docs/spec.md` | 决定行为、验收与兼容性要求 |
+```goal-loop-contract
+{
+  "schema": "goal-loop/contract",
+  "format_version": 1,
+  "sources": [{"path": "docs/spec.md", "role": "defines accepted behavior"}],
+  "outcome": "用户可读取经过验证的数据",
+  "rules": ["保留未授权改变的 API 语义"],
+  "definition_of_done": [{"description": "读取行为满足 spec", "exits": ["G0:E1"]}],
+  "out_of_scope": ["更改写入接口"],
+  "coverage": [{"source": "docs/spec.md", "decision": "accepted read behavior", "exits": ["G0:E1"]}],
+  "gates": [{
+    "id": "G0",
+    "name": "Read behavior",
+    "objective": "实现 spec 定义的读取行为",
+    "inputs": ["docs/spec.md", "src/reader.py"],
+    "scope": "读取路径及其测试",
+    "constraints": ["保留错误响应结构"],
+    "slice_policy": "每个 slice 对应一种可观察读取行为",
+    "checks": [
+      {"id": "D1", "description": "检查所有读取调用遵循 spec", "evidence_inputs": ["src/**", "tests/**"]},
+      {"id": "R1", "description": "执行读取回归测试", "evidence_inputs": ["src/**", "tests/**"], "argv": ["python", "-m", "unittest", "discover", "-s", "tests"], "timeout_seconds": 900},
+      {"id": "M1", "description": "用户确认读取结果与错误展示", "evidence_inputs": ["src/**"]}
+    ],
+    "exits": [{"id": "E1", "description": "正常读取与错误展示符合 spec", "checks": ["D1", "R1", "M1"]}],
+    "stop_conditions": [{"id": "SC1", "description": "所需外部数据不可用"}],
+    "rollback": "还原该 slice 的读取行为变更并重新验证"
+  }]
+}
 ```
+````
 
-路径使用仓库相对 POSIX 路径，按字典序排列且不得重复。所有用于编译计划并可能改变 Scope、Verification、Stop conditions、Rollback 或 Exit conditions 的文件都必须列出。`implementation-plan.md` 由 baseline 自动加入，不写入该表。
+## 合同字段
 
-## Gate Overview
+- `sources`：实际决定范围、验收、约束或回退的仓库相对 POSIX 文件路径及其角色。禁止包含工作计划自身和 effort 的运行文件。每个来源必须被 coverage 使用。
+- `coverage`：来源中的具体决策定位到一个或多个 `G<n>:E<n>`；必须覆盖每个 Exit。模型检查含义，脚本检查引用。
+- `outcome`、`rules`、`definition_of_done`、`out_of_scope` 是全局合同。完成标准每项必须引用存在的 Exit。
+- Gate 从 G0 连续编号，顺序就是依赖关系。Gate 字段全部必填；允许 `inputs`、`constraints`、`stop_conditions` 为空列表。
+- 每类检查在 Gate 内从 D1/R1/M1 连续编号；每项检查至少被一个 Exit 使用。Exit 从 E1 连续编号，至少要求一个检查。
+- `stop_conditions` 从 SC1 连续编号；没有时用空列表。
+- `argv` 仅用于 R 检查，是非空字符串数组，按独立参数传给进程。运行目录固定为仓库根。需要 shell 时显式写入解释器及参数；Windows `.cmd` 项目入口显式使用 `cmd.exe /d /c`。
+- `timeout_seconds` 仅用于 R 检查，默认 900，范围大于 0 且不超过 86400。
+- `evidence_inputs` 为文件或 glob 数组，递归目录包含隐藏文件；排除 `.git` 和当前 effort 运行文件。路径必须留在仓库内。不要把缓存或运行输出纳入检查输入。
+- 无文件输入的环境检查使用 `"evidence_inputs": [], "environment": true`；其新鲜度仅限当前 GateRun，不能证明外部环境未变。其他检查必须至少有一个输入模式。
 
-Gate 从 G0 连续编号。每个 Gate 只能有一个直接前驱；执行控制面使用线性 Gate 顺序作为恢复边界。
+Evidence inputs 应覆盖影响结果的代码、测试、配置、命令脚本与依赖清单。单个模式无匹配文件时不能开始检查；删除或新增匹配文件会影响后续新鲜度。
 
-```markdown
-| Gate | Name | Unlock condition | Outcome |
-| --- | --- | --- | --- |
-| G0 | Prepare | 开始 | <一句话结果> |
-| G1 | Finish | G0 Exit 全部满足 | <一句话结果> |
-```
+## 编译步骤
 
-## Gate 详情
-
-每个 Gate 必须包含：`Purpose`、`Inputs`、`Objective`、`Scope boundary`、`Constraints`、`Slice policy`、`Verification`、`Evidence rule`、`Stop conditions`、`Rollback` 和 `Exit conditions`。
-
-### Verification
-
-由此 skill 编译的计划使用稳定 Verification ID。三类检查分别使用 `D<n>`、`R<n>`、`M<n>`，编号在 Gate 内按类别从 1 连续递增。
-
-#### Directed
-
-```markdown
-| ID | Check | Evidence inputs |
-| --- | --- | --- |
-| D1 | 确认迁移后不存在旧字段读取路径 | `src/migration/**`, `tests/migration/**` |
-```
-
-Directed check 由模型判断语义事实，control script 固定 check id、outcome 和 Evidence inputs snapshot。
-
-#### Repository
-
-```markdown
-| ID | Command | Evidence inputs |
-| --- | --- | --- |
-| R1 | `python -m unittest tests.test_migration` | `src/migration/**`, `tests/test_migration.py` |
-```
-
-Repository check 的 Command 必须是仓库中真实可执行的项目命令。control script 在仓库根目录执行该命令，记录 exit code，并把 stdout/stderr 保存为 `goal/evidence/` artifact。
-
-#### Manual acceptance
-
-```markdown
-| ID | Scenario | Evidence inputs |
-| --- | --- | --- |
-| M1 | 用户确认升级后的 dashboard 数据和交互符合 spec | `src/dashboard/**` |
-```
-
-没有人工验收时写“无”，不要创建空表。
-
-`Evidence inputs` 使用仓库相对文件或 glob，可用逗号分隔。没有代码输入的环境检查可以写 `none`。不得引用 `goal/` 运行态文件。
-
-### Evidence rule
-
-Evidence rule 使用固定表格：
-
-```markdown
-| Exit | Required checks |
-| --- | --- |
-| E1 | D1, R1 |
-| E2 | R2 |
-| E3 | M1 |
-```
-
-规则：
-
-- 每个 Exit 必须至少引用一个当前 Gate 已声明 check。
-- 每个 Verification check 必须至少被一个 Exit 引用。
-- Exit 只能由 Verification check 结果满足。
-- Exit 在其全部 required checks 的最新 effective result 为 pass 时进入 `Satisfied exits`。
-- `pass-gate` 还要求 required passing checks 的 Evidence snapshot 与当前 Evidence inputs 一致。
-
-`Evidence rule` 只接受 `Required checks`。自由文本 `Required evidence` 不属于有效格式。
-
-### Stop conditions
-
-Stop conditions 使用稳定 ID：
-
-```markdown
-- `SC1`: staging database unavailable
-- `SC2`: migration result conflicts with ADR-012
-```
-
-没有 Stop condition 时写“无”。`block` 只能引用当前 Gate 声明的 `SC<n>`。
-
-### Exit conditions
-
-```markdown
-- `E1`: <可观察、可证明的条件>
-- `E2`: <可观察、可证明的条件>
-```
-
-Exit id 从 E1 连续编号。Exit condition 描述可观察结果，不写“代码完成”或单纯“测试通过”。
-
-## Definition Of Done
-
-列出整个 effort 的最终条件。每项必须能回溯到一个或多个 Gate Exit。
-
-## Explicitly Out Of Scope
-
-只列决策文档明确排除且本 effort 不会实现的工作。尚未决策的事项应回到决策文档处理。
+1. 阅读相关已接受决策，确认本 effort 的目标、范围、验收和回退已经收敛。
+2. 建立覆盖关系并选择可独立执行的 Gate，检查每个 Exit 描述实际结果。
+3. 确认 R 命令可用且不会修改其证据输入，明确运行时间上限。
+4. 审查合同含义，再执行 bootstrap。存在运行记录时使用合同修订流程。

@@ -1,6 +1,6 @@
 interface:
   display_name: "Goal Loop"
-  short_description: "把收敛决策编译成 Gate 合同、可恢复状态和 Verification ID 证据链"
-  default_prompt: "使用 $goal-loop 读取我指定的 map、ADR、spec 或 implementation plan，生成或验证 Gate 计划、Contract Baseline、轻量 runbook、按 Gate 分离的 history、Repository evidence artifacts 和固定执行提示词。"
+  short_description: "编译可修订 Gate 合同、检查尝试与可恢复执行记录"
+  default_prompt: "使用 $goal-loop 读取我指定的 map、ADR、spec 或 implementation plan，编译 Gate 合同并建立执行入口，或按请求修订合同、诊断与恢复运行记录、验证证据。"
 policy:
   allow_implicit_invocation: false
