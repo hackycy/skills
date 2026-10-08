@@ -22,9 +22,11 @@
 
 commits 保存连续 Revision、前序哈希、UTC 时间、领域事件和对象引用。objects 保存冻结合同、来源 bytes、证据清单、协议、prompt 和检查输出。一次提交可包含多个必须同时生效的事件。
 
-state、baseline、runbook、prompt、history 是派生视图，不参与状态推导。history/effort.md 提供合同修订和 correction 的索引。spool 是执行中的临时输出，不是通过证据。锁文件只用于进程协调，不需要放入 Git；本地临时输出可忽略。保留 commits 和 objects 才能恢复全部事实。
+state、baseline、runbook 和 history 是执行视图，不参与状态推导。`goal/prompt.md` 是用户复制正文的便利文件；计划和 runbook 不引用它，收到粘贴正文的 agent 也无需再次读取它。history/effort.md 提供合同修订和 correction 的索引。spool 是执行中的临时输出，不是通过证据。锁文件只用于进程协调，不需要放入 Git；本地临时输出可忽略。保留 commits 和 objects 才能恢复全部事实。
 
 bootstrap 固定 `goal-loop/protocol` 的 `format_version`、模板和渲染后 prompt。验证使用 effort 的协议对象，不读取安装包模板进行逐字比较。不支持的格式报错；没有兼容读取或迁移。
+
+prompt 正文跨 Gate、checkpoint、人工验收和合同修订保持相同。安装包模板更新只影响新建 effort；已有 effort 保留冻结正文和记录，不升级或重新 bootstrap。仅便利文件缺失或被改动时，status/context/validate 的执行状态判断不受影响，`damaged_views` 不列出该文件，`valid` 不因它变为 false。视图刷新和 recover 仍会恢复冻结原文；冻结模板或 prompt 对象缺失、哈希损坏仍是完整性错误。
 
 ## 提交与恢复
 
@@ -35,7 +37,8 @@ bootstrap 固定 `goal-loop/protocol` 的 `format_version`、模板和渲染后 
 - 发布前中断：运行状态不变，未引用对象不作为证据。
 - 发布后中断：提交已经生效，恢复重建视图，不重复命令或状态转换。
 - 记录缺失、断链、对象缺失或损坏：停止并定位完整性错误，不改摘要、不猜测原事实。
-- Markdown 被编辑或删除：报告 damaged_views，恢复后从提交记录重建。
+- runbook、history、state 或 baseline 被编辑或删除：报告 damaged_views，恢复后从提交记录重建。
+- prompt 便利文件被编辑或删除：不报告状态损坏，仍可用已保存的正文启动；视图刷新或 recover 可恢复原文。
 
 ```text
 python CTL status EFFORT

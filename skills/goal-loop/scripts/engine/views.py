@@ -51,5 +51,6 @@ def refresh(store: Store, state: State) -> None:
 
 
 def damaged_views(store: Store, state: State) -> list[str]:
+    # The prompt is a copy convenience; users can keep using its saved text.
     return [path.relative_to(store.effort).as_posix() for path, content in render(store, state).items()
-            if not path.is_file() or path.read_bytes() != content]
+            if path != store.root / "prompt.md" and (not path.is_file() or path.read_bytes() != content)]

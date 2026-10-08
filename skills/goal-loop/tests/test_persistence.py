@@ -222,10 +222,14 @@ class PersistenceTests(Fixture):
         self.assertTrue(other.validate()["valid"])
         (effort / "goal/runbook.md").write_text("edited projection", encoding="utf-8")
         (effort / "goal/state.json").unlink()
-        self.assertFalse(service.validate()["valid"])
+        (effort / "goal/prompt.md").unlink()
+        validation = service.validate()
+        self.assertFalse(validation["valid"])
+        self.assertEqual(set(validation["damaged_views"]), {"goal/runbook.md", "goal/state.json"})
         other.recover(0)
         self.assertTrue(service.validate()["valid"])
         self.assertEqual((effort / "goal/prompt.md").read_bytes(), original)
+        self.assertEqual(service.status()["revision"], 0)
 
     def test_object_tampering_and_missing_commits_fail_closed(self):
         _, _, service = self.make(contract(kinds="D"))

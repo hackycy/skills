@@ -42,7 +42,7 @@ class ContractTests(unittest.TestCase):
             compile_plan(plan(value).encode("utf-8"))
 
     def test_skill_markdown_links_exist(self):
-        for path in [SKILL / "SKILL.md", *(SKILL / "references").glob("*.md")]:
+        for path in [*SKILL.glob("*.md"), *(SKILL / "references").glob("*.md")]:
             for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", path.read_text(encoding="utf-8")):
                 if "://" in target or target.startswith("#"):
                     continue
