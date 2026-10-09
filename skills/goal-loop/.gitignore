@@ -1,2 +1,4 @@
 __pycache__/
 *.py[cod]
+.goal-loop.lock
+.goal-loop-transaction.json

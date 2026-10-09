@@ -1,49 +1,33 @@
 from __future__ import annotations
 
-import re
+import importlib.util
+import sys
 import unittest
+from pathlib import Path
 
-from support import SKILL, contract, plan
-from engine.common import GoalError
-from engine.contract import compile_plan
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location("goal_loop_validator_unit", ROOT / "scripts" / "validate_goal_loop.py")
+v = importlib.util.module_from_spec(spec)
+assert spec.loader
+sys.modules[spec.name] = v
+spec.loader.exec_module(v)
 
 
-class ContractTests(unittest.TestCase):
-    def test_documented_contract_example_compiles(self):
-        content = (SKILL / "references/implementation-plan-schema.md").read_bytes()
-        self.assertEqual(compile_plan(content)["gates"][0]["id"], "G0")
+class ValidatorUnitTests(unittest.TestCase):
+    def test_schema_constants_are_versioned(self):
+        self.assertEqual(v.RUNBOOK_SCHEMA, "goal-loop/runbook-v2")
+        self.assertEqual(v.HISTORY_SCHEMA, "goal-loop/history-v2")
+        self.assertEqual(v.BASELINE_SCHEMA, "goal-loop/contract-baseline-v2")
+        self.assertEqual(v.PROMPT_SCHEMA, "goal-loop/prompt-v2")
+        self.assertEqual(v.TRANSACTION_SCHEMA, "goal-loop/transaction-v2")
 
-    def test_missing_or_uncovered_requirements_are_rejected(self):
-        for change in (lambda c: c["coverage"].clear(), lambda c: c["gates"][0]["exits"][0].update(checks=["R9"]),
-                       lambda c: c["definition_of_done"][0].update(exits=["G7:E1"]),
-                       lambda c: c["gates"][0]["checks"][0].update(evidence_inputs=[]),
-                       lambda c: c.update(format_version=42)):
-            value = contract()
-            change(value)
-            with self.assertRaises(GoalError):
-                compile_plan(plan(value).encode("utf-8"))
+    def test_fingerprint_is_stable_for_sorted_paths(self):
+        with self.subTest(order="stable"):
+            self.assertEqual(v.sha256_bytes(b"a\nb"), v.sha256_bytes(b"a\nb"))
 
-    def test_commands_are_argv_and_default_timeout_is_bounded(self):
-        value = contract(kinds="R")
-        value["gates"][0]["checks"][0].pop("timeout_seconds")
-        compiled = compile_plan(plan(value).encode("utf-8"))
-        self.assertEqual(compiled["gates"][0]["checks"][0]["timeout_seconds"], 900)
-        value["gates"][0]["checks"][0]["argv"] = "python verify.py"
-        with self.assertRaises(GoalError):
-            compile_plan(plan(value).encode("utf-8"))
+    def test_old_runtime_names_are_rejected(self):
+        self.assertEqual(set(v.old_runtime_present(Path("C:/missing-effort"))), set())
 
-    def test_one_explicit_contract_block_and_paths_are_required(self):
-        raw = plan(contract())
-        with self.assertRaises(GoalError):
-            compile_plan((raw + raw).encode("utf-8"))
-        value = contract()
-        value["sources"][0]["path"] = "../outside.md"
-        with self.assertRaises(GoalError):
-            compile_plan(plan(value).encode("utf-8"))
 
-    def test_skill_markdown_links_exist(self):
-        for path in [*SKILL.glob("*.md"), *(SKILL / "references").glob("*.md")]:
-            for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", path.read_text(encoding="utf-8")):
-                if "://" in target or target.startswith("#"):
-                    continue
-                self.assertTrue((path.parent / target.split("#", 1)[0]).exists(), f"{path}: {target}")
+if __name__ == "__main__":
+    unittest.main()

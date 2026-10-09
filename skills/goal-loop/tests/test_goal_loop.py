@@ -1,209 +1,321 @@
 from __future__ import annotations
 
-import os
+import base64
+import hashlib
+import importlib.util
+import json
 import subprocess
 import sys
-import time
+import tempfile
 import unittest
+from pathlib import Path
 
-from support import CTL, Fixture, contract
-from engine.common import GoalError
-from engine.storage import Busy
+ROOT = Path(__file__).resolve().parents[1]
+CTL = ROOT / "scripts" / "goal_loop_ctl.py"
+VALIDATOR = ROOT / "scripts" / "validate_goal_loop.py"
+spec = importlib.util.spec_from_file_location("validate_goal_loop", ROOT / "scripts" / "validate_goal_loop.py")
+v = importlib.util.module_from_spec(spec)
+assert spec.loader
+sys.modules[spec.name] = v
+spec.loader.exec_module(v)
+
+PLAN = '''# Demo Implementation Plan
+
+## Contract Sources
+
+| Path | Role |
+| --- | --- |
+| `docs/decision.md` | accepted behavior |
+
+## Source Decisions
+
+- behavior accepted in docs/decision.md
+
+## Outcome
+
+The repository exposes the accepted behavior.
+
+## Non-Negotiable Rules
+
+- preserve the public behavior
+
+## Gate Overview
+
+| Gate | Name | Unlock condition | Outcome |
+| --- | --- | --- | --- |
+| G0 | Prepare | start | prepared |
+{extra_overview}
+
+## G0: Prepare
+
+### Purpose
+
+Prepare the behavior.
+
+### Inputs
+
+- `src/app.txt`
+
+### Objective
+
+Verify the behavior.
+
+### Scope boundary
+
+Only `src/app.txt` changes.
+
+### Constraints
+
+- preserve the public behavior
+
+### Slice policy
+
+One behavior per slice.
+
+### Verification
+
+#### Directed
+
+| ID | Check | Evidence inputs |
+| --- | --- | --- |
+| D1 | inspect the marker | `src/app.txt` |
+
+#### Repository
+
+| ID | Command | Evidence inputs |
+| --- | --- | --- |
+| R1 | `python -c "from pathlib import Path; assert Path('src/app.txt').read_text() == 'ok\\n'"` | `src/app.txt` |
+
+#### Manual acceptance
+
+| ID | Scenario | Evidence inputs |
+| --- | --- | --- |
+| M1 | user confirms the behavior | `src/app.txt` |
+
+### Evidence rule
+
+| Exit | Required checks |
+| --- | --- |
+| E1 | D1, R1 |
+| E2 | M1 |
+
+### Stop conditions
+
+- `SC1`: required dependency unavailable
+
+### Exit conditions
+
+- `E1`: directed and repository checks pass
+- `E2`: manual acceptance passes
+{extra_gate}
+
+## Definition Of Done
+
+- all exits pass
+
+## Explicitly Out Of Scope
+
+- unrelated changes
+'''
 
 
-class AttemptTests(Fixture):
-    def test_mixed_checks_require_every_exit_and_activate_only_the_successor(self):
-        _, _, service = self.make(contract(gates=2, kinds="DRM"))
-        self.passed(service, "D1")
-        service.run(2, "R1")
-        with self.assertRaises(GoalError):
-            service.pass_gate(4)
-        self.passed(service, "M1")
-        result = service.pass_gate(6)
-        self.assertEqual(result["next_gate"], "G1")
-        self.assertEqual(service.status()["checks"]["M1"]["status"], "missing")
-        self.complete(service)
-        self.assertEqual(service.status()["state"], "complete")
-        self.assertTrue(service.validate()["valid"])
+def plan_text(two_gates: bool = False) -> str:
+    if not two_gates:
+        return PLAN.format(extra_overview="", extra_gate="")
+    return PLAN.format(extra_overview="| G1 | Finish | G0 exits pass | finished |", extra_gate='''
 
-    def test_manual_rejection_retry_and_gate_pass(self):
-        _, effort, service = self.make(contract(kinds="M"))
-        first = self.cli(effort, "check", "start", "--check", "M1", "--subject", "build 1", "--expected-revision", 0)
-        self.cli(effort, "check", "finish", "--attempt", first["attempt"], "--outcome", "fail", "--result", "fix interaction", "--expected-revision", 1, expected_code=2)
-        second = self.cli(effort, "check", "start", "--check", "M1", "--subject", "build 2", "--expected-revision", 2)
-        self.assertNotEqual(first["attempt"], second["attempt"])
-        self.cli(effort, "check", "finish", "--attempt", second["attempt"], "--outcome", "pass", "--result", "accepted", "--expected-revision", 3)
-        self.cli(effort, "pass-gate", "--expected-revision", 4)
-        self.assertEqual(service.status()["state"], "complete")
+## G1: Finish
 
-    def test_handoff_snapshot_is_bound_before_waiting(self):
-        repo, _, service = self.make(contract(kinds="M"))
-        start = service.start(0, "M1", "build 1")
-        (repo / "src/app.txt").write_text("changed", encoding="utf-8")
-        result = service.finish(1, start["attempt"], "pass", "accepted build 1")
-        self.assertEqual(result["status"], "stale")
-        self.assertIsNone(service.status()["pending"])
-        self.assertEqual(service.status()["satisfied_exits"], [])
-        self.passed(service, "M1")
-        service.pass_gate(service.status()["revision"])
+### Purpose
 
-    def test_passing_evidence_can_expire_and_be_repeated(self):
-        repo, _, service = self.make(contract(kinds="M"))
-        self.passed(service, "M1")
-        (repo / "src/app.txt").write_text("updated", encoding="utf-8")
-        self.assertEqual(service.status()["checks"]["M1"]["status"], "stale")
-        with self.assertRaisesRegex(GoalError, "stale"):
-            service.pass_gate(2)
-        self.passed(service, "M1")
-        service.pass_gate(4)
+Finish the behavior.
 
-    def test_cancel_never_restores_previous_pass_and_rejects_late_result(self):
-        _, _, service = self.make(contract(kinds="D"))
-        self.passed(service, "D1")
-        start = service.start(2, "D1", "recheck")
-        service.cancel(3, start["attempt"], "cancelled")
-        with self.assertRaises(GoalError):
-            service.finish(4, start["attempt"], "pass", "late response")
-        with self.assertRaises(GoalError):
-            service.pass_gate(4)
-        self.assertEqual(service.status()["checks"]["D1"]["status"], "cancelled")
+### Inputs
 
-    def test_wrong_duplicate_and_parallel_attempts_are_rejected(self):
-        _, _, service = self.make()
-        started = service.start(0, "D1", "inspection")
-        with self.assertRaises(GoalError):
-            service.start(1, "M1", "inspection")
-        with self.assertRaises(GoalError):
-            service.finish(1, "A999999", "pass", "wrong")
-        service.finish(1, started["attempt"], "pass", "observed")
-        with self.assertRaises(GoalError):
-            service.finish(2, started["attempt"], "pass", "duplicate")
+- `src/app.txt`
 
-    def test_directed_result_records_stale_deleted_inputs(self):
-        repo, _, service = self.make(contract(kinds="D"))
-        started = service.start(0, "D1", "source before inspection")
-        (repo / "src/app.txt").unlink()
-        self.assertEqual(service.finish(1, started["attempt"], "pass", "observed before deletion")["status"], "stale")
+### Objective
 
-    def test_glob_file_set_changes_invalidate_evidence(self):
-        value = contract(kinds="D")
-        value["gates"][0]["checks"][0]["evidence_inputs"] = ["src/**"]
-        repo, _, service = self.make(value)
-        self.passed(service, "D1")
-        (repo / "src/another.txt").write_text("additional behavior", encoding="utf-8")
-        self.assertEqual(service.status()["checks"]["D1"]["status"], "stale")
-        self.assertEqual(service.status()["satisfied_exits"], [])
+Run the final check.
 
-    def test_environment_checks_expose_limited_freshness(self):
-        value = contract(kinds="D")
-        value["gates"][0]["checks"][0].update(evidence_inputs=[], environment=True)
-        _, _, service = self.make(value)
-        self.passed(service, "D1")
-        self.assertIn("not fingerprinted", service.status()["checks"]["D1"]["freshness"])
+### Scope boundary
 
-    def test_stop_resume_checkpoint_and_scope_context(self):
-        _, _, service = self.make(contract(gates=2, kinds="D"))
-        service.mutate(0, {"type": "blocked", "condition": "SC1", "reason": "offline", "next_action": "restore dependency"})
-        with self.assertRaises(GoalError):
-            service.start(1, "D1", "cannot proceed")
-        service.mutate(1, {"type": "resumed", "reason": "online", "next_action": "inspect"})
-        service.mutate(2, {"type": "recorded", "kind": "checkpoint", "result": "slice verified", "last_completed_slice": "S1", "next_action": "S2"})
-        context = service.status(context=True)
-        self.assertEqual(context["checkpoint"]["last_completed_slice"], "S1")
-        self.assertEqual(context["gate_contract"]["id"], "G0")
-        self.assertIn("rules", context["global_contract"])
-        self.assertNotIn("history", context)
+Only `src/app.txt` is inspected.
+
+### Constraints
+
+- preserve the public behavior
+
+### Slice policy
+
+One verification slice.
+
+### Verification
+
+#### Directed
+
+无
+
+#### Repository
+
+| ID | Command | Evidence inputs |
+| --- | --- | --- |
+| R1 | `python -c "from pathlib import Path; assert Path('src/app.txt').exists()"` | `src/app.txt` |
+
+#### Manual acceptance
+
+无
+
+### Evidence rule
+
+| Exit | Required checks |
+| --- | --- |
+| E1 | R1 |
+
+### Stop conditions
+
+无
+
+### Exit conditions
+
+- `E1`: final check passes
+''')
 
 
-class RepositoryTests(Fixture):
-    def test_process_tree_is_terminated_on_timeout(self):
-        value = contract(kinds="R")
-        value["gates"][0]["checks"][0]["timeout_seconds"] = 0.4
-        runner = "import subprocess, sys, time\nsubprocess.Popen([sys.executable, 'child.py'])\ntime.sleep(20)\n"
-        repo, _, service = self.make(value, runner)
-        (repo / "child.py").write_text("from pathlib import Path\nimport time\ntime.sleep(1)\nPath('unexpected-child-output').write_text('alive')\n", encoding="utf-8")
-        self.assertEqual(service.run(0, "R1")["status"], "timed-out")
-        time.sleep(1.1)
-        self.assertFalse((repo / "unexpected-child-output").exists())
+class GoalLoopTests(unittest.TestCase):
+    def make_repo(self, *, two_gates: bool = False):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        repo = Path(temp.name)
+        (repo / ".git").mkdir()
+        (repo / "docs").mkdir()
+        (repo / "docs" / "decision.md").write_text("accepted\n", encoding="utf-8")
+        (repo / "src").mkdir()
+        (repo / "src" / "app.txt").write_text("ok\n", encoding="utf-8")
+        effort = repo / "effort"
+        effort.mkdir()
+        (effort / "implementation-plan.md").write_text(plan_text(two_gates), encoding="utf-8")
+        result = self.ctl("bootstrap", effort, "--at", "2026-10-09")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return repo, effort
 
-    def test_host_exit_leaves_an_interrupted_attempt_with_observed_logs(self):
-        repo, effort, service = self.make(contract(kinds="R"), "from pathlib import Path\nimport time\nprint('before host exit', flush=True)\nPath('ready').write_text('ready')\ntime.sleep(0.6)\n")
-        proc = subprocess.Popen([sys.executable, "-B", str(CTL), "check", "run", str(effort), "--check", "R1", "--expected-revision", "0"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.addCleanup(lambda: proc.kill() if proc.poll() is None else None)
-        deadline = time.monotonic() + 10
-        while not (repo / "ready").exists() and time.monotonic() < deadline:
-            time.sleep(0.02)
-        self.assertTrue((repo / "ready").exists())
-        proc.kill()
-        proc.communicate(timeout=5)
-        # POSIX child owns an inherited lifecycle descriptor until it exits.
-        deadline = time.monotonic() + 5
-        while True:
-            try:
-                result = service.recover(1)
-                break
-            except Busy:
-                if time.monotonic() >= deadline:
-                    raise
-                time.sleep(0.05)
-        self.assertEqual(result["status"], "interrupted")
-        self.assertIn(b"before host exit", service.store.get(result["output"]["stdout"]))
-        self.assertEqual(service.status()["satisfied_exits"], [])
+    def ctl(self, command: str, effort: Path, *args: str):
+        if command == "check":
+            args = (*args,)
+            argv = [sys.executable, str(CTL), command, *(args[:1]), str(effort), *args[1:]]
+        else:
+            argv = [sys.executable, str(CTL), command, str(effort), *args]
+        return subprocess.run(argv, capture_output=True, text=True, check=False)
 
-    def test_command_executes_without_shell_and_keeps_output(self):
-        _, effort, service = self.make(contract(kinds="R"))
-        result = self.cli(effort, "check", "run", "--check", "R1", "--expected-revision", 0)
-        self.assertIn(b"passed", service.store.get(result["output"]["stdout"]))
-        self.assertEqual(result["revision"], 2)
-        service.pass_gate(2)
+    def revision(self, effort: Path) -> int:
+        text = (effort / "goal" / "runbook.md").read_text(encoding="utf-8")
+        return int(next(line.split("`")[1] for line in text.splitlines() if line.startswith("Revision:")))
 
-    def test_repository_input_mutation_cannot_pass(self):
-        _, _, service = self.make(contract(kinds="R"), "from pathlib import Path\nPath('src/app.txt').write_text('changed')\n")
-        self.assertEqual(service.run(0, "R1")["status"], "stale")
-        with self.assertRaises(GoalError):
-            service.pass_gate(2)
+    def complete_g0(self, effort: Path):
+        commands = [
+            ("check", "start", "--expected-revision", "0", "--kind", "Directed", "--check", "D1", "--result", "inspected", "--next-action", "finish D1"),
+            ("check", "finish", "--expected-revision", "1", "--kind", "Directed", "--check", "D1", "--outcome", "pass", "--result", "accepted", "--next-action", "R1"),
+            ("check", "run", "--expected-revision", "2", "--check", "R1", "--next-action", "M1"),
+            ("check", "start", "--expected-revision", "3", "--kind", "Manual acceptance", "--check", "M1", "--result", "ready", "--next-action", "wait"),
+            ("check", "finish", "--expected-revision", "4", "--kind", "Manual acceptance", "--check", "M1", "--acceptance", "G0-M1", "--outcome", "pass", "--result", "accepted", "--next-action", "pass Gate"),
+        ]
+        for command in commands:
+            result = self.ctl(command[0], effort, command[1], *command[2:])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_failed_command_and_timeout_are_recorded(self):
-        _, _, service = self.make(contract(kinds="R"), "import sys\nprint('failure detail', file=sys.stderr)\nsys.exit(3)\n")
-        result = service.run(0, "R1")
-        self.assertEqual(result["status"], "fail")
-        self.assertIn(b"failure detail", service.store.get(result["output"]["stderr"]))
-        value = contract(kinds="R")
-        value["gates"][0]["checks"][0]["timeout_seconds"] = 0.15
-        _, _, service = self.make(value, "import time\ntime.sleep(30)\n")
-        self.assertEqual(service.run(0, "R1")["status"], "timed-out")
+    def test_bootstrap_has_only_fixed_control_files(self):
+        _, effort = self.make_repo()
+        files = {path.relative_to(effort).as_posix() for path in (effort / "goal").rglob("*") if path.is_file() and not path.name.startswith(".")}
+        self.assertEqual(files, {"goal/contract-baseline.json", "goal/runbook.md", "goal/prompt.md", "goal/history/G0.md"})
+        for name in ("commits", "objects", "spool", "state.json", "evidence"):
+            self.assertFalse((effort / "goal" / name).exists())
+        self.assertEqual(v.validate(effort), [])
 
-    def test_missing_executable_records_interruption(self):
-        value = contract(kinds="R")
-        value["gates"][0]["checks"][0]["argv"] = ["goal-loop-nonexistent-command-123"]
-        _, _, service = self.make(value)
-        self.assertEqual(service.run(0, "R1")["status"], "interrupted")
+    def test_old_runtime_is_rejected(self):
+        _, effort = self.make_repo()
+        (effort / "goal" / "objects").mkdir()
+        result = self.ctl("status", effort)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unsupported legacy", result.stdout)
 
-    def test_unicode_spaces_and_literal_arguments(self):
-        value = contract(kinds="R")
-        argument = '空 格; $() & "quote" \\path'
-        value["gates"][0]["checks"][0]["argv"] += [argument]
-        _, _, service = self.make(value, "import sys\nsys.stdout.reconfigure(encoding='utf-8')\nprint(sys.argv[1])\n")
-        result = service.run(0, "R1")
-        self.assertIn(argument, service.store.get(result["output"]["stdout"]).decode("utf-8"))
+    def test_checkpoint_is_replaced_after_one_hundred_slices(self):
+        _, effort = self.make_repo()
+        for index in range(100):
+            result = self.ctl("record", effort, "--expected-revision", str(index), "--kind", "checkpoint", "--slice", f"S{index}", "--result", "stable", "--next-action", "continue", "--last-completed-slice", f"S{index}", "--current-slice", "next")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        runbook = effort / "goal" / "runbook.md"
+        self.assertLess(runbook.stat().st_size, 7000)
+        self.assertIn("S99", runbook.read_text(encoding="utf-8"))
+        self.assertEqual(len(list((effort / "goal" / "history").glob("G*.md"))), 1)
 
-    def test_cancel_running_process_and_preserve_output(self):
-        repo, effort, service = self.make(contract(kinds="R"), "from pathlib import Path\nimport time\nprint('started', flush=True)\nPath('ready').write_text('ready')\ntime.sleep(20)\n")
-        proc = subprocess.Popen([sys.executable, "-B", str(CTL), "check", "run", str(effort), "--check", "R1", "--expected-revision", "0"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.addCleanup(lambda: proc.kill() if proc.poll() is None else None)
-        deadline = time.monotonic() + 10
-        while not (repo / "ready").exists() and time.monotonic() < deadline:
-            time.sleep(0.02)
-        self.assertTrue((repo / "ready").exists())
-        status = service.status()
-        with self.assertRaises(Busy):
-            service.recover(status["revision"])
-        service.cancel(status["revision"], status["pending"]["id"], "user cancelled")
-        out, err = proc.communicate(timeout=10)
-        self.assertEqual(proc.returncode, 2, out + err)
-        final = service.store.load().attempts[status["pending"]["id"]]
-        self.assertEqual(final.status, "cancelled")
-        self.assertIn(b"started", service.store.get(final.output["stdout"]))
+    def test_directed_repository_and_manual_checks(self):
+        _, effort = self.make_repo()
+        self.complete_g0(effort)
+        text = (effort / "goal" / "runbook.md").read_text(encoding="utf-8")
+        self.assertIn("Satisfied exits: `all`", text)
+        self.assertFalse(any(path.is_file() for path in (effort / "goal").rglob("evidence/*")))
+
+    def test_fingerprint_change_rejects_pass_gate(self):
+        repo, effort = self.make_repo()
+        self.ctl("check", effort, "start", "--expected-revision", "0", "--kind", "Directed", "--check", "D1", "--result", "ok", "--next-action", "finish D1")
+        self.ctl("check", effort, "finish", "--expected-revision", "1", "--kind", "Directed", "--check", "D1", "--outcome", "pass", "--result", "ok", "--next-action", "R1")
+        self.ctl("check", effort, "run", "--expected-revision", "2", "--check", "R1", "--next-action", "M1")
+        repo.joinpath("src/app.txt").write_text("changed\n", encoding="utf-8")
+        result = self.ctl("pass-gate", effort, "--expected-revision", "3")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("stale", (result.stdout + result.stderr).lower())
+
+    def test_manual_handoff_does_not_change_gate_state_and_blocks_pass(self):
+        _, effort = self.make_repo()
+        result = self.ctl("check", effort, "start", "--expected-revision", "0", "--kind", "Manual acceptance", "--check", "M1", "--result", "ready", "--next-action", "wait")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Acceptance: G0-M1", result.stdout)
+        self.assertIn("| G0: Prepare | active |", (effort / "goal" / "runbook.md").read_text(encoding="utf-8"))
+        self.assertNotEqual(self.ctl("pass-gate", effort, "--expected-revision", "1").returncode, 0)
+
+    def test_block_resume_and_only_direct_successor(self):
+        _, effort = self.make_repo(two_gates=True)
+        self.assertEqual(self.ctl("block", effort, "--expected-revision", "0", "--condition", "SC1", "--next-action", "restore").returncode, 0)
+        self.assertEqual(self.ctl("resume", effort, "--expected-revision", "1", "--result", "restored", "--next-action", "continue").returncode, 0)
+        text = (effort / "goal" / "runbook.md").read_text(encoding="utf-8")
+        self.assertIn("| G1: Finish | planned |", text)
+
+    def test_gate_pass_reports_effort_complete(self):
+        _, effort = self.make_repo()
+        self.complete_g0(effort)
+        result = self.ctl("pass-gate", effort, "--expected-revision", "5")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Gate: `none`", (effort / "goal" / "runbook.md").read_text(encoding="utf-8"))
+
+    def test_recover_finishes_control_transaction(self):
+        _, effort = self.make_repo()
+        runbook = effort / "goal" / "runbook.md"
+        before = runbook.read_bytes()
+        after = before.replace(b"Revision: `0`", b"Revision: `1`")
+        journal = {"schema": v.TRANSACTION_SCHEMA, "operation": "test", "files": [{"path": "goal/runbook.md", "before_exists": True, "before_sha256": hashlib.sha256(before).hexdigest(), "after_sha256": hashlib.sha256(after).hexdigest(), "before_b64": base64.b64encode(before).decode(), "after_b64": base64.b64encode(after).decode()}]}
+        (effort / "goal" / ".goal-loop-transaction.json").write_text(json.dumps(journal), encoding="utf-8")
+        result = self.ctl("recover", effort)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse((effort / "goal" / ".goal-loop-transaction.json").exists())
+
+    def test_cli_validator_and_prompt_are_current(self):
+        _, effort = self.make_repo()
+        result = subprocess.run([sys.executable, str(VALIDATOR), str(effort)], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        prompt = (effort / "goal" / "prompt.md").read_text(encoding="utf-8").lower()
+        self.assertIn("不创建、修改或回滚 git commit", prompt)
+        self.assertNotIn("goal/evidence", prompt)
+
+    def test_contract_revision_preview_and_revalidate(self):
+        repo, effort = self.make_repo()
+        candidate = repo / "candidate-plan.md"
+        candidate.write_text(plan_text(), encoding="utf-8")
+        preview = self.ctl("revise-contract", effort, "--plan", str(candidate), "--mode", "revalidate", "--reason", "accepted clarification")
+        self.assertEqual(preview.returncode, 0, preview.stdout + preview.stderr)
+        proposal = json.loads(preview.stdout)
+        committed = self.ctl("revise-contract", effort, "--plan", str(candidate), "--mode", "revalidate", "--reason", "accepted clarification", "--preview-digest", proposal["digest"], "--expected-revision", "0")
+        self.assertEqual(committed.returncode, 0, committed.stdout + committed.stderr)
+        self.assertEqual(v.validate(effort), [])
 
 
 if __name__ == "__main__":

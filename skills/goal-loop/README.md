@@ -28,7 +28,7 @@ agent 会审查输入，将任务拆成具有明确范围与验收条件的 Gate
 | `implementation-plan.md` | 做什么、按什么顺序、如何切片和证明完成 |
 | `goal/runbook.md` | 查看当前进度、恢复点和检查状态 |
 | `goal/prompt.md` | 可直接复制发送的固定提示词正文 |
-| `goal/history/`、`goal/commits/`、`goal/objects/` | 供 agent 追溯与恢复的记录和证据 |
+| `goal/history/` | 按 Gate 保存简短追溯记录 |
 
 初始化回复会直接给出完整的提示词代码块。保存这段文本即可，也可以从 `goal/prompt.md` 复制；其中的实际路径已经填好。上面的示例用于初始化，后续执行使用 agent 交付的固定正文。
 
@@ -86,7 +86,7 @@ Gate 是计划中一个有明确目标和验收条件的阶段；Goal 是你发�
 
 **提示词文件丢了，保存的文本还能用吗？**
 
-可以。`goal/prompt.md` 只是复制便利文件，计划和 runbook 不依赖它。agent 可以恢复原文；请保留运行记录与证据目录。
+可以。`goal/prompt.md` 只是复制便利文件，计划和 runbook 不依赖它。agent 可以恢复原文；请保留计划、runbook 和各 Gate history。
 
 **更新 skill 会改变已有任务的提示词吗？**
 
