@@ -468,10 +468,12 @@ def validate_prompt(effort: Path, errors: list[str]) -> None:
     for forbidden in ("goal/evidence", "verify-directed", "verify-repository", "reconcile-baseline", "event hash chain"):
         if forbidden in text.lower():
             errors.append(f"prompt: obsolete term is present: {forbidden}")
-    required = ("不创建、修改或回滚 git commit", "代码提交和代码回退由用户", "只有合同声明的 stop condition")
+    required = ("不创建、修改或回滚 git commit", "只有合同声明的 stop condition")
     for phrase in required:
         if phrase.lower() not in text.lower():
             errors.append(f"prompt: required responsibility statement is missing: {phrase}")
+    if not any(phrase in text for phrase in ("代码提交和代码回退由我", "代码提交和代码回退由用户")):
+        errors.append("prompt: code submission and rollback must remain the user's responsibility")
 
 
 def valid_ledger_shape(rows: list[LedgerRow]) -> bool:
