@@ -25,6 +25,7 @@ CHECKPOINT_ORDER = (
     "Gate", "History", "History head", "Last completed slice", "Current slice", "Checks",
     "Satisfied exits", "Manual acceptance", "Blocker", "Risks", "Next action", "Contract revision",
 )
+CONTEXT_PAGE_CHARS = 4000
 
 
 def today() -> str:
@@ -229,7 +230,9 @@ def current_prompt(effort: Path) -> bytes:
     repo_root = v.find_repo_root(effort)
     rel = v.repo_relative(effort, repo_root)
     template = Path(__file__).resolve().parents[1] / "references" / "goal-prompt-template.md"
-    return template.read_text(encoding="utf-8").replace("{{EFFORT_PATH}}", rel).encode()
+    return (template.read_text(encoding="utf-8")
+            .replace("{{EFFORT_PATH}}", rel)
+            .replace("{{PYTHON}}", "python" if os.name == "nt" else "python3").encode())
 
 
 def control(effort: Path, expected_revision: int, *, allow_drift: bool = False) -> dict[str, object]:
@@ -291,7 +294,7 @@ def update_checkpoint(state: dict[str, object], history: str, event_id: str, *, 
 def command_bootstrap(args: argparse.Namespace) -> None:
     effort = args.effort.resolve()
     if v.old_runtime_present(effort):
-        die("unsupported legacy runtime directory; re-bootstrap in a clean effort")
+        die("unsupported legacy runtime directory; existing files retained")
     plan_path = effort / "implementation-plan.md"
     if not plan_path.exists() or (effort / "goal" / "runbook.md").exists():
         die("implementation plan is missing or goal/runbook.md already exists")
@@ -313,6 +316,9 @@ def command_bootstrap(args: argparse.Namespace) -> None:
     checkpoint = {"Gate": first.label, "History": "goal/history/G0.md", "History head": "G0-E0001", "Last completed slice": "none", "Current slice": "none", "Checks": "none", "Satisfied exits": "none", "Manual acceptance": "none", "Blocker": "none", "Risks": "none", "Next action": "select the first slice from the Gate contract", "Contract revision": "initial"}
     prompt = current_prompt(effort)
     writes = {effort / "goal" / "contract-baseline.json": manifest, effort / "goal" / "runbook.md": render_runbook(plan_title(plan_path.read_text(encoding="utf-8")), 0, v.sha256_bytes(manifest), rows, checkpoint).encode(), effort / "goal" / "prompt.md": prompt, effort / "goal" / "history" / "G0.md": history.encode()}
+    # Pin the executable pair with the prompt; normal execution needs no skill installation.
+    for source in (Path(__file__).resolve(), Path(v.__file__).resolve()):
+        writes[effort / "goal" / source.name] = source.read_bytes()
     commit_transaction(effort, writes, operation="bootstrap")
     print("OK: bootstrap; Revision 0")
 
@@ -559,45 +565,67 @@ def command_revise_contract(args: argparse.Namespace) -> None:
         write_state(state, state["history_text"], {**state["checkpoint"], "Contract revision": args.reason}, operation="revise-contract", extra=extra)  # type: ignore[arg-type]
 
 
+def current_view(effort: Path) -> tuple[str, str]:
+    """Render validated live state without exposing history or implementation details."""
+    text = (effort / "goal" / "runbook.md").read_text(encoding="utf-8")
+    revision = v.parse_revision(text, [])
+    checkpoint = v.parse_checkpoint(text, [])
+    rows = v.parse_ledger(text, [])
+    plan_text = (effort / "implementation-plan.md").read_text(encoding="utf-8")
+    plan = v.parse_plan(plan_text, [])
+    gate = next((gate for gate in plan.gates if gate.label == checkpoint.get("Gate")), None)
+    row = next((row for row in rows if row.gate == checkpoint.get("Gate")), None)
+    stale = "none"
+    if gate:
+        events = v.parse_history(effort / checkpoint["History"], gate, [])
+        stale_map = v.stale_checks(v.find_repo_root(effort), gate, events)
+        stale = ", ".join(f"{check}: stale ({reason})" for check, reason in stale_map.items()) or "none"
+    summary = (f"Validation: OK (transaction, baseline, runbook, history)\nRevision: {revision}\n"
+               f"State: {row.status if row else 'complete'}\nGate: {checkpoint.get('Gate')}\n"
+               f"Manual acceptance: {checkpoint.get('Manual acceptance')}\n"
+               f"Satisfied exits: {checkpoint.get('Satisfied exits')}\n"
+               f"Next action: {checkpoint.get('Next action')}\nStale checks: {stale}")
+    if gate is None:
+        return summary, "Effort complete"
+    context = (f"Checkpoint:\n{v.section(text, 'Current Checkpoint') or ''}\n"
+               f"Plan rules:\n{v.section(plan_text, 'Non-Negotiable Rules') or ''}\n"
+               "Contract Sources (read relevant sources on demand):\n"
+               + "\n".join(f"- {source}" for source in plan.contract_sources)
+               + f"\n\nCurrent Gate contract:\n{gate.body}")
+    return summary, context
+
+
 def command_status(args: argparse.Namespace) -> int:
     errors = v.validate(args.effort)
     if errors:
         print("ERROR: " + "; ".join(errors))
         return 1
-    text = (args.effort / "goal" / "runbook.md").read_text(encoding="utf-8")
-    checkpoint_errors: list[str] = []
-    revision = v.parse_revision(text, checkpoint_errors)
-    checkpoint = v.parse_checkpoint(text, checkpoint_errors)
-    stale = "none"
-    if checkpoint.get("Gate") != "none":
-        plan_errors: list[str] = []
-        plan = v.parse_plan((args.effort / "implementation-plan.md").read_text(encoding="utf-8"), plan_errors)
-        gate = next((gate for gate in plan.gates if gate.label == checkpoint.get("Gate")), None)
-        if gate:
-            history_path = args.effort / checkpoint.get("History", "")
-            history_errors: list[str] = []
-            events = v.parse_history(history_path, gate, history_errors)
-            stale_map = v.stale_checks(v.find_repo_root(args.effort), gate, events)
-            stale = ", ".join(f"{check}: stale ({reason})" for check, reason in stale_map.items()) or "none"
-    print(f"Revision: {revision}\nGate: {checkpoint.get('Gate')}\nManual acceptance: {checkpoint.get('Manual acceptance')}\nSatisfied exits: {checkpoint.get('Satisfied exits')}\nNext action: {checkpoint.get('Next action')}\nStale checks: {stale}")
+    summary, _ = current_view(args.effort)
+    print(summary)
     return 0
+
+
+def print_context_page(text: str, offset: int) -> None:
+    if offset < 0 or (offset and offset >= len(text)):
+        die("context offset is outside the current view; read context from offset 0")
+    end = min(offset + CONTEXT_PAGE_CHARS, len(text))
+    print(f"Context characters {offset}:{end} of {len(text)}")
+    print("--- context ---")
+    print(text[offset:end])
+    print("--- end context ---")
+    print(f"Next page: context --offset {end} (same effort)" if end < len(text) else "Context complete")
 
 
 def command_context(args: argparse.Namespace) -> int:
     errors = v.validate(args.effort)
     if errors:
-        print("ERROR: " + "; ".join(errors))
+        print_context_page("ERROR: " + "\nERROR: ".join(errors), args.offset)
         return 1
-    text = (args.effort / "goal" / "runbook.md").read_text(encoding="utf-8")
-    checkpoint_errors: list[str] = []
-    checkpoint = v.parse_checkpoint(text, checkpoint_errors)
-    plan_errors: list[str] = []
-    plan = v.parse_plan((args.effort / "implementation-plan.md").read_text(encoding="utf-8"), plan_errors)
-    gate = next((gate for gate in plan.gates if gate.label == checkpoint.get("Gate")), None)
-    if gate is None:
-        print("Effort complete")
-        return 0
-    print(f"Gate: {gate.label}\nCheckpoint:\n{v.section(text, 'Current Checkpoint') or ''}\nContract Sources:\n" + "\n".join(f"- {source}" for source in plan.contract_sources) + f"\n\nCurrent Gate contract:\n{gate.body}")
+    summary, context = current_view(args.effort)
+    # Every page identifies its revision so callers can detect concurrent changes.
+    revision = v.parse_revision((args.effort / "goal" / "runbook.md").read_text(encoding="utf-8"), [])
+    print(f"Revision: {revision}")
+    print_context_page(summary + "\n\n" + context, args.offset)
     return 0
 
 
@@ -612,7 +640,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("bootstrap"); p.add_argument("effort", type=Path); p.add_argument("--at"); p.set_defaults(func=command_bootstrap)
     p = sub.add_parser("recover"); p.add_argument("effort", type=Path); p.set_defaults(func=lambda args: recover(args.effort))
     p = sub.add_parser("status"); p.add_argument("effort", type=Path); p.set_defaults(func=command_status)
-    p = sub.add_parser("context"); p.add_argument("effort", type=Path); p.set_defaults(func=command_context)
+    p = sub.add_parser("context"); p.add_argument("effort", type=Path); p.add_argument("--offset", type=int, default=0, help="character offset for the next bounded context page"); p.set_defaults(func=command_context)
     p = sub.add_parser("validate"); p.add_argument("effort", type=Path); p.set_defaults(func=lambda args: print("OK: goal-loop artifacts are valid") if not v.validate(args.effort) else die("; ".join(v.validate(args.effort))))
     p = sub.add_parser("record"); p.add_argument("effort", type=Path); add_mutation(p); p.add_argument("--kind", choices=["slice", "checkpoint", "failure"], required=True); p.add_argument("--slice", default="none"); p.add_argument("--files", default="none"); p.add_argument("--changed", default="none"); p.add_argument("--result", required=True); p.add_argument("--risk", default="none"); p.add_argument("--next-action", required=True); p.add_argument("--last-completed-slice", default="none"); p.add_argument("--current-slice", default="none"); p.set_defaults(func=command_record)
     check = sub.add_parser("check"); check_sub = check.add_subparsers(dest="check_command", required=True)
@@ -628,6 +656,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    v.configure_stdio()
     args = build_parser().parse_args()
     effort = args.effort.resolve()
     with control_lock(effort):

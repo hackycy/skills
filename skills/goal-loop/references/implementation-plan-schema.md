@@ -44,6 +44,8 @@ Gate 从 G0 连续编号。每个 Gate 只能有一个直接前驱；执行控�
 
 每个 Gate 必须包含：`Purpose`、`Inputs`、`Objective`、`Scope boundary`、`Constraints`、`Slice policy`、`Verification`、`Evidence rule`、`Stop conditions` 和 `Exit conditions`。Gate 合同不包含 rollback 字段；代码版本和代码回退由用户的 Git 流程负责。
 
+Gate 合同是每轮必读内容：保留执行边界与验收所需规则，详细背景、示例和文件清单通过 Inputs 指向来源。共享规则写在 Non-Negotiable Rules，避免在每个 Gate 复制；执行历史放进 history。不要为缩短输出省略约束或验收条件。
+
 ### Verification
 
 由此 skill 编译的计划使用稳定 Verification ID。三类检查分别使用 `D<n>`、`R<n>`、`M<n>`，编号在 Gate 内按类别从 1 连续递增。
@@ -66,7 +68,7 @@ Directed check 由模型判断语义事实，control script 固定 check id、ou
 | R1 | `python -m unittest tests.test_migration` | `src/migration/**`, `tests/test_migration.py` |
 ```
 
-Repository check 的 Command 必须是仓库中真实可执行的项目命令。control script 在仓库根目录执行该命令，记录 exit code、状态和最多 4 KiB 的当前命令输出；stdout/stderr 不写入 `goal/`。
+Repository check 的 Command 必须是仓库中真实可执行的项目命令。control script 在仓库根目录执行该命令，记录 exit code 与状态；stdout/stderr 各输出末尾最多 4 KiB，不写入 `goal/`。
 
 #### Manual acceptance
 

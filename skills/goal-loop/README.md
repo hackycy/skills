@@ -8,7 +8,7 @@ agent 会读取最新进度、选择当前工作、实现、验证和保存记�
 
 适合已有明确目标、需要分阶段执行或跨多轮接续的工作。输入可以是 effort 目录（这一项工作的文档目录）、已收敛的 map、已接受的 ADR、spec，或现有 implementation plan。影响当前范围与验收的决策应已确定；缺少的必要决策会由 agent 指出。
 
-执行环境需要能访问目标 Git 仓库、skill 目录和 Python 3.11+。控制脚本只依赖 Python 标准库；项目自身的构建、测试和验收环境按项目要求准备。
+初始化需要能访问目标 Git 仓库、skill 目录和 Python 3.11+。初始化时会在 effort 中保存执行脚本副本，后续启动只需同一工作区与 Python。控制脚本只依赖 Python 标准库；项目自身的构建、测试和验收环境按项目要求准备。
 
 ## 第一次使用
 
@@ -29,8 +29,43 @@ agent 会审查输入，将任务拆成具有明确范围与验收条件的 Gate
 | `goal/runbook.md` | 查看当前进度、恢复点和检查状态 |
 | `goal/prompt.md` | 可直接复制发送的固定提示词正文 |
 | `goal/history/` | 按 Gate 保存简短追溯记录 |
+| `goal/goal_loop_ctl.py`、`goal/validate_goal_loop.py` | agent 使用的固定执行入口 |
 
 初始化回复会直接给出完整的提示词代码块。保存这段文本即可，也可以从 `goal/prompt.md` 复制；其中的实际路径已经填好。上面的示例用于初始化，后续执行使用 agent 交付的固定正文。
+
+## 项目已有 effort 时
+
+在目标项目中发送以下提示词，并替换示例路径。如果环境中安装了多份 goal-loop，附上要使用的 `SKILL.md` 路径，便于 agent 确定入口。
+
+**接续已有进度**
+
+已有 effort 无需重新初始化，直接发送保存的固定正文即可。需要 agent 帮你定位入口、检查记录或找回固定正文时，可发送：
+
+```text
+使用 $goal-loop，检查 docs/efforts/reader 中已有的 effort。
+保留其 implementation-plan.md、执行记录、脚本和固定 prompt，不重新 bootstrap。
+定位实际执行入口，检查当前状态；如果存在未完成的控制面 transaction，按恢复流程处理。
+如遇不支持的格式或无法恢复的文件，报告具体问题并保留原文件。
+完整输出 goal/prompt.md 中保存的原固定正文，不按 Gate、Revision 或 checkpoint 改写。
+本次只检查和恢复入口，不推进实现。
+```
+
+**重新初始化执行记录**
+
+`bootstrap` 会拒绝覆盖已经存在的 `goal/runbook.md`。如果明确要重新建立执行记录，使用独立的 effort 目录，保留原目录。初始化后的进度从 G0 开始；仓库代码保持原状，检查结果需要重新验证。此操作不是接续工作的必需步骤。
+
+```text
+使用 $goal-loop，以 docs/efforts/reader/implementation-plan.md 及其合同来源为依据，
+在 docs/efforts/reader-verification 中重新初始化执行记录。
+保留 docs/efforts/reader 中的全部文件及其固定 prompt；不改动或回退仓库代码。
+复用已经确定的目标、范围、Gate 顺序和验收条件，核对计划在目标目录中的路径引用。
+历史记录可用于理解已有工作，不直接继承 passed 状态或检查结果。
+如果目标目录已有运行记录，停止初始化并说明，不覆盖它。
+完成初始化和入口验证，完整输出目标目录 goal/prompt.md 的固定正文，供我保存并反复使用。
+本次只初始化，不推进 Gate。
+```
+
+这会建立一套独立的执行记录，不迁移原 effort 的 checkpoint。之后只使用目标目录交付的固定正文推进该 effort，避免交替运行两套记录。
 
 ## 每轮如何继续
 
@@ -48,7 +83,7 @@ flowchart TD
     result -->|所有阶段均通过| complete[整个 effort 完成]
 ```
 
-Gate 是计划中一个有明确目标和验收条件的阶段；Goal 是你发送提示词启动的一次任务；slice 是 agent 在阶段内部选择的一小块可验证工作。一个 Goal 可以连续完成多个 slice。Gate 通过后本轮结束，下一轮自动接续直接后继；同一个 Gate 也可能因交接或中断跨越多轮。
+Gate 是计划中一个有明确目标和验收条件的阶段；Goal 是你发送提示词启动的一次任务；slice 是 agent 在阶段内部选择的一小块可验证工作。一个 Goal 可以连续完成多个 slice，保存 slice 后继续执行，不要求你重新启动。Gate 通过后本轮结束，下一轮自动接续直接后继；同一个 Gate 也可能因交接或中断跨越多轮。
 
 ## 验收、恢复与完成
 
@@ -86,11 +121,11 @@ Gate 是计划中一个有明确目标和验收条件的阶段；Goal 是你发�
 
 **提示词文件丢了，保存的文本还能用吗？**
 
-可以。`goal/prompt.md` 只是复制便利文件，计划和 runbook 不依赖它。agent 可以恢复原文；请保留计划、runbook 和各 Gate history。
+可以。agent 可用你保存的原文恢复 `goal/prompt.md` 后继续；校验器要求该文件存在。请保留计划、runbook、各 Gate history 和脚本副本。
 
 **更新 skill 会改变已有任务的提示词吗？**
 
-不会。已有 effort 保留初始化时的固定正文和执行记录，新模板用于新建 effort。恢复操作重建原文，无需升级或重新初始化。
+不会。模板仅在初始化时生成固定正文；已有 effort 保留初始化时的固定正文、执行记录和脚本。恢复时使用保存的原文，无需升级或重新初始化。
 
 ## 内部机制与维护
 

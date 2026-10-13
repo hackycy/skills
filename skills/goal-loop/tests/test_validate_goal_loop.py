@@ -18,7 +18,7 @@ class ValidatorUnitTests(unittest.TestCase):
         self.assertEqual(v.RUNBOOK_SCHEMA, "goal-loop/runbook-v2")
         self.assertEqual(v.HISTORY_SCHEMA, "goal-loop/history-v2")
         self.assertEqual(v.BASELINE_SCHEMA, "goal-loop/contract-baseline-v2")
-        self.assertEqual(v.PROMPT_SCHEMA, "goal-loop/prompt-v2")
+        self.assertEqual(v.PROMPT_SCHEMA, "goal-loop/prompt-v3")
         self.assertEqual(v.TRANSACTION_SCHEMA, "goal-loop/transaction-v2")
 
     def test_fingerprint_is_stable_for_sorted_paths(self):

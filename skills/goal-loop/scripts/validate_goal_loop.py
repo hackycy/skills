@@ -8,13 +8,14 @@ import glob
 import hashlib
 import json
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 RUNBOOK_SCHEMA = "goal-loop/runbook-v2"
 HISTORY_SCHEMA = "goal-loop/history-v2"
 BASELINE_SCHEMA = "goal-loop/contract-baseline-v2"
-PROMPT_SCHEMA = "goal-loop/prompt-v2"
+PROMPT_SCHEMA = "goal-loop/prompt-v3"
 TRANSACTION_SCHEMA = "goal-loop/transaction-v2"
 
 REQUIRED_GATE_HEADINGS = (
@@ -462,8 +463,8 @@ def validate_prompt(effort: Path, errors: list[str]) -> None:
     except FileNotFoundError:
         errors.append("prompt: goal/prompt.md is missing")
         return
-    if prompt_schema(text) != PROMPT_SCHEMA:
-        errors.append(f"prompt: schema must be {PROMPT_SCHEMA}")
+    if prompt_schema(text) not in {"goal-loop/prompt-v2", PROMPT_SCHEMA}:
+        errors.append(f"prompt: schema must be goal-loop/prompt-v2 or {PROMPT_SCHEMA}")
     for forbidden in ("goal/evidence", "verify-directed", "verify-repository", "reconcile-baseline", "event hash chain"):
         if forbidden in text.lower():
             errors.append(f"prompt: obsolete term is present: {forbidden}")
@@ -494,7 +495,7 @@ def validate(effort: Path, *, allow_baseline_drift: bool = False, allow_pending_
     errors: list[str] = []
     old = old_runtime_present(effort)
     if old:
-        errors.append("unsupported legacy runtime directory; re-bootstrap effort: " + ", ".join(old))
+        errors.append("unsupported legacy runtime directory; existing files retained: " + ", ".join(old))
     goal = effort / "goal"
     if (goal / ".goal-loop-transaction.json").exists() and not allow_pending_transaction:
         errors.append("pending control-plane transaction exists; run recover")
@@ -552,7 +553,15 @@ def validate(effort: Path, *, allow_baseline_drift: bool = False, allow_pending_
     return errors
 
 
+def configure_stdio() -> None:
+    # Pipe consumers use UTF-8 even when Windows defaults to a legacy code page.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
 def main() -> int:
+    configure_stdio()
     parser = argparse.ArgumentParser()
     parser.add_argument("effort", type=Path)
     args = parser.parse_args()

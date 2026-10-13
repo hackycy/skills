@@ -4,6 +4,9 @@ import base64
 import hashlib
 import importlib.util
 import json
+import os
+import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -183,7 +186,7 @@ One verification slice.
 
 
 class GoalLoopTests(unittest.TestCase):
-    def make_repo(self, *, two_gates: bool = False):
+    def make_repo(self, *, two_gates: bool = False, plan: str | None = None):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         repo = Path(temp.name)
@@ -192,9 +195,9 @@ class GoalLoopTests(unittest.TestCase):
         (repo / "docs" / "decision.md").write_text("accepted\n", encoding="utf-8")
         (repo / "src").mkdir()
         (repo / "src" / "app.txt").write_text("ok\n", encoding="utf-8")
-        effort = repo / "effort"
+        effort = repo / "effort with spaces"
         effort.mkdir()
-        (effort / "implementation-plan.md").write_text(plan_text(two_gates), encoding="utf-8")
+        (effort / "implementation-plan.md").write_text(plan or plan_text(two_gates), encoding="utf-8")
         result = self.ctl("bootstrap", effort, "--at", "2026-10-09")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return repo, effort
@@ -205,7 +208,123 @@ class GoalLoopTests(unittest.TestCase):
             argv = [sys.executable, str(CTL), command, *(args[:1]), str(effort), *args[1:]]
         else:
             argv = [sys.executable, str(CTL), command, str(effort), *args]
-        return subprocess.run(argv, capture_output=True, text=True, check=False)
+        return subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", check=False)
+
+    def test_saved_prompt_entry_runs_from_repo_without_skill_discovery(self):
+        repo, effort = self.make_repo()
+        prompt = (effort / "goal/prompt.md").read_text(encoding="utf-8")
+        commands = re.findall(r"^python[^\n]+ context [^\n]+$", prompt, re.MULTILINE)
+        self.assertEqual(len(commands), 1, "saved prompt must contain one executable startup command")
+        argv = shlex.split(commands[0])
+        argv[0] = sys.executable
+        result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Revision: 0", result.stdout)
+        self.assertIn("State: active", result.stdout)
+        self.assertTrue((effort / "goal/validate_goal_loop.py").is_file())
+
+    def test_context_handles_non_gbk_contract_in_a_gbk_environment(self):
+        _, effort = self.make_repo(plan=plan_text().replace("Prepare the behavior.", "检查 façade 与 🚀。"))
+        result = subprocess.run([sys.executable, str(CTL), "context", str(effort)],
+                                env={**os.environ, "PYTHONIOENCODING": "gbk"}, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", errors="replace"))
+        self.assertIn("检查 façade 与 🚀。", result.stdout.decode("utf-8"))
+
+    def test_large_context_is_bounded_and_can_be_read_completely(self):
+        detail = "contract detail 中文 🚀 " * 3000 + "CONTRACT_END"
+        _, effort = self.make_repo(plan=plan_text().replace("Prepare the behavior.", detail))
+        result = self.ctl("context", effort)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertLessEqual(len(result.stdout.encode("utf-8")), 17000)
+        pages = [result.stdout]
+        while match := re.search(r"Next page: context --offset (\d+)", pages[-1]):
+            self.assertLess(len(pages), 100)
+            result = self.ctl("context", effort, "--offset", match[1])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertLessEqual(len(result.stdout.encode("utf-8")), 17000)
+            pages.append(result.stdout)
+        # Only framing is removed: the full contract must survive pagination.
+        payload = "".join(page.split("--- context ---\n", 1)[1].rsplit("\n--- end context ---", 1)[0] for page in pages)
+        self.assertIn(detail, payload)
+        self.assertIn("preserve the public behavior", payload)
+        self.assertNotIn("G0-E0001 · initialized", payload)
+
+    def test_context_reports_stale_checks_without_history_replay(self):
+        repo, effort = self.make_repo()
+        self.complete_g0(effort)
+        repo.joinpath("src/app.txt").write_text("changed\n", encoding="utf-8")
+        result = self.ctl("context", effort)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("D1: stale", result.stdout)
+        self.assertIn("Revision: 5", result.stdout)
+        self.assertNotIn("Evidence fingerprint:", result.stdout)
+
+    def test_context_stops_on_pending_transaction_and_baseline_drift(self):
+        repo, effort = self.make_repo()
+        journal = effort / "goal/.goal-loop-transaction.json"
+        journal.write_text("{}", encoding="utf-8")
+        result = self.ctl("context", effort)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("run recover", result.stdout)
+        self.assertNotIn("Current Gate contract:", result.stdout)
+        journal.unlink()
+        repo.joinpath("docs/decision.md").write_text("changed\n", encoding="utf-8")
+        result = self.ctl("context", effort)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("drift", result.stdout)
+        self.assertNotIn("Current Gate contract:", result.stdout)
+
+    def test_v2_runtime_is_accepted_without_rewriting_or_installing_files(self):
+        _, effort = self.make_repo()
+        prompt = effort / "goal/prompt.md"
+        original = (ROOT / "tests/fixtures/prompt-v2.md").read_bytes()
+        prompt.write_bytes(original.replace(b"{{EFFORT_PATH}}", b"effort with spaces"))
+        for name in ("goal_loop_ctl.py", "validate_goal_loop.py"):
+            (effort / "goal" / name).unlink()
+        before = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+        result = self.ctl("context", effort)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(before, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
+        result = self.ctl("record", effort, "--expected-revision", "0", "--kind", "slice",
+                          "--result", "stable", "--next-action", "continue")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(prompt.read_bytes(), before[prompt])
+        self.assertFalse((effort / "goal/goal_loop_ctl.py").exists())
+
+    def test_bundled_runtime_records_multiple_slices_with_the_same_prompt(self):
+        repo, effort = self.make_repo()
+        prompt = (effort / "goal/prompt.md").read_bytes()
+        entry = effort / "goal/goal_loop_ctl.py"
+        for index in range(2):
+            result = subprocess.run([sys.executable, str(entry), "record", str(effort),
+                                     "--expected-revision", str(index), "--kind", "slice",
+                                     "--last-completed-slice", f"S{index + 1}",
+                                     "--result", "stable", "--next-action", "continue"],
+                                    cwd=repo, capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn(f"Revision {index + 1}", result.stdout)
+        result = subprocess.run([sys.executable, str(entry), "context", str(effort)],
+                                cwd=repo, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("State: active", result.stdout)
+        self.assertIn("Last completed slice: `S2`", result.stdout)
+        self.assertEqual(prompt, (effort / "goal/prompt.md").read_bytes())
+
+    def test_same_saved_entry_resumes_successor_without_passed_history(self):
+        repo, effort = self.make_repo(two_gates=True)
+        prompt = (effort / "goal/prompt.md").read_text(encoding="utf-8")
+        command = re.findall(r"^python[^\n]+ context [^\n]+$", prompt, re.MULTILINE)[0]
+        argv = shlex.split(command)
+        argv[0] = sys.executable
+        self.complete_g0(effort)
+        passed = self.ctl("pass-gate", effort, "--expected-revision", "5")
+        self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
+        result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Gate: G1: Finish", result.stdout)
+        self.assertNotIn("Prepare the behavior.", result.stdout)
+        self.assertNotIn("G0-E", result.stdout)
+        self.assertEqual(prompt, (effort / "goal/prompt.md").read_text(encoding="utf-8"))
 
     def revision(self, effort: Path) -> int:
         text = (effort / "goal" / "runbook.md").read_text(encoding="utf-8")
@@ -226,7 +345,7 @@ class GoalLoopTests(unittest.TestCase):
     def test_bootstrap_has_only_fixed_control_files(self):
         _, effort = self.make_repo()
         files = {path.relative_to(effort).as_posix() for path in (effort / "goal").rglob("*") if path.is_file() and not path.name.startswith(".")}
-        self.assertEqual(files, {"goal/contract-baseline.json", "goal/runbook.md", "goal/prompt.md", "goal/history/G0.md"})
+        self.assertEqual(files, {"goal/contract-baseline.json", "goal/runbook.md", "goal/prompt.md", "goal/history/G0.md", "goal/goal_loop_ctl.py", "goal/validate_goal_loop.py"})
         for name in ("commits", "objects", "spool", "state.json", "evidence"):
             self.assertFalse((effort / "goal" / name).exists())
         self.assertEqual(v.validate(effort), [])
@@ -240,6 +359,7 @@ class GoalLoopTests(unittest.TestCase):
 
     def test_checkpoint_is_replaced_after_one_hundred_slices(self):
         _, effort = self.make_repo()
+        initial_context = self.ctl("context", effort).stdout
         for index in range(100):
             result = self.ctl("record", effort, "--expected-revision", str(index), "--kind", "checkpoint", "--slice", f"S{index}", "--result", "stable", "--next-action", "continue", "--last-completed-slice", f"S{index}", "--current-slice", "next")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -247,6 +367,9 @@ class GoalLoopTests(unittest.TestCase):
         self.assertLess(runbook.stat().st_size, 7000)
         self.assertIn("S99", runbook.read_text(encoding="utf-8"))
         self.assertEqual(len(list((effort / "goal" / "history").glob("G*.md"))), 1)
+        current_context = self.ctl("context", effort).stdout
+        self.assertLess(len(current_context), len(initial_context) + 100)
+        self.assertNotIn("G0-E0002 · checkpoint", current_context)
 
     def test_directed_repository_and_manual_checks(self):
         _, effort = self.make_repo()
@@ -286,6 +409,10 @@ class GoalLoopTests(unittest.TestCase):
         result = self.ctl("pass-gate", effort, "--expected-revision", "5")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Gate: `none`", (effort / "goal" / "runbook.md").read_text(encoding="utf-8"))
+        context = self.ctl("context", effort)
+        self.assertEqual(context.returncode, 0)
+        self.assertIn("State: complete", context.stdout)
+        self.assertIn("Effort complete", context.stdout)
 
     def test_recover_finishes_control_transaction(self):
         _, effort = self.make_repo()
@@ -300,7 +427,7 @@ class GoalLoopTests(unittest.TestCase):
 
     def test_cli_validator_and_prompt_are_current(self):
         _, effort = self.make_repo()
-        result = subprocess.run([sys.executable, str(VALIDATOR), str(effort)], capture_output=True, text=True, check=False)
+        result = subprocess.run([sys.executable, str(VALIDATOR), str(effort)], capture_output=True, text=True, encoding="utf-8", check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         prompt = (effort / "goal" / "prompt.md").read_text(encoding="utf-8").lower()
         self.assertIn("不创建、修改或回滚 git commit", prompt)
