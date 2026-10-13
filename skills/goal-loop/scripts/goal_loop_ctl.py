@@ -175,8 +175,8 @@ def baseline_bytes(repo_root: Path, paths: list[str]) -> bytes:
         target = repo_root / rel
         if not target.exists():
             die(f"contract source does not exist: {rel}")
-        files.append({"path": rel, "sha256": v.sha256(target)})
-    return (json.dumps({"schema": v.BASELINE_SCHEMA, "files": files}, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
+        files.append({"path": rel, "sha256": v.contract_sha256(target.read_bytes())})
+    return (json.dumps({"schema": v.BASELINE_SCHEMA, "hash_mode": v.CONTRACT_HASH_MODE, "files": files}, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
 
 
 def render_event(event_id: str, event_type: str, fields: dict[str, str]) -> str:
@@ -578,7 +578,7 @@ def command_revise_contract(args: argparse.Namespace) -> None:
     plan_rel = v.repo_relative(plan_path, repo_root)
     for entry in manifest_data["files"]:
         if entry["path"] == plan_rel:
-            entry["sha256"] = v.sha256_bytes(candidate.encode())
+            entry["sha256"] = v.contract_sha256(candidate.encode())
     manifest = (json.dumps(manifest_data, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
     rows: list[v.LedgerRow] = state["rows"]  # type: ignore[assignment]
     if args.mode == "revalidate":

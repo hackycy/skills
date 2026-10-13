@@ -15,6 +15,7 @@ from pathlib import Path
 RUNBOOK_SCHEMA = "goal-loop/runbook-v2"
 HISTORY_SCHEMA = "goal-loop/history-v2"
 BASELINE_SCHEMA = "goal-loop/contract-baseline-v2"
+CONTRACT_HASH_MODE = "sha256-utf8-crlf-to-lf"
 PROMPT_SCHEMA = "goal-loop/prompt-v3"
 TRANSACTION_SCHEMA = "goal-loop/transaction-v2"
 
@@ -100,6 +101,35 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def contract_bytes(data: bytes) -> bytes:
+    """Normalize only CRLF in UTF-8 text; preserve binary and all other bytes."""
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data
+    return data if b"\x00" in data else data.replace(b"\r\n", b"\n")
+
+
+def contract_sha256(data: bytes) -> str:
+    return sha256_bytes(contract_bytes(data))
+
+
+def matches_contract_digest(data: bytes, expected: str, *, legacy: bool = False) -> bool:
+    normalized = contract_bytes(data)
+    if sha256_bytes(normalized) == expected:
+        return True
+    if not legacy:
+        return False
+    if sha256_bytes(data) == expected:
+        return True
+    # Raw digests recorded before hash_mode may represent uniform CRLF text.
+    try:
+        normalized.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    return b"\x00" not in normalized and sha256_bytes(normalized.replace(b"\n", b"\r\n")) == expected
 
 
 def find_repo_root(effort: Path) -> Path:
@@ -429,6 +459,9 @@ def load_baseline_manifest(path: Path, errors: list[str]) -> dict[str, object] |
     if data.get("schema") != BASELINE_SCHEMA or not isinstance(data.get("files"), list):
         errors.append(f"baseline: schema must be {BASELINE_SCHEMA} with files")
         return None
+    if "hash_mode" in data and data["hash_mode"] != CONTRACT_HASH_MODE:
+        errors.append("baseline: unsupported hash_mode")
+        return None
     return data
 
 
@@ -444,11 +477,12 @@ def validate_baseline(effort: Path, repo_root: Path, plan_path: Path, plan: Plan
     if sorted(actual) != expected:
         errors.append("baseline: file paths must exactly match implementation-plan.md and Contract Sources")
     if check_drift:
-        drift = [rel for rel in expected if rel not in actual or not (repo_root / rel).exists() or actual[rel] != sha256(repo_root / rel)]
+        drift = [rel for rel in expected if rel not in actual or not (repo_root / rel).exists()
+                 or not matches_contract_digest((repo_root / rel).read_bytes(), actual[rel], legacy="hash_mode" not in manifest)]
         if drift:
             errors.append("baseline: contract input drift detected: " + ", ".join(drift))
     _, digest = parse_contract_baseline(runbook, errors)
-    if digest != sha256(manifest_path):
+    if not matches_contract_digest(manifest_path.read_bytes(), digest, legacy=True):
         errors.append("runbook: Contract Baseline Manifest SHA-256 does not match manifest")
 
 

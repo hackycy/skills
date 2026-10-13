@@ -274,6 +274,85 @@ class GoalLoopTests(unittest.TestCase):
         self.assertIn("drift", result.stdout)
         self.assertNotIn("Current Gate contract:", result.stdout)
 
+    def test_context_ignores_contract_and_manifest_line_endings_without_writes(self):
+        for legacy in (False, True):
+            for original_ending in (b"\n", b"\r\n"):
+                with self.subTest(legacy=legacy, original_ending=original_ending):
+                    repo, effort = self.make_repo()
+                    manifest_path = effort / "goal/contract-baseline.json"
+                    manifest = json.loads(manifest_path.read_bytes())
+                    paths = [repo / item["path"] for item in manifest["files"]]
+                    if legacy:
+                        manifest.pop("hash_mode", None)
+                        for item, path in zip(manifest["files"], paths):
+                            data = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", original_ending)
+                            path.write_bytes(data)
+                            item["sha256"] = hashlib.sha256(data).hexdigest()
+                        data = (json.dumps(manifest, indent=2) + "\n").encode().replace(b"\n", original_ending)
+                        previous_digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+                        manifest_path.write_bytes(data)
+                        runbook = effort / "goal/runbook.md"
+                        runbook.write_bytes(runbook.read_bytes().replace(previous_digest.encode(), hashlib.sha256(data).hexdigest().encode()))
+                    target_ending = b"\r\n" if original_ending == b"\n" else b"\n"
+                    for path in [*paths, manifest_path]:
+                        path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", target_ending))
+                    before = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+                    result = self.ctl("context", effort)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(before, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
+                    (repo / "docs/decision.md").write_bytes(b"changed\r\n")
+                    result = self.ctl("context", effort)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("contract input drift", result.stdout)
+
+    def test_contract_changes_beyond_crlf_still_drift(self):
+        for change in (b"changed\n", b"accepted \n", b"accepted", b"\xef\xbb\xbfaccepted\n", b"accepted\r"):
+            with self.subTest(change=change):
+                repo, effort = self.make_repo()
+                (repo / "docs/decision.md").write_bytes(change)
+                result = self.ctl("context", effort)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("contract input drift", result.stdout)
+
+    def test_contract_baseline_normalizes_mixed_endings_but_not_binary(self):
+        repo, effort = self.make_repo()
+        manifest = json.loads((effort / "goal/contract-baseline.json").read_bytes())
+        self.assertEqual(manifest["hash_mode"], v.CONTRACT_HASH_MODE)
+        path = effort / "implementation-plan.md"
+        lines = path.read_bytes().replace(b"\r\n", b"\n").split(b"\n")
+        path.write_bytes(b"".join(line + (b"\r\n" if i % 2 else b"\n") for i, line in enumerate(lines[:-1])) + lines[-1])
+        result = self.ctl("context", effort)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for data in (b"\xff\r\n", b"\x00\r\n"):
+            self.assertEqual(v.contract_sha256(data), hashlib.sha256(data).hexdigest())
+            self.assertFalse(v.matches_contract_digest(data.replace(b"\r\n", b"\n"), v.contract_sha256(data), legacy=True))
+
+    def test_evidence_fingerprint_stays_byte_sensitive_for_line_endings(self):
+        repo, effort = self.make_repo()
+        (repo / "src/app.txt").write_bytes(b"ok\n")
+        self.complete_g0(effort)
+        (repo / "src/app.txt").write_bytes(b"ok\r\n")
+        result = self.ctl("context", effort)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("D1: stale", result.stdout)
+        result = self.ctl("pass-gate", effort, "--expected-revision", "5")
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_manifest_changes_are_not_hidden_by_line_ending_tolerance(self):
+        _, effort = self.make_repo()
+        path = effort / "goal/contract-baseline.json"
+        original = path.read_bytes()
+        path.write_bytes(original + b" ")
+        result = self.ctl("context", effort)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Manifest SHA-256", result.stdout)
+        manifest = json.loads(original)
+        manifest["hash_mode"] = "unknown"
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+        result = self.ctl("context", effort)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unsupported hash_mode", result.stdout)
+
     def test_v2_runtime_is_accepted_without_rewriting_or_installing_files(self):
         _, effort = self.make_repo()
         prompt = effort / "goal/prompt.md"
