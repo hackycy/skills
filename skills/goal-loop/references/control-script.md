@@ -2,7 +2,7 @@
 
 `scripts/goal_loop_ctl.py` 是运行态文件的唯一写入入口。模型负责语义判断；脚本负责 Revision、Verification ID、Repository command、evidence fingerprint、Ledger/checkpoint、transaction 和最终验证。
 
-所有修改命令携带 `--expected-revision <n>`。成功输出包含新 Revision，直接用于下一次写入；只有冲突或需刷新状态时才重新读取。支持命令为 `bootstrap`、`status`、`context`、`validate`、`recover`、`record`、`check start`、`check finish`、`check run`、`check cancel`、`block`、`resume`、`pass-gate`、`revise-contract`。
+执行状态写入命令携带 `--expected-revision <n>`，成功输出包含递增的 Revision，直接用于下一次写入；只有冲突或需刷新状态时才重新读取。`upgrade` 也检查 expected Revision，但只更换入口文件，保持 Revision 不变。支持命令为 `bootstrap`、`upgrade`、`status`、`context`、`validate`、`recover`、`record`、`check start`、`check finish`、`check run`、`check cancel`、`block`、`resume`、`pass-gate`、`revise-contract`。
 
 ## 只读与初始化
 
@@ -20,6 +20,20 @@ bootstrap 创建 baseline、Revision 0 runbook、G0 history、固定 prompt，�
 `context` 每页最多 4,000 个字符（UTF-8 正文最多 16 KB，另有短页头/页尾）。agent 按 `Next page: context --offset <n>` 使用同一 effort 继续读取，直到 `Context complete`，期间 Revision 改变则从头读取。分页无状态，不写文件、不生成下一轮 prompt。保留全部合同而非静默截断；字段再长也受同一页大小约束。
 
 脚本校验 history 的磁盘读取不会把历史正文交给模型。普通 context 不输出 history；agent 仅在诊断具体问题时读取相关片段。两个 Python 入口统一输出 UTF-8。
+
+## prompt-v2 → prompt-v3 入口升级
+
+仅在用户明确要求时执行。agent 使用 skill 内的脚本读取状态和 Revision，再运行：
+
+```bash
+python3 -X utf8 "<skill-dir>/scripts/goal_loop_ctl.py" upgrade "<effort-path>" --expected-revision <n>
+```
+
+此命令校验已有控制面，将两个脚本安装到 `goal/`，用固定模板生成 `goal/prompt.md`；被替换的文件保存在 `goal/backup-v2/`。计划、baseline、runbook（包括 Revision、Gate、checkpoint）和全部 history 保持原字节。active、blocked、人工验收等待和全部完成的 effort 均可升级；升级不代表解除阻塞或接受验收。
+
+pending transaction 先使用 `recover` 处理后重读状态；baseline 漂移、陈旧 Revision 或备份冲突会阻止升级。使用已有 transaction 机制写入，无需迁移运行状态。重复升级已具备脚本的 prompt-v3 入口不写文件。
+
+升级后 agent 从仓库根目录运行固定正文中的本地 `context` 入口，核对进度保留，再完整交付固定正文。用户保存一次后持续复用；普通接续不会再升级或改写正文。
 
 ## Slice
 

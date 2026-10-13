@@ -291,6 +291,81 @@ class GoalLoopTests(unittest.TestCase):
         self.assertEqual(prompt.read_bytes(), before[prompt])
         self.assertFalse((effort / "goal/goal_loop_ctl.py").exists())
 
+    def prepare_v2(self, effort: Path, *, with_scripts: bool = False):
+        goal = effort / "goal"
+        original = (ROOT / "tests/fixtures/prompt-v2.md").read_bytes()
+        (goal / "prompt.md").write_bytes(original.replace(b"{{EFFORT_PATH}}", effort.name.encode()))
+        for name in ("goal_loop_ctl.py", "validate_goal_loop.py"):
+            if with_scripts:
+                (goal / name).write_bytes(b"# existing v2 script\n")
+            else:
+                (goal / name).unlink()
+        return {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+
+    def test_upgrade_preserves_progress_and_runs_saved_entry(self):
+        for with_scripts in (False, True):
+            with self.subTest(with_scripts=with_scripts):
+                repo, effort = self.make_repo(two_gates=True)
+                self.complete_g0(effort)
+                self.assertEqual(self.ctl("pass-gate", effort, "--expected-revision", "5").returncode, 0)
+                before = self.prepare_v2(effort, with_scripts=with_scripts)
+                result = self.ctl("upgrade", effort, "--expected-revision", "6")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                changed = {effort / "goal" / n for n in ("prompt.md", "goal_loop_ctl.py", "validate_goal_loop.py")}
+                for path, data in before.items():
+                    self.assertEqual((effort / "goal/backup-v2" / path.name).read_bytes() if path in changed else path.read_bytes(), data)
+                self.assertEqual(self.revision(effort), 6)
+                prompt = (effort / "goal/prompt.md").read_text(encoding="utf-8")
+                self.assertIn("goal-loop/prompt-v3", prompt)
+                command = re.findall(r"^python[^\n]+ context [^\n]+$", prompt, re.MULTILINE)[0]
+                argv = shlex.split(command)
+                argv[0] = sys.executable
+                context = subprocess.run(argv, cwd=repo, capture_output=True, text=True, encoding="utf-8")
+                self.assertEqual(context.returncode, 0, context.stdout + context.stderr)
+                self.assertIn("Gate: G1: Finish", context.stdout)
+                after = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+                repeated = self.ctl("upgrade", effort, "--expected-revision", "6")
+                self.assertEqual(repeated.returncode, 0, repeated.stdout + repeated.stderr)
+                self.assertEqual(after, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
+
+    def test_upgrade_rejects_stale_revision_drift_transaction_and_backup_conflict(self):
+        for problem in ("revision", "drift", "transaction", "backup"):
+            with self.subTest(problem=problem):
+                repo, effort = self.make_repo()
+                self.prepare_v2(effort)
+                if problem == "drift":
+                    (repo / "docs/decision.md").write_text("changed", encoding="utf-8")
+                elif problem == "transaction":
+                    (effort / "goal/.goal-loop-transaction.json").write_text("{}", encoding="utf-8")
+                elif problem == "backup":
+                    (effort / "goal/backup-v2").mkdir()
+                    (effort / "goal/backup-v2/prompt.md").write_text("retained", encoding="utf-8")
+                before = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+                result = self.ctl("upgrade", effort, "--expected-revision", "1" if problem == "revision" else "0")
+                self.assertNotEqual(result.returncode, 0)
+                expected = {"revision": "stale Revision", "drift": "drift", "transaction": "run recover", "backup": "backup-v2 already exists"}
+                self.assertIn(expected[problem], result.stdout + result.stderr)
+                self.assertEqual(before, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
+
+    def test_upgrade_preserves_blocked_pending_and_complete_states(self):
+        for state in ("blocked", "pending", "complete"):
+            with self.subTest(state=state):
+                _, effort = self.make_repo()
+                if state == "blocked":
+                    result = self.ctl("block", effort, "--expected-revision", "0", "--condition", "SC1", "--next-action", "restore")
+                elif state == "pending":
+                    result = self.ctl("check", effort, "start", "--expected-revision", "0", "--kind", "Manual acceptance", "--check", "M1", "--result", "ready", "--next-action", "wait")
+                else:
+                    self.complete_g0(effort)
+                    result = self.ctl("pass-gate", effort, "--expected-revision", "5")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                before = self.prepare_v2(effort)
+                result = self.ctl("upgrade", effort, "--expected-revision", str(self.revision(effort)))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                for path, data in before.items():
+                    if path.name != "prompt.md":
+                        self.assertEqual(path.read_bytes(), data)
+
     def test_bundled_runtime_records_multiple_slices_with_the_same_prompt(self):
         repo, effort = self.make_repo()
         prompt = (effort / "goal/prompt.md").read_bytes()

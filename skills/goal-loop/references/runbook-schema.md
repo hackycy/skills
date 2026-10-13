@@ -6,7 +6,7 @@ Schema: `goal-loop/runbook-v2`
 
 ## Revision
 
-`Revision` 是并发写入 token。除 bootstrap/recover 外，每个 mutation 必须携带当前 `--expected-revision`；成功写入递增 1。
+`Revision` 是并发写入 token。执行状态写入必须携带当前 `--expected-revision`，成功写入递增 1。bootstrap 初始化 Revision，recover 恢复 transaction 中的值；入口升级 upgrade 检查 expected Revision 并保留其值，不修改执行状态。
 
 ## Contract Baseline
 

@@ -50,22 +50,25 @@ agent 会审查输入，将任务拆成具有明确范围与验收条件的 Gate
 本次只检查和恢复入口，不推进实现。
 ```
 
-**重新初始化执行记录**
+**将 prompt-v2 升级为 prompt-v3**
 
-`bootstrap` 会拒绝覆盖已经存在的 `goal/runbook.md`。如果明确要重新建立执行记录，使用独立的 effort 目录，保留原目录。初始化后的进度从 G0 开始；仓库代码保持原状，检查结果需要重新验证。此操作不是接续工作的必需步骤。
+如果固定正文使用 `goal-loop/prompt-v2`，执行时需要查找 skill 内的脚本，可以在原 effort 目录升级入口。agent 安装 `goal/goal_loop_ctl.py` 和 `goal/validate_goal_loop.py`，并生成指向这两个本地脚本的固定正文。计划、Gate 进度、Revision、checkpoint、检查结果和 history 保留，不从 G0 重来。
+
+在目标项目中发送以下提示词，替换 effort 路径。如果该项目使用的 skill 尚未提供 `upgrade` 命令，附上包含此命令的 goal-loop `SKILL.md` 路径。
 
 ```text
-使用 $goal-loop，以 docs/efforts/reader/implementation-plan.md 及其合同来源为依据，
-在 docs/efforts/reader-verification 中重新初始化执行记录。
-保留 docs/efforts/reader 中的全部文件及其固定 prompt；不改动或回退仓库代码。
-复用已经确定的目标、范围、Gate 顺序和验收条件，核对计划在目标目录中的路径引用。
-历史记录可用于理解已有工作，不直接继承 passed 状态或检查结果。
-如果目标目录已有运行记录，停止初始化并说明，不覆盖它。
-完成初始化和入口验证，完整输出目标目录 goal/prompt.md 的固定正文，供我保存并反复使用。
-本次只初始化，不推进 Gate。
+使用 $goal-loop，将 docs/efforts/reader 的固定执行入口从 prompt-v2 升级为 prompt-v3。
+在原 effort 目录操作，不重新 bootstrap，不重建计划，不重置 Gate 或 checkpoint。
+保留 implementation-plan.md、contract-baseline.json、runbook.md、Revision、全部 history 和仓库代码。
+使用 skill 内控制脚本的 upgrade 命令，将两个执行脚本安装到 goal/，
+并将 goal/prompt.md 更新为指向本地脚本的固定正文。
+被替换的 prompt 和已有脚本保存到 goal/backup-v2，不覆盖已有备份。
+如有 pending transaction，先按恢复流程处理；其他校验错误先报告，不重建或清空记录。
+验证本地入口能读取升级前的 Gate 和 checkpoint，完整输出 goal/prompt.md 正文供我保存。
+本次只升级入口，不推进实现。
 ```
 
-这会建立一套独立的执行记录，不迁移原 effort 的 checkpoint。之后只使用目标目录交付的固定正文推进该 effort，避免交替运行两套记录。
+升级后保存 agent 交付的正文，之后每轮都发送这同一份文本。只有这次明确要求的升级会替换固定正文；普通接续不按 Gate、Revision 或 checkpoint 生成提示词。命令和状态核对都由 agent 完成。
 
 ## 每轮如何继续
 
@@ -125,7 +128,7 @@ Gate 是计划中一个有明确目标和验收条件的阶段；Goal 是你发�
 
 **更新 skill 会改变已有任务的提示词吗？**
 
-不会。模板仅在初始化时生成固定正文；已有 effort 保留初始化时的固定正文、执行记录和脚本。恢复时使用保存的原文，无需升级或重新初始化。
+不会自动改变。普通接续保留固定正文、执行记录和脚本；明确要求 prompt-v2 → prompt-v3 升级时，agent 备份原入口后替换脚本和固定正文，执行进度保留。恢复时使用保存的原文，无需重新初始化。
 
 ## 内部机制与维护
 

@@ -30,7 +30,7 @@ Goal Loop 维护 Plan 的 Gate 顺序、唯一当前 Gate、跨 Goal checkpoint�
 
 bootstrap 只创建 G0 history，后续 Gate 通过时创建直接后继 history。同时固定控制脚本及 validator 副本，prompt 指向 effort 内的准确入口，普通执行不依赖 skill 安装路径。不创建 `commits/`、`objects/`、`spool/`、`state.json`、`evidence/` 或 `history/effort.md`。
 
-初始化后验证生成入口能在目标仓库根目录执行，并完整交付 `goal/prompt.md` 正文。模板仅在初始化时生成固定正文；已有 effort 的记录、脚本和固定 prompt 保留，不升级、不重新 bootstrap。不支持的运行格式只报告问题并保留文件。
+初始化后验证生成入口能在目标仓库根目录执行，并完整交付 `goal/prompt.md` 正文。普通接续保留已有 effort 的记录、脚本和固定 prompt。用户明确要求 prompt-v2 → prompt-v3 升级时，按[控制脚本](references/control-script.md)的 `upgrade` 流程在原目录安装入口、备份并替换固定正文，保留执行进度；不重新 bootstrap。不支持的运行格式只报告问题并保留文件。
 
 `runbook.md` 是当前状态权威来源，Revision 只用于并发写入检查。checkpoint 每次替换，保存当前 Gate、slice、每个检查最新状态、Exit、Manual acceptance、Blocker、Risks、Next action 和合同修订摘要。`history/G<n>.md` 只保存 slice、修改文件、检查结果、失败修复摘要、风险、交接和 Gate pass 事实，不保存 hash chain、完整输出、完整文件清单或对象引用。
 

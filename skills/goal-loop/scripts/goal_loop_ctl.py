@@ -235,6 +235,40 @@ def current_prompt(effort: Path) -> bytes:
             .replace("{{PYTHON}}", "python" if os.name == "nt" else "python3").encode())
 
 
+def command_upgrade(args: argparse.Namespace) -> None:
+    """Install the v3 entry point without changing execution state."""
+    effort = args.effort
+    errors = v.validate(effort)
+    if errors:
+        die("cannot upgrade: " + "; ".join(errors))
+    goal = effort / "goal"
+    revision = v.parse_revision((goal / "runbook.md").read_text(encoding="utf-8"), [])
+    if revision != args.expected_revision:
+        die(f"stale Revision: expected {args.expected_revision}, current {revision}")
+    schema = v.prompt_schema((goal / "prompt.md").read_text(encoding="utf-8"))
+    script_names = ("goal_loop_ctl.py", "validate_goal_loop.py")
+    if schema == "goal-loop/prompt-v3":
+        if not all((goal / name).is_file() for name in script_names):
+            die("prompt-v3 entry is incomplete; restore its saved scripts")
+        print(f"OK: prompt-v3 already installed; Revision {revision} unchanged")
+        return
+    if schema != "goal-loop/prompt-v2":
+        die("upgrade requires goal-loop/prompt-v2")
+    if (goal / "backup-v2").exists():
+        die("goal/backup-v2 already exists; retained without overwriting")
+    template = Path(__file__).resolve().parents[1] / "references/goal-prompt-template.md"
+    if not template.is_file():
+        die("run upgrade using the skill's scripts/goal_loop_ctl.py")
+    writes = {goal / "prompt.md": current_prompt(effort)}
+    for source in (Path(__file__).resolve(), Path(v.__file__).resolve()):
+        writes[goal / source.name] = source.read_bytes()
+    for target in list(writes):
+        if target.exists():
+            writes[goal / "backup-v2" / target.name] = target.read_bytes()
+    commit_transaction(effort, writes, operation="upgrade-v2-to-v3")
+    print(f"OK: upgraded prompt-v2 to prompt-v3; Revision {revision} unchanged; originals in goal/backup-v2")
+
+
 def control(effort: Path, expected_revision: int, *, allow_drift: bool = False) -> dict[str, object]:
     errors = v.validate(effort, allow_baseline_drift=allow_drift)
     if errors:
@@ -638,6 +672,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("bootstrap"); p.add_argument("effort", type=Path); p.add_argument("--at"); p.set_defaults(func=command_bootstrap)
+    p = sub.add_parser("upgrade", help="install prompt-v3 and local scripts while preserving v2 execution state"); p.add_argument("effort", type=Path); p.add_argument("--expected-revision", type=int, required=True); p.set_defaults(func=command_upgrade)
     p = sub.add_parser("recover"); p.add_argument("effort", type=Path); p.set_defaults(func=lambda args: recover(args.effort))
     p = sub.add_parser("status"); p.add_argument("effort", type=Path); p.set_defaults(func=command_status)
     p = sub.add_parser("context"); p.add_argument("effort", type=Path); p.add_argument("--offset", type=int, default=0, help="character offset for the next bounded context page"); p.set_defaults(func=command_context)
