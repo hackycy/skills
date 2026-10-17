@@ -30,9 +30,9 @@ Goal Loop 维护 Plan 的 Gate 顺序、唯一当前 Gate、跨 Goal checkpoint�
 
 bootstrap 只创建 G0 history，后续 Gate 通过时创建直接后继 history。同时固定控制脚本及 validator 副本，prompt 指向 effort 内的准确入口，普通执行不依赖 skill 安装路径。不创建 `commits/`、`objects/`、`spool/`、`state.json`、`evidence/` 或 `history/effort.md`。
 
-初始化后验证生成入口能在目标仓库根目录执行，并完整交付 `goal/prompt.md` 正文。普通接续保留已有 effort 的记录、脚本和固定 prompt。用户明确要求 prompt-v2 → prompt-v3 升级时，按[控制脚本](references/control-script.md)的 `upgrade` 流程在原目录安装入口、备份并替换固定正文，保留执行进度；不重新 bootstrap。不支持的运行格式只报告问题并保留文件。
+初始化后验证生成入口能在目标仓库根目录执行，并完整交付 `goal/prompt.md` 正文。普通接续保留已有 effort 的记录、脚本和固定 prompt。用户要求优化执行材料时，按[控制脚本](references/control-script.md)的 `refresh` 流程审阅并合并提示词、备份被替换的文件和更新本地入口；任务进度与历史保留。兼容处理由工具完成，无需用户选择版本；无法可靠读取当前事实时报告具体缺口并保留文件。
 
-`runbook.md` 是当前状态权威来源，Revision 只用于并发写入检查。checkpoint 每次替换，保存当前 Gate、slice、每个检查最新状态、Exit、Manual acceptance、Blocker、Risks、Next action 和合同修订摘要。`history/G<n>.md` 只保存 slice、修改文件、检查结果、失败修复摘要、风险、交接和 Gate pass 事实，不保存 hash chain、完整输出、完整文件清单或对象引用。
+`runbook.md` 是当前状态权威来源，Revision 只用于并发写入检查。checkpoint 与检查快照每次替换，保存当前 Gate、slice、每个检查最新状态及证据指纹、Exit、Manual acceptance、Blocker、Risks、Next action 和合同修订摘要。`history/G<n>.md` 只保存 slice、修改文件、检查结果、失败修复摘要、风险、交接和 Gate pass 事实；既有内容保留，纠正或重新验证追加记录。当前快照完整时，执行不依赖历史格式或历史重放。
 
 ## 合同与执行
 
@@ -55,6 +55,6 @@ bootstrap 只创建 G0 history，后续 Gate 通过时创建直接后继 history
 
 ## 验证
 
-维护时使用 `python3 <skill-dir>/scripts/validate_goal_loop.py <effort-path>` 检查计划、baseline、runbook、history、prompt、Gate 线性状态和 pending transaction。执行态使用固定 prompt 中的 effort 本地入口。`recover` 只恢复控制面 transaction，不恢复代码、不重跑检查、不回滚工作区。
+维护时使用 `python3 <skill-dir>/scripts/validate_goal_loop.py <effort-path>` 检查计划、baseline、runbook 当前事实、prompt 入口文件、Gate 线性状态和 pending transaction；提示词语义由 agent 审阅。执行态使用固定 prompt 中的 effort 本地入口。`recover` 只恢复控制面 transaction，不恢复代码、不重跑检查、不回滚工作区。
 
 脚本回归验证：在本仓库根目录运行 `python -m unittest discover -s skills/goal-loop/tests`。

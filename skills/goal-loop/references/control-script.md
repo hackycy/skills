@@ -2,7 +2,7 @@
 
 `scripts/goal_loop_ctl.py` 是运行态文件的唯一写入入口。模型负责语义判断；脚本负责 Revision、Verification ID、Repository command、evidence fingerprint、Ledger/checkpoint、transaction 和最终验证。
 
-执行状态写入命令携带 `--expected-revision <n>`，成功输出包含递增的 Revision，直接用于下一次写入；只有冲突或需刷新状态时才重新读取。`upgrade` 也检查 expected Revision，但只更换入口文件，保持 Revision 不变。支持命令为 `bootstrap`、`upgrade`、`status`、`context`、`validate`、`recover`、`record`、`check start`、`check finish`、`check run`、`check cancel`、`block`、`resume`、`pass-gate`、`revise-contract`。
+执行状态写入命令携带 `--expected-revision <n>`，成功输出包含递增的 Revision，直接用于下一次写入；只有冲突或需刷新状态时才重新读取。`refresh` 也检查 expected Revision，但保留执行事实与 Revision。支持命令为 `bootstrap`、`refresh`、`status`、`context`、`validate`、`recover`、`record`、`check start`、`check finish`、`check run`、`check cancel`、`block`、`resume`、`pass-gate`、`revise-contract`。
 
 ## 只读与初始化
 
@@ -19,21 +19,30 @@ bootstrap 创建 baseline、Revision 0 runbook、G0 history、固定 prompt，�
 
 `context` 每页最多 4,000 个字符（UTF-8 正文最多 16 KB，另有短页头/页尾）。agent 按 `Next page: context --offset <n>` 使用同一 effort 继续读取，直到 `Context complete`，期间 Revision 改变则从头读取。分页无状态，不写文件、不生成下一轮 prompt。保留全部合同而非静默截断；字段再长也受同一页大小约束。
 
-脚本校验 history 的磁盘读取不会把历史正文交给模型。普通 context 不输出 history；agent 仅在诊断具体问题时读取相关片段。两个 Python 入口统一输出 UTF-8。
+普通 context 从 runbook 的当前快照判断检查状态与证据新鲜度，不读取 history。内部指纹和文件数量不输出到模型上下文，待验对象说明与当前 Gate 合同完整提供。缺少快照的已有任务仅兼容读取恢复当前事实所需的旧记录。两个 Python 入口统一输出 UTF-8。
 
-## prompt-v2 → prompt-v3 入口升级
+## 刷新执行材料
 
-仅在用户明确要求时执行。agent 使用 skill 内的脚本读取状态和 Revision，再运行：
+仅在用户要求优化执行材料时执行，可重复调用。agent 读取已有 prompt 和当前状态，从 skill 入口取得填好路径的模板：
 
 ```bash
-python3 -X utf8 "<skill-dir>/scripts/goal_loop_ctl.py" upgrade "<effort-path>" --expected-revision <n>
+python3 -X utf8 "<skill-dir>/scripts/goal_loop_ctl.py" refresh "<effort-path>" --preview
 ```
 
-此命令校验已有控制面，将两个脚本安装到 `goal/`，用固定模板生成 `goal/prompt.md`；被替换的文件保存在 `goal/backup-v2/`。计划、baseline、runbook（包括 Revision、Gate、checkpoint）和全部 history 保持原字节。active、blocked、人工验收等待和全部完成的 effort 均可升级；升级不代表解除阻塞或接受验收。
+preview 不修改任务文件。agent 保留已有正文中的明确人工补充，更新通用执行规则；存在实际冲突时才请用户决定。将审阅后的完整正文保存到临时文件，再执行：
 
-pending transaction 先使用 `recover` 处理后重读状态；baseline 漂移、陈旧 Revision 或备份冲突会阻止升级。使用已有 transaction 机制写入，无需迁移运行状态。重复升级已具备脚本的 prompt-v3 入口不写文件。
+```bash
+python3 -X utf8 "<skill-dir>/scripts/goal_loop_ctl.py" refresh "<effort-path>" \
+  --expected-revision <n> --prompt "<reviewed-prompt-path>"
+```
 
-升级后 agent 从仓库根目录运行固定正文中的本地 `context` 入口，核对进度保留，再完整交付固定正文。用户保存一次后持续复用；普通接续不会再升级或改写正文。
+命令检查当前事实和正文中的本地 context 入口，将两个脚本及已审阅正文安装到 `goal/`。它不自动推断或合并用户意图；`--prompt` 必须由 agent 审阅提供，不能直接覆盖人工补充。被替换的文件保存在独立的 `goal/backups/refresh-<timestamp>-<id>/`，重复刷新不覆盖备份；内容相同时不写文件。
+
+计划、baseline 和全部 history 保持原字节。已有完整快照的 runbook 也保持原字节；缺少快照时，从相关旧 history 自动提取当前检查结果、证据与待验对象，补齐 runbook，保留 Gate、Revision、checkpoint 的恢复事实。无法可靠还原则保留文件、报告具体缺口，不猜测结果或重置任务。active、blocked、人工验收等待和全部完成的 effort 均可刷新；刷新不解除阻塞、不接受验收、不因工具变化要求重验。
+
+pending transaction 先使用 `recover` 处理后重读状态；baseline 漂移、陈旧 Revision 或正在执行的控制命令会阻止刷新。刷新使用同一 transaction 保存备份和替换文件。
+
+刷新后 agent 从仓库根目录运行正文中的本地 `context`，核对进度与待验事项保留，再完整交付正文供用户重新保存。普通接续继续使用这份固定正文。
 
 ## Slice
 
@@ -74,7 +83,7 @@ python3 -X utf8 "<effort-path>/goal/goal_loop_ctl.py" check finish "<effort-path
   --acceptance G0-M1 --outcome pass --result "用户明确接受" --next-action "检查 Exit"
 ```
 
-等待人工验收时 Gate 保持 active，不使用 blocked，不轮询。`check cancel` 终止待检查记录。输入 fingerprint 改变后必须重新检查。
+等待人工验收时 Gate 保持 active，不使用 blocked，不轮询。`check cancel` 终止待检查记录。`check finish` 使用 start 时固定的受验对象；输入 fingerprint 改变时取消旧检查，再针对当前对象重新开始，旧对象的结果不能接受为新对象的结果。
 
 ## 状态转换
 

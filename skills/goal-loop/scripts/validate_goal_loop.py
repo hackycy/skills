@@ -12,12 +12,11 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-RUNBOOK_SCHEMA = "goal-loop/runbook-v2"
-HISTORY_SCHEMA = "goal-loop/history-v2"
-BASELINE_SCHEMA = "goal-loop/contract-baseline-v2"
+RUNBOOK_SCHEMA = "goal-loop/runbook"
+HISTORY_SCHEMA = "goal-loop/history"
+BASELINE_SCHEMA = "goal-loop/contract-baseline"
 CONTRACT_HASH_MODE = "sha256-utf8-crlf-to-lf"
-PROMPT_SCHEMA = "goal-loop/prompt-v3"
-TRANSACTION_SCHEMA = "goal-loop/transaction-v2"
+TRANSACTION_SCHEMA = "goal-loop/transaction"
 
 REQUIRED_GATE_HEADINGS = (
     "Purpose", "Inputs", "Objective", "Scope boundary", "Constraints",
@@ -33,10 +32,6 @@ STATE_RULES = (
     "人工验收 pending 时 Gate 保持 `active`；当前 Goal 结束且不轮询，只在收到对应 acceptance id 的明确结果后继续。",
     "Gate 通过时只激活直接后继；最后一个 Gate 通过后 effort complete。",
 )
-ALLOWED_EVENT_TYPES = {
-    "initialized", "slice", "checkpoint", "verification", "failure", "blocked", "resumed",
-    "manual-handoff", "manual-result", "gate-passed", "contract-revised",
-}
 EMPTY_MARKERS = {"none", "无", "—", "-", ""}
 
 
@@ -89,6 +84,16 @@ class Event:
     event_id: str
     event_type: str
     fields: dict[str, str]
+
+
+@dataclass
+class CheckState:
+    outcome: str
+    fingerprint: str
+    matched_files: int
+    result: str = ""
+    acceptance: str = "none"
+    exit_code: str = "none"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -331,12 +336,6 @@ def parse_contract_baseline(runbook: str, errors: list[str]) -> tuple[str, str]:
     return manifest, digest
 
 
-def parse_state_rules(runbook: str, errors: list[str]) -> None:
-    rules = [line[2:].strip() for line in (section(runbook, "State Rules") or "").splitlines() if line.strip().startswith("- ")]
-    if rules != list(STATE_RULES):
-        errors.append("runbook: State Rules do not match the required lightweight invariants")
-
-
 def parse_ledger(runbook: str, errors: list[str]) -> list[LedgerRow]:
     rows = parse_markdown_table(runbook, "Goal Ledger")
     expected = ["Gate", "Status", "Depends on", "Plan contract", "History", "History head", "Unlock evidence"]
@@ -366,10 +365,9 @@ def parse_checkpoint(runbook: str, errors: list[str]) -> dict[str, str]:
 
 
 def parse_history_text(text: str, gate: Gate, source_name: str, errors: list[str]) -> dict[str, Event]:
-    if f"Schema: `{HISTORY_SCHEMA}`" not in text:
-        errors.append(f"history {source_name}: schema must be {HISTORY_SCHEMA}")
+    """Read recorded facts only when importing a runbook without a check snapshot."""
     events: dict[str, Event] = {}
-    chunks = re.split(r"(?m)^### (G\d+-E\d{4}) · ([^\n]+)\s*$", text)[1:]
+    chunks = re.split(r"(?m)^### (" + re.escape(gate.id) + r"-E\d+) · ([^\n]+)\s*$", text)[1:]
     for index in range(0, len(chunks), 3):
         event_id, event_type, body = chunks[index:index + 3]
         fields: dict[str, str] = {}
@@ -379,23 +377,15 @@ def parse_history_text(text: str, gate: Gate, source_name: str, errors: list[str
                 fields[match.group(1).strip()] = unquote_code(match.group(2).strip())
         if event_id in events:
             errors.append(f"history {source_name}: duplicate event {event_id}")
-        if event_type not in ALLOWED_EVENT_TYPES:
-            errors.append(f"history {source_name}: unsupported event type {event_type}")
-        for key in ("At", "Type", "Slice", "Result", "Next"):
-            if key not in fields:
-                errors.append(f"history {source_name}: {event_id} missing {key}")
         events[event_id] = Event(event_id, event_type, fields)
-    expected = [f"{gate.id}-E{i:04d}" for i in range(1, len(events) + 1)]
-    if list(events) != expected:
-        errors.append(f"history {source_name}: event ids must be continuous")
     return events
 
 
 def parse_history(path: Path, gate: Gate, errors: list[str]) -> dict[str, Event]:
     try:
         return parse_history_text(path.read_text(encoding="utf-8"), gate, path.name, errors)
-    except FileNotFoundError:
-        errors.append(f"history missing: {path}")
+    except (OSError, UnicodeError) as exc:
+        errors.append(f"cannot read history needed for current facts: {path}: {exc}")
         return {}
 
 
@@ -429,25 +419,94 @@ def latest_check_events(events: dict[str, Event], gate: Gate) -> dict[str, Event
     return latest
 
 
-def check_summary(events: dict[str, Event], gate: Gate) -> str:
-    latest = latest_check_events(events, gate)
-    return ", ".join(f"{check_id}={event.fields.get('Outcome', 'unknown')}" for check_id, event in latest.items()) or "none"
+def check_summary(checks: dict[str, CheckState], gate: Gate) -> str:
+    return ", ".join(f"{cid}={checks[cid].outcome}" for cid in gate.checks if cid in checks) or "none"
 
 
-def effective_satisfied_exits(events: dict[str, Event], gate: Gate) -> set[str]:
-    latest = latest_check_events(events, gate)
-    return {exit_id for exit_id, required in gate.evidence_rules.items() if all(latest.get(cid) and latest[cid].fields.get("Outcome") == "pass" for cid in required)}
+def effective_satisfied_exits(checks: dict[str, CheckState], gate: Gate) -> set[str]:
+    return {exit_id for exit_id, required in gate.evidence_rules.items() if all(cid in checks and checks[cid].outcome == "pass" for cid in required)}
 
 
-def stale_checks(repo_root: Path, gate: Gate, events: dict[str, Event]) -> dict[str, str]:
+def stale_checks(repo_root: Path, gate: Gate, checks: dict[str, CheckState]) -> dict[str, str]:
     stale: dict[str, str] = {}
-    for check_id, event in latest_check_events(events, gate).items():
-        if event.fields.get("Outcome") != "pass":
+    for check_id, check in checks.items():
+        if check.outcome not in {"pass", "started"}:
             continue
         fingerprint, count, missing = evidence_fingerprint(repo_root, gate.checks[check_id])
-        if missing or fingerprint != event.fields.get("Evidence fingerprint") or str(count) != event.fields.get("Matched files"):
+        if missing or fingerprint != check.fingerprint or count != check.matched_files:
             stale[check_id] = ", ".join(missing) if missing else "evidence fingerprint changed"
     return stale
+
+
+def parse_current_checks(runbook: str, errors: list[str]) -> dict[str, CheckState] | None:
+    body = section(runbook, "Current Checks")
+    if body is None:
+        return None
+    match = re.fullmatch(r"\s*```json\s*\n(.*?)\n```\s*", body, re.S)
+    try:
+        data = json.loads(match.group(1)) if match else None
+        if not isinstance(data, dict):
+            raise ValueError("expected a JSON object")
+        checks = {}
+        for cid, fields in data.items():
+            if not isinstance(fields, dict):
+                raise ValueError(f"{cid}: expected a check object")
+            check = CheckState(**{key: fields[key] for key in CheckState.__dataclass_fields__ if key in fields})
+            if check.outcome not in {"started", "pass", "fail", "timed-out", "interrupted", "cancelled"}:
+                raise ValueError(f"{cid}: unknown outcome")
+            if not isinstance(check.fingerprint, str) or not re.fullmatch(r"[0-9a-f]{64}", check.fingerprint):
+                raise ValueError(f"{cid}: invalid evidence fingerprint")
+            if type(check.matched_files) is not int or check.matched_files < 0:
+                raise ValueError(f"{cid}: invalid matched file count")
+            if not all(isinstance(value, str) for value in (check.result, check.acceptance, check.exit_code)):
+                raise ValueError(f"{cid}: invalid check details")
+            checks[cid] = check
+        return checks
+    except (ValueError, TypeError) as exc:
+        errors.append(f"runbook: invalid Current Checks: {exc}")
+        return {}
+
+
+def load_current_checks(effort: Path, runbook: str, gate: Gate | None, checkpoint: dict[str, str], errors: list[str]) -> dict[str, CheckState]:
+    checks = parse_current_checks(runbook, errors)
+    if checks is not None:
+        return checks
+    # Compatibility is read-only. Only records needed for the current facts are consulted.
+    if gate is None or (checkpoint.get("Checks") == "none" and checkpoint.get("Manual acceptance") == "none"):
+        return {}
+    path = effort / "goal" / "history" / f"{gate.id}.md"
+    events = parse_history(path, gate, errors)
+    tail = tail_event(events)
+    if not tail or tail.event_id != checkpoint.get("History head"):
+        errors.append("current check snapshot is missing and the current history does not reach the saved checkpoint")
+    latest = latest_check_events(events, gate)
+    advertised = checkpoint.get("Checks", "none")
+    actual = {f"{cid}={event.fields.get('Outcome')}" for cid, event in latest.items()}
+    if ({item.strip() for item in advertised.split(",")} if advertised != "none" else set()) != actual:
+        errors.append("current check snapshot is missing and history disagrees with checkpoint Checks")
+    # Include pending handoffs and cancellation, which older summaries did not contain.
+    for event in events.values():
+        cid = event.fields.get("Check")
+        if cid in gate.checks and event.event_type == "manual-handoff":
+            latest[cid] = event
+        elif cid in gate.checks and event.event_type in {"verification", "manual-result"}:
+            latest[cid] = event
+        elif cid in latest and event.fields.get("Outcome") == "cancelled":
+            previous = latest[cid]
+            latest[cid] = Event(event.event_id, event.event_type, {**previous.fields, **event.fields})
+    checks = {}
+    for cid, event in latest.items():
+        fields = event.fields
+        try:
+            fingerprint = fields["Evidence fingerprint"]
+            count = int(fields["Matched files"])
+            if not re.fullmatch(r"[0-9a-f]{64}", fingerprint) or count < 0:
+                raise ValueError("invalid evidence metadata")
+            acceptance = fields.get("Acceptance", f"{gate.id}-{cid}" if gate.checks[cid].kind == "Manual acceptance" else "none")
+            checks[cid] = CheckState(fields["Outcome"], fingerprint, count, fields.get("Result", ""), acceptance, fields.get("Exit code", "none"))
+        except (KeyError, ValueError) as exc:
+            errors.append(f"cannot restore current check {cid} from history: {exc}")
+    return checks
 
 
 def load_baseline_manifest(path: Path, errors: list[str]) -> dict[str, object] | None:
@@ -456,7 +515,7 @@ def load_baseline_manifest(path: Path, errors: list[str]) -> dict[str, object] |
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         errors.append(f"baseline: cannot read manifest: {exc}")
         return None
-    if data.get("schema") != BASELINE_SCHEMA or not isinstance(data.get("files"), list):
+    if not isinstance(data, dict) or data.get("schema") not in {BASELINE_SCHEMA, "goal-loop/contract-baseline-v2"} or not isinstance(data.get("files"), list):
         errors.append(f"baseline: schema must be {BASELINE_SCHEMA} with files")
         return None
     if "hash_mode" in data and data["hash_mode"] != CONTRACT_HASH_MODE:
@@ -486,28 +545,14 @@ def validate_baseline(effort: Path, repo_root: Path, plan_path: Path, plan: Plan
         errors.append("runbook: Contract Baseline Manifest SHA-256 does not match manifest")
 
 
-def prompt_schema(text: str) -> str | None:
-    match = re.search(r"(?m)^Prompt schema: `([^`]+)`$", text)
-    return match.group(1) if match else None
-
-
 def validate_prompt(effort: Path, errors: list[str]) -> None:
     try:
         text = (effort / "goal" / "prompt.md").read_text(encoding="utf-8")
-    except FileNotFoundError:
-        errors.append("prompt: goal/prompt.md is missing")
+    except (OSError, UnicodeError) as exc:
+        errors.append(f"prompt: cannot read goal/prompt.md: {exc}")
         return
-    if prompt_schema(text) not in {"goal-loop/prompt-v2", PROMPT_SCHEMA}:
-        errors.append(f"prompt: schema must be goal-loop/prompt-v2 or {PROMPT_SCHEMA}")
-    for forbidden in ("goal/evidence", "verify-directed", "verify-repository", "reconcile-baseline", "event hash chain"):
-        if forbidden in text.lower():
-            errors.append(f"prompt: obsolete term is present: {forbidden}")
-    required = ("不创建、修改或回滚 git commit", "只有合同声明的 stop condition")
-    for phrase in required:
-        if phrase.lower() not in text.lower():
-            errors.append(f"prompt: required responsibility statement is missing: {phrase}")
-    if not any(phrase in text for phrase in ("代码提交和代码回退由我", "代码提交和代码回退由用户")):
-        errors.append("prompt: code submission and rollback must remain the user's responsibility")
+    if not text.strip():
+        errors.append("prompt: saved entry is empty")
 
 
 def valid_ledger_shape(rows: list[LedgerRow]) -> bool:
@@ -526,7 +571,7 @@ def old_runtime_present(effort: Path) -> list[str]:
     return [name for name in ("commits", "objects", "spool", "state.json", "evidence") if (effort / "goal" / name).exists()]
 
 
-def validate(effort: Path, *, allow_baseline_drift: bool = False, allow_pending_transaction: bool = False) -> list[str]:
+def validate(effort: Path, *, allow_baseline_drift: bool = False, allow_pending_transaction: bool = False, check_prompt: bool = True) -> list[str]:
     effort = effort.resolve()
     errors: list[str] = []
     old = old_runtime_present(effort)
@@ -542,28 +587,28 @@ def validate(effort: Path, *, allow_baseline_drift: bool = False, allow_pending_
     plan = parse_plan(plan_path.read_text(encoding="utf-8"), plan_errors)
     errors.extend(plan_errors)
     runbook = runbook_path.read_text(encoding="utf-8")
-    if f"Schema: `{RUNBOOK_SCHEMA}`" not in runbook:
-        errors.append(f"runbook: schema must be {RUNBOOK_SCHEMA}")
     revision_errors: list[str] = []
     parse_revision(runbook, revision_errors)
     errors.extend(revision_errors)
     parse_contract_baseline(runbook, errors)
-    parse_state_rules(runbook, errors)
     rows = parse_ledger(runbook, errors)
     checkpoint = parse_checkpoint(runbook, errors)
-    if rows and len(rows) != len(plan.gates) and not allow_baseline_drift:
+    if len(rows) != len(plan.gates) and not allow_baseline_drift:
         errors.append("runbook: Goal Ledger must contain exactly one row per plan Gate")
     if rows and not valid_ledger_shape(rows):
         errors.append("runbook: Goal Ledger state is not a linear Gate sequence")
     repo_root = find_repo_root(effort)
     if plan.gates:
         validate_baseline(effort, repo_root, plan_path, plan, runbook, errors, check_drift=not allow_baseline_drift)
-    validate_prompt(effort, errors)
+    if check_prompt:
+        validate_prompt(effort, errors)
     active = [index for index, row in enumerate(rows) if row.status in {"active", "blocked"}]
     if len(active) > 1:
         errors.append("runbook: more than one active or blocked Gate")
     if active and rows[active[0]].gate != checkpoint.get("Gate"):
         errors.append("runbook: checkpoint Gate must equal the active Gate")
+    if not active and checkpoint.get("Gate") != "none":
+        errors.append("runbook: completed ledger must have no current Gate")
     for index, row in enumerate(rows):
         if index >= len(plan.gates) or row.gate != plan.gates[index].label:
             if allow_baseline_drift:
@@ -571,21 +616,36 @@ def validate(effort: Path, *, allow_baseline_drift: bool = False, allow_pending_
             errors.append(f"runbook: Ledger Gate row {index} does not match plan")
             continue
         if row.status in {"active", "blocked", "passed"}:
-            if row.history in {"—", "none", ""}:
-                errors.append(f"runbook: {row.gate} requires a history path")
-                continue
-            history_errors: list[str] = []
-            events = parse_history(effort / row.history, plan.gates[index], history_errors)
-            errors.extend(history_errors)
-            tail = tail_event(events)
-            if tail and row.history_head != tail.event_id:
-                errors.append(f"runbook: {row.gate} History head must equal history tail event id")
-            if row.status in {"active", "blocked"} and checkpoint.get("Checks") != check_summary(events, plan.gates[index]):
-                errors.append(f"runbook: {row.gate} checkpoint Checks must match latest check results")
+            if row.history != f"goal/history/{plan.gates[index].id}.md":
+                errors.append(f"runbook: {row.gate} has an invalid history path")
         elif row.history != "—" or row.history_head != "—":
             errors.append(f"runbook: planned Gate {row.gate} must not have history")
     if checkpoint.get("Gate") == "none" and rows and any(row.status != "passed" for row in rows):
         errors.append("runbook: completed checkpoint requires every Gate passed")
+    gate = next((g for g in plan.gates if g.label == checkpoint.get("Gate")), None)
+    checks = load_current_checks(effort, runbook, gate, checkpoint, errors)
+    if gate is None:
+        if checks or checkpoint.get("Gate") != "none" or checkpoint.get("Manual acceptance") != "none":
+            errors.append("runbook: completed effort must have no current checks or pending acceptance")
+    else:
+        for cid, check in checks.items():
+            if cid not in gate.checks:
+                errors.append(f"runbook: unknown current check {cid}")
+            if check.outcome not in {"started", "pass", "fail", "timed-out", "interrupted", "cancelled"}:
+                errors.append(f"runbook: invalid outcome for {cid}")
+        pending = [check.acceptance for cid, check in checks.items() if cid in gate.checks and gate.checks[cid].kind == "Manual acceptance" and check.outcome == "started"]
+        manual = checkpoint.get("Manual acceptance")
+        if (pending and (len(pending) != 1 or pending[0] == "none" or manual != f"pending {pending[0]}")) or (not pending and manual != "none"):
+            errors.append("runbook: pending acceptance does not match current check snapshot")
+        if section(runbook, "Current Checks") is not None:
+            if checkpoint.get("Checks") != check_summary(checks, gate):
+                errors.append("runbook: checkpoint Checks do not match current check snapshot")
+            satisfied = effective_satisfied_exits(checks, gate)
+            expected = "all" if satisfied == set(gate.exits) else (", ".join(e for e in gate.exits if e in satisfied) or "none")
+            if checkpoint.get("Satisfied exits") != expected:
+                errors.append("runbook: Satisfied exits do not match current check snapshot")
+        if active and rows[active[0]].status == "blocked" and checkpoint.get("Blocker", "").split(":", 1)[0] not in gate.stop_conditions:
+            errors.append("runbook: blocked Gate requires a declared Stop condition")
     return errors
 
 

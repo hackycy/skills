@@ -1,4 +1,3 @@
-Prompt schema: `goal-loop/prompt-v3`
 Effort path: `{{EFFORT_PATH}}`
 
 请推进这个 effort，直到全部 Gate 通过。每次收到这段指令，先自行读取当前 Gate、Revision、slice 和 checkpoint，从保存的进度继续。本次 Goal 锁定启动时的 Gate，Gate 通过后结束本轮。无需让我选择 Gate、执行控制命令或获取下一轮提示词。
@@ -13,7 +12,7 @@ Effort path: `{{EFFORT_PATH}}`
 
 开始时：
 
-1. `context` 已校验 pending transaction、合同 baseline 和运行记录，并返回 Revision、Gate 状态、checkpoint、过期检查和当前合同。长输出按 `Next page` 的 offset 自行继续读取，直到 `Context complete` 再实现；分页期间 Revision 改变则从头读取。无需重复运行 status/validate 或读取原始 runbook、baseline、脚本源码和 skill。
+1. `context` 已校验 pending transaction、合同 baseline 和当前状态，并返回 Revision、Gate 状态、checkpoint、过期检查和当前合同。长输出按 `Next page` 的 offset 自行继续读取，直到 `Context complete` 再实现；分页期间 Revision 改变则从头读取。检查快照中的内部证据元数据由脚本使用，无需额外读入上下文。无需重复运行 status/validate 或读取原始 runbook、baseline、脚本源码和 skill。
 2. pending transaction 时先用同一入口执行 `recover`，然后重新读取 context；baseline 漂移或其他校验错误时停止实现并报告。全部 Gate 已通过则报告 effort complete。
 3. 读取适用的仓库指令、当前 Gate 必要代码和相关合同来源。history 只在具体检查或交接信息不足时按需读取相关片段；默认不读取 passed Gate history。
 4. blocked 时确认恢复条件后使用 `resume`。Manual acceptance pending 时，只在收到我对相应验收编号的明确结果后使用 `check finish`；否则向我报告待验事项并结束，不轮询。

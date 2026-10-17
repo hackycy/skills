@@ -14,12 +14,11 @@ spec.loader.exec_module(v)
 
 
 class ValidatorUnitTests(unittest.TestCase):
-    def test_schema_constants_are_versioned(self):
-        self.assertEqual(v.RUNBOOK_SCHEMA, "goal-loop/runbook-v2")
-        self.assertEqual(v.HISTORY_SCHEMA, "goal-loop/history-v2")
-        self.assertEqual(v.BASELINE_SCHEMA, "goal-loop/contract-baseline-v2")
-        self.assertEqual(v.PROMPT_SCHEMA, "goal-loop/prompt-v3")
-        self.assertEqual(v.TRANSACTION_SCHEMA, "goal-loop/transaction-v2")
+    def test_invalid_snapshot_is_not_treated_as_missing(self):
+        for body in ("not JSON", '```json\n{"D1": {"outcome": "pass"}}\n```'):
+            errors = []
+            self.assertEqual(v.parse_current_checks("## Current Checks\n\n" + body, errors), {})
+            self.assertTrue(errors)
 
     def test_fingerprint_is_stable_for_sorted_paths(self):
         with self.subTest(order="stable"):

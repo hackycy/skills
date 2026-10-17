@@ -2,7 +2,7 @@
 
 `goal/contract-baseline.json` 保存 implementation plan 和 Contract Sources 的当前摘要，用于检测合同漂移。
 
-Schema: `goal-loop/contract-baseline-v2`
+标识：`goal-loop/contract-baseline`。已有 baseline 的格式标识由读取端兼容；刷新执行材料保留其原字节。
 
 ```json
 {
@@ -11,7 +11,7 @@ Schema: `goal-loop/contract-baseline-v2`
     {"path": "docs/spec.md", "sha256": "<64-hex>"},
     {"path": "efforts/example/implementation-plan.md", "sha256": "<64-hex>"}
   ],
-  "schema": "goal-loop/contract-baseline-v2"
+  "schema": "goal-loop/contract-baseline"
 }
 ```
 

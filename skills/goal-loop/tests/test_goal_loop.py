@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -370,32 +371,60 @@ class GoalLoopTests(unittest.TestCase):
         self.assertEqual(prompt.read_bytes(), before[prompt])
         self.assertFalse((effort / "goal/goal_loop_ctl.py").exists())
 
-    def prepare_v2(self, effort: Path, *, with_scripts: bool = False):
+    def prepare_legacy(self, effort: Path, *, with_scripts: bool = False):
         goal = effort / "goal"
         original = (ROOT / "tests/fixtures/prompt-v2.md").read_bytes()
         (goal / "prompt.md").write_bytes(original.replace(b"{{EFFORT_PATH}}", effort.name.encode()))
+        runbook_path = goal / "runbook.md"
+        runbook = runbook_path.read_text(encoding="utf-8").split("## Current Checks")[0]
+        runbook = runbook.replace("goal-loop/runbook`", "goal-loop/runbook-v2`")
+        manifest_path = goal / "contract-baseline.json"
+        old_digest = v.sha256(manifest_path)
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["schema"] = "goal-loop/contract-baseline-v2"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        runbook = runbook.replace(old_digest, v.sha256(manifest_path))
+        # Earlier checkpoints did not include pending manual handoffs in Checks.
+        runbook = re.sub(r",? ?M1=started", "", runbook).replace("Checks: ``", "Checks: `none`")
+        runbook_path.write_text(runbook, encoding="utf-8")
+        for path in (goal / "history").glob("*.md"):
+            path.write_bytes(path.read_bytes().replace(b"goal-loop/history`", b"goal-loop/history-v2`"))
         for name in ("goal_loop_ctl.py", "validate_goal_loop.py"):
             if with_scripts:
-                (goal / name).write_bytes(b"# existing v2 script\n")
+                (goal / name).write_bytes(b"# saved execution script\n")
             else:
                 (goal / name).unlink()
         return {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
 
-    def test_upgrade_preserves_progress_and_runs_saved_entry(self):
+    def reviewed_prompt(self, effort: Path, *, addition: str = "") -> Path:
+        candidate = effort.parent / "reviewed-prompt.md"
+        text = (ROOT / "references/goal-prompt-template.md").read_text(encoding="utf-8")
+        text = text.replace("{{EFFORT_PATH}}", effort.name).replace("{{PYTHON}}", "python" if os.name == "nt" else "python3")
+        candidate.write_text(text + addition, encoding="utf-8")
+        return candidate
+
+    def refresh(self, effort: Path, *, revision: int | None = None, addition: str = ""):
+        return self.ctl("refresh", effort, "--expected-revision", str(self.revision(effort) if revision is None else revision),
+                        "--prompt", str(self.reviewed_prompt(effort, addition=addition)))
+
+    def test_refresh_preserves_progress_and_runs_saved_entry(self):
         for with_scripts in (False, True):
             with self.subTest(with_scripts=with_scripts):
                 repo, effort = self.make_repo(two_gates=True)
                 self.complete_g0(effort)
                 self.assertEqual(self.ctl("pass-gate", effort, "--expected-revision", "5").returncode, 0)
-                before = self.prepare_v2(effort, with_scripts=with_scripts)
-                result = self.ctl("upgrade", effort, "--expected-revision", "6")
+                before = self.prepare_legacy(effort, with_scripts=with_scripts)
+                result = self.refresh(effort)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                changed = {effort / "goal" / n for n in ("prompt.md", "goal_loop_ctl.py", "validate_goal_loop.py")}
+                changed = {effort / "goal" / n for n in ("prompt.md", "goal_loop_ctl.py", "validate_goal_loop.py", "runbook.md")}
+                backup = next((effort / "goal/backups").iterdir())
                 for path, data in before.items():
-                    self.assertEqual((effort / "goal/backup-v2" / path.name).read_bytes() if path in changed else path.read_bytes(), data)
+                    if path in changed:
+                        self.assertEqual((backup / path.name).read_bytes(), data)
+                    else:
+                        self.assertEqual(path.read_bytes(), data)
                 self.assertEqual(self.revision(effort), 6)
                 prompt = (effort / "goal/prompt.md").read_text(encoding="utf-8")
-                self.assertIn("goal-loop/prompt-v3", prompt)
                 command = re.findall(r"^python[^\n]+ context [^\n]+$", prompt, re.MULTILINE)[0]
                 argv = shlex.split(command)
                 argv[0] = sys.executable
@@ -403,31 +432,28 @@ class GoalLoopTests(unittest.TestCase):
                 self.assertEqual(context.returncode, 0, context.stdout + context.stderr)
                 self.assertIn("Gate: G1: Finish", context.stdout)
                 after = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
-                repeated = self.ctl("upgrade", effort, "--expected-revision", "6")
+                repeated = self.refresh(effort)
                 self.assertEqual(repeated.returncode, 0, repeated.stdout + repeated.stderr)
                 self.assertEqual(after, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
 
-    def test_upgrade_rejects_stale_revision_drift_transaction_and_backup_conflict(self):
-        for problem in ("revision", "drift", "transaction", "backup"):
+    def test_refresh_rejects_stale_revision_drift_and_transaction(self):
+        for problem in ("revision", "drift", "transaction"):
             with self.subTest(problem=problem):
                 repo, effort = self.make_repo()
-                self.prepare_v2(effort)
+                self.prepare_legacy(effort)
                 if problem == "drift":
                     (repo / "docs/decision.md").write_text("changed", encoding="utf-8")
                 elif problem == "transaction":
                     (effort / "goal/.goal-loop-transaction.json").write_text("{}", encoding="utf-8")
-                elif problem == "backup":
-                    (effort / "goal/backup-v2").mkdir()
-                    (effort / "goal/backup-v2/prompt.md").write_text("retained", encoding="utf-8")
                 before = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
-                result = self.ctl("upgrade", effort, "--expected-revision", "1" if problem == "revision" else "0")
+                result = self.refresh(effort, revision=1 if problem == "revision" else 0)
                 self.assertNotEqual(result.returncode, 0)
-                expected = {"revision": "stale Revision", "drift": "drift", "transaction": "run recover", "backup": "backup-v2 already exists"}
+                expected = {"revision": "stale Revision", "drift": "drift", "transaction": "run recover"}
                 self.assertIn(expected[problem], result.stdout + result.stderr)
                 self.assertEqual(before, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
 
-    def test_upgrade_preserves_blocked_pending_and_complete_states(self):
-        for state in ("blocked", "pending", "complete"):
+    def test_refresh_preserves_blocked_pending_and_complete_states(self):
+        for state in ("blocked", "pending", "complete", "passing"):
             with self.subTest(state=state):
                 _, effort = self.make_repo()
                 if state == "blocked":
@@ -436,14 +462,72 @@ class GoalLoopTests(unittest.TestCase):
                     result = self.ctl("check", effort, "start", "--expected-revision", "0", "--kind", "Manual acceptance", "--check", "M1", "--result", "ready", "--next-action", "wait")
                 else:
                     self.complete_g0(effort)
-                    result = self.ctl("pass-gate", effort, "--expected-revision", "5")
+                    if state == "complete":
+                        self.assertEqual(self.ctl("pass-gate", effort, "--expected-revision", "5").returncode, 0)
+                before = self.prepare_legacy(effort)
+                checkpoint_before = v.parse_checkpoint((effort / "goal/runbook.md").read_text(encoding="utf-8"), [])
+                revision = self.revision(effort)
+                result = self.refresh(effort)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                before = self.prepare_v2(effort)
-                result = self.ctl("upgrade", effort, "--expected-revision", str(self.revision(effort)))
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                checkpoint_after = v.parse_checkpoint((effort / "goal/runbook.md").read_text(encoding="utf-8"), [])
+                for key in checkpoint_before:
+                    if key != "Checks":
+                        self.assertEqual(checkpoint_before[key], checkpoint_after[key])
+                self.assertEqual(self.revision(effort), revision)
                 for path, data in before.items():
-                    if path.name != "prompt.md":
+                    if path.name not in {"prompt.md", "runbook.md"}:
                         self.assertEqual(path.read_bytes(), data)
+                # The saved facts remain usable without reading historical evidence again.
+                (effort / "goal/history/G0.md").write_bytes(b"older notes, no machine-readable events\r\n")
+                if state == "pending":
+                    result = self.ctl("check", effort, "finish", "--expected-revision", str(revision), "--kind", "Manual acceptance", "--check", "M1", "--acceptance", "G0-M1", "--outcome", "pass", "--result", "accepted", "--next-action", "continue")
+                elif state == "passing":
+                    result = self.ctl("pass-gate", effort, "--expected-revision", str(revision))
+                else:
+                    result = self.ctl("context", effort)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_refresh_is_repeatable_and_keeps_reviewed_additions(self):
+        _, effort = self.make_repo()
+        prompt = effort / "goal/prompt.md"
+        addition = "\n每完成一个 slice，向我汇报验证结果。\n"
+        prompt.write_text(prompt.read_text(encoding="utf-8") + addition, encoding="utf-8")
+        saved_script = effort / "goal/goal_loop_ctl.py"
+        saved_script.write_bytes(b"# earlier script\n")
+        before = saved_script.read_bytes()
+        result = self.refresh(effort, addition=addition)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(saved_script.read_bytes(), CTL.read_bytes())
+        self.assertIn(addition.strip(), prompt.read_text(encoding="utf-8"))
+        first_backup = next((effort / "goal/backups").iterdir())
+        self.assertEqual((first_backup / saved_script.name).read_bytes(), before)
+        saved_script.write_bytes(b"# another saved script\n")
+        result = self.refresh(effort, addition=addition)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(list((effort / "goal/backups").iterdir())), 2)
+        self.assertEqual((first_backup / saved_script.name).read_bytes(), before)
+        self.assertEqual(self.revision(effort), 0)
+
+    def test_refresh_requires_reviewed_prompt_and_preview_is_read_only(self):
+        _, effort = self.make_repo()
+        before = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+        preview = self.ctl("refresh", effort, "--preview")
+        self.assertEqual(preview.returncode, 0, preview.stdout + preview.stderr)
+        self.assertIn(f'"{effort.name}/goal/goal_loop_ctl.py" context', preview.stdout)
+        missing = self.ctl("refresh", effort, "--expected-revision", "0")
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertEqual(before, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
+
+    def test_refresh_refuses_unknown_current_facts_without_modifying_records(self):
+        _, effort = self.make_repo()
+        self.complete_g0(effort)
+        self.prepare_legacy(effort)
+        (effort / "goal/history/G0.md").write_text("old notes without check evidence", encoding="utf-8")
+        before = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+        result = self.refresh(effort)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("current check snapshot is missing", result.stdout + result.stderr)
+        self.assertEqual(before, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
 
     def test_bundled_runtime_records_multiple_slices_with_the_same_prompt(self):
         repo, effort = self.make_repo()
@@ -463,6 +547,74 @@ class GoalLoopTests(unittest.TestCase):
         self.assertIn("State: active", result.stdout)
         self.assertIn("Last completed slice: `S2`", result.stdout)
         self.assertEqual(prompt, (effort / "goal/prompt.md").read_bytes())
+
+    def test_current_checks_survive_opaque_history_and_rule_wording_changes(self):
+        _, effort = self.make_repo(two_gates=True)
+        self.complete_g0(effort)
+        history = effort / "goal/history/G0.md"
+        original = b"# Notes\r\nOld layout, irregular numbering and free-form notes.\r\n"
+        history.write_bytes(original)
+        runbook = effort / "goal/runbook.md"
+        runbook.write_text(runbook.read_text(encoding="utf-8").replace(v.STATE_RULES[0], "Follow the saved task contract."), encoding="utf-8")
+        result = self.ctl("pass-gate", effort, "--expected-revision", "5")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(history.read_bytes().startswith(original))
+        # Even unreadable completed history is not part of startup validation.
+        history.write_bytes(b"\xff\xfe archived notes")
+        context = self.ctl("context", effort)
+        self.assertEqual(context.returncode, 0, context.stdout + context.stderr)
+        self.assertIn("Gate: G1: Finish", context.stdout)
+
+    def test_missing_history_does_not_remove_current_checks(self):
+        _, effort = self.make_repo()
+        self.complete_g0(effort)
+        (effort / "goal/history/G0.md").unlink()
+        result = self.ctl("pass-gate", effort, "--expected-revision", "5")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_snapshot_is_bounded_and_internal_evidence_stays_out_of_context(self):
+        _, effort = self.make_repo()
+        sizes, contexts = [], []
+        for revision in range(20):
+            result = self.ctl("check", effort, "run", "--expected-revision", str(revision), "--check", "R1", "--next-action", "continue")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            sizes.append((effort / "goal/runbook.md").stat().st_size)
+            contexts.append(self.ctl("context", effort).stdout)
+        self.assertLess(max(sizes) - min(sizes), 50)
+        self.assertLess(max(map(len, contexts)) - min(map(len, contexts)), 50)
+        text = (effort / "goal/runbook.md").read_text(encoding="utf-8")
+        checks = v.parse_current_checks(text, [])
+        self.assertEqual(list(checks), ["R1"])
+        self.assertIn("R1=pass", contexts[-1])
+        self.assertNotIn(checks["R1"].fingerprint, contexts[-1])
+        self.assertNotIn("Current Checks", contexts[-1])
+
+    def test_refresh_preserves_pending_object_and_rejects_accepting_changed_inputs(self):
+        repo, effort = self.make_repo()
+        start = self.ctl("check", effort, "start", "--expected-revision", "0", "--kind", "Manual acceptance", "--check", "M1", "--result", "build reader-42", "--next-action", "wait")
+        self.assertEqual(start.returncode, 0, start.stdout + start.stderr)
+        before = (effort / "goal/runbook.md").read_bytes()
+        self.assertEqual(self.refresh(effort).returncode, 0)
+        self.assertEqual((effort / "goal/runbook.md").read_bytes(), before)
+        self.assertIn("build reader-42", self.ctl("context", effort).stdout)
+        (repo / "src/app.txt").write_text("different build", encoding="utf-8")
+        finish = self.ctl("check", effort, "finish", "--expected-revision", "1", "--kind", "Manual acceptance", "--check", "M1", "--acceptance", "G0-M1", "--outcome", "pass", "--result", "accepted old build", "--next-action", "continue")
+        self.assertNotEqual(finish.returncode, 0)
+        self.assertIn("evidence changed", finish.stdout + finish.stderr)
+        self.assertEqual((effort / "goal/runbook.md").read_bytes(), before)
+        cancelled = self.ctl("check", effort, "cancel", "--expected-revision", "1", "--kind", "Manual acceptance", "--check", "M1", "--result", "request new build", "--next-action", "start again")
+        self.assertEqual(cancelled.returncode, 0, cancelled.stdout + cancelled.stderr)
+        self.assertIn("M1=cancelled", self.ctl("context", effort).stdout)
+
+    def test_refresh_and_record_do_not_overlap_another_control_command(self):
+        _, effort = self.make_repo()
+        spec = importlib.util.spec_from_file_location("goal_loop_ctl_test", CTL)
+        ctl = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ctl)
+        with ctl.control_lock(effort):
+            result = self.refresh(effort)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("another control command is running", result.stdout + result.stderr)
 
     def test_same_saved_entry_resumes_successor_without_passed_history(self):
         repo, effort = self.make_repo(two_gates=True)
@@ -485,6 +637,7 @@ class GoalLoopTests(unittest.TestCase):
         return int(next(line.split("`")[1] for line in text.splitlines() if line.startswith("Revision:")))
 
     def complete_g0(self, effort: Path):
+        initial_revision = self.revision(effort)
         commands = [
             ("check", "start", "--expected-revision", "0", "--kind", "Directed", "--check", "D1", "--result", "inspected", "--next-action", "finish D1"),
             ("check", "finish", "--expected-revision", "1", "--kind", "Directed", "--check", "D1", "--outcome", "pass", "--result", "accepted", "--next-action", "R1"),
@@ -493,6 +646,9 @@ class GoalLoopTests(unittest.TestCase):
             ("check", "finish", "--expected-revision", "4", "--kind", "Manual acceptance", "--check", "M1", "--acceptance", "G0-M1", "--outcome", "pass", "--result", "accepted", "--next-action", "pass Gate"),
         ]
         for command in commands:
+            command = list(command)
+            revision_index = command.index("--expected-revision") + 1
+            command[revision_index] = str(initial_revision + int(command[revision_index]))
             result = self.ctl(command[0], effort, command[1], *command[2:])
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -589,14 +745,70 @@ class GoalLoopTests(unittest.TestCase):
 
     def test_contract_revision_preview_and_revalidate(self):
         repo, effort = self.make_repo()
+        self.complete_g0(effort)
+        history = effort / "goal/history/G0.md"
+        before = history.read_bytes().replace(b"\n", b"\r\n")
+        history.write_bytes(before)
         candidate = repo / "candidate-plan.md"
         candidate.write_text(plan_text(), encoding="utf-8")
         preview = self.ctl("revise-contract", effort, "--plan", str(candidate), "--mode", "revalidate", "--reason", "accepted clarification")
         self.assertEqual(preview.returncode, 0, preview.stdout + preview.stderr)
         proposal = json.loads(preview.stdout)
-        committed = self.ctl("revise-contract", effort, "--plan", str(candidate), "--mode", "revalidate", "--reason", "accepted clarification", "--preview-digest", proposal["digest"], "--expected-revision", "0")
+        committed = self.ctl("revise-contract", effort, "--plan", str(candidate), "--mode", "revalidate", "--reason", "accepted clarification", "--preview-digest", proposal["digest"], "--expected-revision", "5")
         self.assertEqual(committed.returncode, 0, committed.stdout + committed.stderr)
         self.assertEqual(v.validate(effort), [])
+        self.assertTrue(history.read_bytes().startswith(before))
+        result = self.ctl("pass-gate", effort, "--expected-revision", "6")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("checks incomplete", result.stdout + result.stderr)
+
+    def test_reactivation_retains_successor_history_and_clears_old_results(self):
+        repo, effort = self.make_repo(two_gates=True)
+        self.complete_g0(effort)
+        self.assertEqual(self.ctl("pass-gate", effort, "--expected-revision", "5").returncode, 0)
+        self.assertEqual(self.ctl("check", effort, "run", "--expected-revision", "6", "--check", "R1", "--next-action", "pass").returncode, 0)
+        histories = {p: p.read_bytes() for p in (effort / "goal/history").glob("*.md")}
+        candidate = repo / "candidate-plan.md"
+        candidate.write_text(plan_text(True).replace("Prepare the behavior.", "Prepare the clarified behavior."), encoding="utf-8")
+        preview = self.ctl("revise-contract", effort, "--plan", str(candidate), "--reason", "clarification")
+        committed = self.ctl("revise-contract", effort, "--plan", str(candidate), "--reason", "clarification", "--preview-digest", json.loads(preview.stdout)["digest"], "--expected-revision", "7")
+        self.assertEqual(committed.returncode, 0, committed.stdout + committed.stderr)
+        self.complete_g0(effort)
+        passed = self.ctl("pass-gate", effort, "--expected-revision", str(self.revision(effort)))
+        self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
+        for path, data in histories.items():
+            self.assertTrue(path.read_bytes().startswith(data))
+        stale_pass = self.ctl("pass-gate", effort, "--expected-revision", str(self.revision(effort)))
+        self.assertNotEqual(stale_pass.returncode, 0)
+        self.assertIn("checks incomplete", stale_pass.stdout + stale_pass.stderr)
+
+    def test_completed_effort_can_be_revalidated_without_erasing_history(self):
+        repo, effort = self.make_repo()
+        self.complete_g0(effort)
+        self.assertEqual(self.ctl("pass-gate", effort, "--expected-revision", "5").returncode, 0)
+        history = effort / "goal/history/G0.md"
+        before = history.read_bytes()
+        candidate = repo / "candidate-plan.md"
+        candidate.write_text(plan_text(), encoding="utf-8")
+        for mode, revision in (("equivalent", 6), ("revalidate", 7)):
+            preview = self.ctl("revise-contract", effort, "--plan", str(candidate), "--mode", mode, "--reason", "explicit review")
+            commit = self.ctl("revise-contract", effort, "--plan", str(candidate), "--mode", mode, "--reason", "explicit review", "--preview-digest", json.loads(preview.stdout)["digest"], "--expected-revision", str(revision))
+            self.assertEqual(commit.returncode, 0, commit.stdout + commit.stderr)
+            self.assertIn("State: complete" if mode == "equivalent" else "State: active", self.ctl("context", effort).stdout)
+            self.assertTrue(history.read_bytes().startswith(before))
+
+    def test_failed_refresh_transaction_restores_original_bytes(self):
+        _, effort = self.make_repo()
+        spec = importlib.util.spec_from_file_location("goal_loop_ctl_rollback_test", CTL)
+        ctl = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ctl)
+        prompt = effort / "goal/prompt.md"
+        backup = effort / "goal/backups/refresh-test/prompt.md"
+        before = {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()}
+        with patch.object(ctl.v, "validate", return_value=["injected failure"]):
+            with self.assertRaisesRegex(RuntimeError, "injected failure"):
+                ctl.commit_transaction(effort, {prompt: b"replacement", backup: prompt.read_bytes()}, operation="refresh")
+        self.assertEqual(before, {p: p.read_bytes() for p in effort.rglob("*") if p.is_file()})
 
 
 if __name__ == "__main__":
