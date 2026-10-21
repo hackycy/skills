@@ -19,7 +19,7 @@
     "lint": "eslint --cache .",
     "prepublishOnly": "pnpm build",
     "release": "bumpp -r",
-    "test": "pnpm test",
+    "test": "vitest run --dir packages",
     "typecheck": "tsc",
     "prepare": "simple-git-hooks",
     "open:packages": "npx open-packages-on-npm",

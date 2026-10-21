@@ -1,0 +1,286 @@
+{
+  "note_valid": [
+    {
+      "name": "proposed",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "proposed",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。"
+      }
+    },
+    {
+      "name": "implemented",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "implemented",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。"
+      }
+    },
+    {
+      "name": "rejected",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "rejected",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。",
+        "rejection_reason": "独立服务并未解决当前的所有权问题。"
+      }
+    },
+    {
+      "name": "global",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "proposed",
+        "scope": {
+          "global": true
+        },
+        "read_when": "修改事件发布责任时。"
+      }
+    },
+    {
+      "name": "archived",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "implemented",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。",
+        "archive": {
+          "date": "2026-10-21",
+          "reason": "保留历史；已无现行指导价值。"
+        }
+      }
+    },
+    {
+      "name": "full-supersession",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "implemented",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。",
+        "relations": {
+          "supersedes": [
+            {
+              "id": "an-83869376-c1c7-43c5-a6f5-450c7fe4ee4f",
+              "extent": "full",
+              "reason": "替代范围详见正文。"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "partial-supersession",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "implemented",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。",
+        "relations": {
+          "supersedes": [
+            {
+              "id": "an-83869376-c1c7-43c5-a6f5-450c7fe4ee4f",
+              "extent": "partial",
+              "reason": "替代范围详见正文。"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "note_invalid": [
+    {
+      "name": "missing-id",
+      "value": {
+        "format": "agent-note/1",
+        "status": "proposed",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。"
+      }
+    },
+    {
+      "name": "empty-scope",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "proposed",
+        "scope": {},
+        "read_when": "修改事件发布责任时。"
+      }
+    },
+    {
+      "name": "mixed-global",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "proposed",
+        "scope": {
+          "global": true,
+          "paths": [
+            "src/**"
+          ]
+        },
+        "read_when": "修改事件发布责任时。"
+      }
+    },
+    {
+      "name": "rejected-without-reason",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "rejected",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。"
+      }
+    },
+    {
+      "name": "archive-proposed",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "proposed",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。",
+        "archive": {
+          "date": "2026-10-21",
+          "reason": "错误状态"
+        }
+      }
+    },
+    {
+      "name": "unknown-field",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "proposed",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。",
+        "statuz": "proposed"
+      }
+    },
+    {
+      "name": "rejected-supersedes",
+      "value": {
+        "format": "agent-note/1",
+        "id": "an-98e9a99f-81c9-4e06-901f-aedb1429d493",
+        "status": "rejected",
+        "scope": {
+          "paths": [
+            "src/orders/**"
+          ],
+          "topics": [
+            "event-ownership"
+          ]
+        },
+        "read_when": "修改事件发布责任时。",
+        "rejection_reason": "不采纳",
+        "relations": {
+          "supersedes": [
+            {
+              "id": "an-83869376-c1c7-43c5-a6f5-450c7fe4ee4f",
+              "extent": "full",
+              "reason": "不能生效"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "manifest_valid": [
+    {
+      "format": "agent-note-archive/1",
+      "entries": {}
+    },
+    {
+      "format": "agent-note-archive/1",
+      "entries": {
+        "an-98e9a99f-81c9-4e06-901f-aedb1429d493": {
+          "path": "archived/architecture/2026-10-21-event-ownership.md",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source": {
+            "path": "implemented/architecture/2026-10-21-event-ownership.md",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        }
+      }
+    }
+  ]
+}

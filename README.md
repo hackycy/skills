@@ -10,6 +10,18 @@ pnpx skills@latest add hackycy/skills
 
 Learn more about the CLI usage at [skills](https://github.com/vercel-labs/skills).
 
+## Agent Notes CLI
+
+[Agent Notes](packages/agent-notes/README.md) manages engineering decision Notes
+through a CLI in `packages/agent-notes`. It installs the `agent-note` and
+`agent-note-maintenance` skills together with a shared project runtime. Choose
+the generic `.agents` target, `.claude`, or both. Install these two skills through
+the CLI so their scripts, templates and document contracts stay together.
+
+The CLI provides scoped discovery, validated lifecycle operations, archive
+freezing and runtime upgrades that preserve project documents. See the package
+documentation for its command and document contracts.
+
 ## Inspire
 
 - https://github.com/antfu/skills

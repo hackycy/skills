@@ -1,0 +1,25 @@
+{
+  "observedOn": "2026-10-21",
+  "purpose": "Local design research; upstream checkouts are ignored and must not be committed",
+  "repositories": [
+    {
+      "url": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+      "checkout": ".cache/upstreams/deepseek-harness",
+      "scope": "Agent Notes discovery, recording, maintenance, verification and runtime integration"
+    },
+    {
+      "url": "https://github.com/mattpocock/skills.git",
+      "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+      "checkout": ".cache/upstreams/mattpocock-skills",
+      "scope": [
+        "skills/engineering/wayfinder/SKILL.md",
+        "skills/engineering/wayfinder/agents/openai.yaml",
+        "skills/engineering/grill-with-docs/SKILL.md",
+        "skills/engineering/grill-with-docs/agents/openai.yaml",
+        "docs/engineering/wayfinder.md",
+        "docs/engineering/grill-with-docs.md"
+      ]
+    }
+  ]
+}

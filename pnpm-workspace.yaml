@@ -7,6 +7,15 @@ packages:
   - docs
   - packages/*
   - examples/*
+catalog:
+  '@types/mdast': ^4.0.4
+  ajv: ^8.17.1
+  ajv-formats: ^3.0.1
+  github-slugger: ^2.0.0
+  mdast-util-to-string: ^4.0.0
+  remark-gfm: ^4.0.1
+  remark-parse: ^11.0.0
+  unified: ^11.0.5
 catalogs:
   cli:
     '@antfu/eslint-config': ^6.7.3

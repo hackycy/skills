@@ -1,0 +1,231 @@
+{
+  "type": "object",
+  "properties": {
+    "format": {
+      "const": "agent-note/1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^an-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "implemented",
+        "rejected"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "topics": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "global": {
+          "const": true
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "global"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "paths"
+                ]
+              },
+              {
+                "required": [
+                  "topics"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "paths"
+              ]
+            },
+            {
+              "required": [
+                "topics"
+              ]
+            }
+          ],
+          "not": {
+            "required": [
+              "global"
+            ]
+          }
+        }
+      ]
+    },
+    "read_when": {
+      "type": "string",
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "relations": {
+      "type": "object",
+      "properties": {
+        "related": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^an-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          }
+        },
+        "requires": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^an-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^an-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+              },
+              "extent": {
+                "enum": [
+                  "full",
+                  "partial"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "required": [
+              "id",
+              "extent",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "archive": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "date",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "format",
+    "id",
+    "status",
+    "scope",
+    "read_when"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Note v1 frontmatter",
+  "description": "Metadata only. Directory, Markdown body, target identities and Git history are validated separately.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "rejected"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "rejection_reason"
+        ],
+        "properties": {
+          "relations": {
+            "not": {
+              "required": [
+                "supersedes"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "required": [
+            "rejection_reason"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "archive"
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "implemented"
+          }
+        }
+      }
+    }
+  ]
+}

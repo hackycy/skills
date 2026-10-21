@@ -1,0 +1,35 @@
+{
+  "name": "@hackycy/agent-notes",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Portable engineering decision notes with explicit lifecycle governance",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hackycy/skills.git",
+    "directory": "packages/agent-notes"
+  },
+  "bin": { "agent-notes": "./dist/cli.mjs" },
+  "files": ["assets", "contracts", "dist", "writing.md"],
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "build": "tsdown",
+    "prepack": "pnpm run build",
+    "start": "tsx src/cli/main.ts",
+    "test": "vitest run",
+    "test:bundle": "tsx tests/bundle-smoke.ts",
+    "test:install": "tsx tests/install-smoke.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/mdast": "catalog:",
+    "ajv": "catalog:",
+    "ajv-formats": "catalog:",
+    "github-slugger": "catalog:",
+    "mdast-util-to-string": "catalog:",
+    "remark-gfm": "catalog:",
+    "remark-parse": "catalog:",
+    "unified": "catalog:",
+    "yaml": "catalog:testing"
+  }
+}
