@@ -1,10 +1,15 @@
+// @ts-check
 import antfu from '@antfu/eslint-config'
 
-export default antfu({
-  ignores: [
-    '**/skills/**',
-  ],
-  rules: {
-    'no-console': 'off',
+export default antfu(
+  {
+    type: 'lib',
+    ignores: [
+      '**/skills/**',
+      '.scratch/**',
+    ],
+    rules: {
+      'no-console': 'off',
+    },
   },
-})
+)

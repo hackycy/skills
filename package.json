@@ -1,25 +1,54 @@
 {
   "type": "module",
+  "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@12.14.0",
+  "author": "hackycy <hackycy@outlook.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/hackycy/pkg-placeholder#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hackycy/pkg-placeholder.git"
+  },
+  "bugs": "https://github.com/hackycy/pkg-placeholder/issues",
+  "keywords": [],
+  "sideEffects": false,
   "scripts": {
-    "lint": "eslint .",
-    "start": "",
-    "prepare": "simple-git-hooks"
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "eslint --cache .",
+    "prepublishOnly": "pnpm build",
+    "release": "bumpp -r",
+    "test": "pnpm test",
+    "typecheck": "tsc",
+    "prepare": "simple-git-hooks",
+    "open:packages": "npx open-packages-on-npm",
+    "catalog": "pnpx codemod pnpm/catalog"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^7.7.2",
-    "@clack/prompts": "^1.1.0",
-    "@types/node": "^25.5.0",
-    "eslint": "^10.0.3",
-    "lint-staged": "^16.3.3",
-    "simple-git-hooks": "^2.13.1",
-    "typescript": "^5.9.3"
+    "@antfu/eslint-config": "catalog:cli",
+    "@antfu/ni": "catalog:cli",
+    "@antfu/utils": "catalog:inlined",
+    "@types/node": "catalog:types",
+    "bumpp": "catalog:cli",
+    "eslint": "catalog:cli",
+    "lint-staged": "catalog:cli",
+    "publint": "catalog:cli",
+    "simple-git-hooks": "catalog:cli",
+    "tinyexec": "catalog:testing",
+    "tsdown": "catalog:cli",
+    "tsx": "catalog:cli",
+    "turbo": "catalog:cli",
+    "typescript": "catalog:cli",
+    "vite": "catalog:cli",
+    "vitest": "catalog:testing",
+    "vitest-package-exports": "catalog:testing",
+    "yaml": "catalog:testing"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged"
+    "pre-commit": "pnpm i --frozen-lockfile --ignore-scripts && npx lint-staged"
   },
   "lint-staged": {
-    "*.{js,ts,mjs,mts}": "eslint --fix"
+    "*": "eslint --fix"
   }
 }
