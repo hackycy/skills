@@ -12,6 +12,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { run } from '../src/cli/run'
 import { manage } from '../src/distribution/manage'
 import { block, installPath } from '../src/distribution/manifest'
+import { checkLinks } from '../src/notes/markdown'
+import { Repository } from '../src/notes/snapshot'
 import { executeWrite } from '../src/workflow/execute'
 import { recoverTransaction } from '../src/workflow/transaction'
 import { archive, commit, git, ids, metadata, note, project, write } from './fixtures'
@@ -143,6 +145,36 @@ describe('installation ownership', () => {
     expectOk(command(root, 'init', bundle(), { notesDir: 'docs/decisions', language: 'en' }))
     expect(JSON.parse(read(root, '.agent-notes/config.json'))).toMatchObject({ notes_dir: 'docs/decisions', language: 'en' })
     expect(read(root, '.gitattributes')).toContain('/docs/decisions/** text eol=lf')
+  })
+
+  it.each(['agents', 'claude'] as const)('relocates shared and skill-local resources for %s without rewriting examples', (target) => {
+    const root = setup()
+    const content = bundle()
+    const guide = '# Example\n\n[Shared](../../../references/writing.md#inputs)\n\n![Asset](example.bin)\n'
+    const skill = '# Skill\n\n[Guide][guide]\n\n[guide]: references/example.md#example\n\n[Format](../../formats/document.md)\n\n[Formats](../../formats/)\n\n[Local](references/)\n\n```md\n[Example](../../references/writing.md)\n```\n'
+    content.files.set('assets/references/writing.md', Buffer.from('# Inputs\n'))
+    content.files.set('assets/formats/document.md', Buffer.from('# Format\n'))
+    for (const [path, bytes] of [
+      ['agent-note/SKILL.md', Buffer.from(skill)],
+      ['agent-note/references/example.md', Buffer.from(guide)],
+      ['agent-note/references/example.bin', Buffer.from([0, 255, 128])],
+    ] as const) {
+      content.files.set(`assets/skills/${path}`, bytes)
+      content.skills.set(path, bytes)
+    }
+    expectOk(command(root, 'init', content, { targets: [target] }))
+    const prefix = `.${target}/skills/agent-note`
+    expect(read(root, `${prefix}/SKILL.md`)).toContain('[guide]: references/example.md#example')
+    expect(read(root, `${prefix}/SKILL.md`)).toContain('[Format](../../../.agent-notes/runtime/assets/formats/document.md)')
+    expect(read(root, `${prefix}/SKILL.md`)).toContain('[Formats](../../../.agent-notes/runtime/assets/formats)')
+    expect(read(root, `${prefix}/SKILL.md`)).toContain('[Local](references/)')
+    expect(read(root, `${prefix}/SKILL.md`)).toContain('```md\n[Example](../../references/writing.md)\n```')
+    expect(read(root, `${prefix}/references/example.md`)).toContain('../../../../.agent-notes/runtime/assets/references/writing.md#inputs')
+    expect(readFileSync(join(root, `${prefix}/references/example.bin`))).toEqual(Buffer.from([0, 255, 128]))
+    expect(read(root, '.agent-notes/runtime/assets/skills/agent-note/SKILL.md')).toBe(skill)
+    const source = new Repository(root).snapshot('worktree')
+    source.includeDirectory('.agent-notes/runtime')
+    expect(checkLinks(source, source.paths().filter(path => path.endsWith('.md')))).toEqual([])
   })
 
   it.each(['.GIT/private-notes', '.AGENT-NOTES/runtime'])('rejects reserved directory aliases on case-insensitive filesystems: %s', (notesDir) => {
@@ -327,6 +359,36 @@ describe('upgrades and recovery boundaries', () => {
     collision.files.set('unknown.txt', Buffer.from('Replacement\n'))
     expect(command(root, 'upgrade', collision).diagnostics[0].code).toBe('UNOWNED_ASSET')
     expect(read(root, '.agent-notes/runtime/unknown.txt')).toBe('Keep me\n')
+  })
+
+  it('upgrades and rolls back the resource layout while preserving project documents and seals', () => {
+    const root = setup()
+    const previous = bundle()
+    for (const path of ['README.md', 'writing.md', 'contracts/document.md'])
+      previous.files.set(path, Buffer.from('# Previous resource\n'))
+    expectOk(command(root, 'init', previous))
+    note(root, metadata({ id: ids[1] }), 'active')
+    archive(root, note(root))
+    commit(root)
+    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agent-notes/config.json')
+    write(root, '.agent-notes/runtime/writing.md', '# Local edit of the old reference\n')
+    write(root, '.agent-notes/runtime/unknown.txt', 'Project neighboring file\n')
+    const next = bundle('0.2.0')
+    next.files.set('assets/references/writing.md', Buffer.from('# Write inputs\n'))
+    next.files.set('assets/formats/document.md', Buffer.from('# Document format\n'))
+    const upgraded = command(root, 'upgrade', next)
+    expectOk(upgraded)
+    expect(read(root, `${upgraded.data.backup}/original/.agent-notes/runtime/writing.md`)).toBe('# Local edit of the old reference\n')
+    for (const path of ['README.md', 'writing.md', 'contracts/document.md'])
+      expect(existsSync(join(root, '.agent-notes/runtime', path))).toBe(false)
+    expect(read(root, '.agent-notes/runtime/assets/references/writing.md')).toBe('# Write inputs\n')
+    expectOk(command(root, 'upgrade', previous))
+    expect(read(root, '.agent-notes/runtime/writing.md')).toBe('# Previous resource\n')
+    expect(existsSync(join(root, '.agent-notes/runtime/assets/references/writing.md'))).toBe(false)
+    expect(read(root, '.agent-notes/runtime/unknown.txt')).toBe('Project neighboring file\n')
+    for (const [path, bytes] of preserved)
+      expect(read(root, path)).toBe(bytes)
+    expectOk(command(root, 'status'))
   })
 
   it.each(['../outside.md', 'README.md', '.agents/notes/implemented/architecture/2026-10-21-owned.md', '.agent-notes/config.json'])('rejects manifest ownership of %s', (path) => {

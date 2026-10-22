@@ -18,7 +18,7 @@
 | `archive <id>` | 同上，可选 `--base <ref>` | 封存 implemented；需要可解析的 Git 基线 |
 | `prune <id>` | 同上，可选 `--base <ref>` | 条件清理未归档记录；需要可解析的 Git 基线 |
 
-五个内容写命令及 init/upgrade 支持 `--dry-run` 与 `--recover`，两者互斥。预览只显示变更与诊断，不落盘、不创建备份、不分配永久身份；执行时重新预检。`--recover` 先恢复中断事务，再按当前输入执行。输入、expected_hash、草稿链接解释和恢复冲突见[写入参考](../writing.md)。
+五个内容写命令及 init/upgrade 支持 `--dry-run` 与 `--recover`，两者互斥。预览只显示变更与诊断，不落盘、不创建备份、不分配永久身份；执行时重新预检。`--recover` 先恢复中断事务，再按当前输入执行。输入、expected_hash、草稿链接解释和恢复冲突见[写入参考](writing.md)。
 
 路径相对项目根解析，不随调用子目录改变。CLI 不弹交互式确认，不保存聊天记录或授权令牌；缺少操作材料直接报告。所有文件访问检查项目边界与 symlink，未知格式和读取错误不会作为空结果跳过。
 
@@ -38,7 +38,7 @@
 
 agents 目标在根 AGENTS 中写受管块，claude 目标使用已有 CLAUDE 入口或创建 `.claude/CLAUDE.md`，两个目标共用 `.agent-notes/runtime/` 和一个文档根。双目标通过 Claude 导入 AGENTS 共用路由；已有独立行的直接导入会被复用，围栏或缩进代码中的示例不算导入。新建 Claude 入口时保留已有 AGENTS 规则的可达性。
 
-两个 skill 从相同内容源安装到目标的 skills 目录。已有无关的规则与 skill 可共存；没有安装清单却存在同名 skill、不明 runtime、非空 Notes 根或无主受管块时报告冲突，不隐式接管。
+两个 skill 从相同内容源安装到目标的 skills 目录，随附的专用参考与其他文件一起安装，Markdown 链接按目标位置重算。共享参考、格式和模板位于 `.agent-notes/runtime/assets/`；该目录中的 skill 源副本用于离线重新安装与修复。已有无关的规则与 skill 可共存；没有安装清单却存在同名 skill、不明 runtime、非空 Notes 根或无主受管块时报告冲突，不隐式接管。
 
 runtime、skill、配置、安装清单和 Notes 随 Git 分发；`.agent-notes/local/` 中的草稿、锁、journal 和备份忽略。安装为需要跟踪的文件生成精确忽略例外，不暴露其他本地 skills。
 
@@ -52,7 +52,7 @@ init/upgrade 使用本次调用的完整工具包；版本选择由调用者及�
 
 手改受管文件在覆盖前将原文与 diff 备份到 `.agent-notes/local/backups/`，输出具体位置；备份失败则中止。未知同名文件阻止覆盖，清单不能授权越界路径。兼容的工具回退使用相同流程，只改变运行资产，不回退用户文档。
 
-安装、升级与内容写入共用事务锁和 journal。目标 bundle 先在隔离目录验证当前文档契约，再替换资产，最后更新安装清单，完成前复核运行结果及保留的字节。恢复见[事务和恢复](../writing.md#事务和恢复)。
+安装、升级与内容写入共用事务锁和 journal。目标 bundle 先在隔离目录验证当前文档契约，再替换资产，最后更新安装清单，完成前复核运行结果及保留的字节。恢复见[事务和恢复](writing.md#事务和恢复)。
 
 ## 查询
 
@@ -78,7 +78,7 @@ context 返回 ID、标题、状态、路径、read_when、匹配原因及替代
 
 结构检查覆盖目录/格式、ID 唯一性、关系及环、相对链接和锚点、生命周期、rejected 历史保护、归档 seal 与基线冻结。活跃 Markdown 扫描 Git 跟踪及非忽略文件，并额外读取配置文档根；冻结出链、runtime 和 local 不参与现行链接校验。不联网验证外部 URL。
 
-`--maintenance` 增加失配 scope 和替代记录的维护候选，不自动改写、归档或删除。check 的历史限制和归档来源规则见[文档契约](document.md)。没有 Note diff 的代码变更不会自动失败；同 PR 义务针对整个 base→head，由作者与评审核实长期理由是否完整。
+`--maintenance` 增加失配 scope 和替代记录的维护候选，不自动改写、归档或删除。check 的历史限制和归档来源规则见[文档契约](../formats/document.md)。没有 Note diff 的代码变更不会自动失败；同 PR 义务针对整个 base→head，由作者与评审核实长期理由是否完整。
 
 ## 输出与退出码
 

@@ -1,7 +1,7 @@
 import type { Result } from '../src/cli/run'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
@@ -21,8 +21,30 @@ try {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' },
   })
+  const packageRoot = join(sandbox, 'node_modules/@hackycy/agent-notes')
+  assert.ok(existsSync(join(packageRoot, 'README.md')))
+  assert.ok(existsSync(join(packageRoot, 'docs/installation.md')))
+  assert.ok(existsSync(join(packageRoot, 'assets/references/writing.md')))
+  assert.ok(existsSync(join(packageRoot, 'assets/formats/document.md')))
+  for (const path of ['AGENTS.md', 'docs/maintainers', 'src', 'tests', 'contracts', 'writing.md'])
+    assert.equal(existsSync(join(packageRoot, path)), false, `Unexpected npm content: ${path}`)
+  const packageSource = new Repository(packageRoot).snapshot('worktree')
+  assert.deepEqual(checkLinks(packageSource, packageSource.paths().filter(path => path.endsWith('.md'))), [])
   const bin = join(sandbox, 'node_modules/.bin/agent-notes')
   assert.ok(existsSync(bin))
+  const incompleteRoot = project()
+  roots.push(incompleteRoot)
+  const writing = join(packageRoot, 'assets/references/writing.md')
+  const original = readFileSync(writing)
+  rmSync(writing)
+  try {
+    const incomplete = spawnSync(bin, ['init', '--root', incompleteRoot, '--target', 'agents', '--json'], { encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+    assert.equal(incomplete.status, 1, incomplete.stdout || incomplete.stderr)
+    assert.equal((JSON.parse(incomplete.stdout) as Result).diagnostics[0].code, 'INVALID_BUNDLE')
+    assert.equal(existsSync(join(incompleteRoot, '.agent-notes/install.json')), false)
+    assert.equal(existsSync(join(incompleteRoot, '.agent-notes/runtime')), false)
+  }
+  finally { writeFileSync(writing, original) }
   for (const [target, language] of [['agents', 'zh-CN'], ['claude', 'en']] as const) {
     const root = project()
     roots.push(root)
@@ -42,6 +64,10 @@ try {
     }
     invoke(['init', '--root', root, '--target', target, '--notes-dir', 'docs/decisions', '--language', language])
     assert.equal(invoke(['status']).data.notes_dir, 'docs/decisions')
+    for (const path of ['README.md', 'docs', 'contracts', 'writing.md'])
+      assert.equal(existsSync(join(root, '.agent-notes/runtime', path)), false, `Unexpected runtime content: ${path}`)
+    assert.ok(existsSync(join(root, '.agent-notes/runtime/assets/references/writing.md')))
+    assert.ok(existsSync(join(root, '.agent-notes/runtime/assets/formats/document.md')))
     const entry = `.${target}/skills/agent-note/SKILL.md`
     const skill = readFileSync(join(root, entry), 'utf8')
     const frontmatter = /^---\n([\s\S]*?)\n---/.exec(skill)![1]
@@ -68,6 +94,11 @@ try {
     const local = spawnSync(process.execPath, [join(root, '.agent-notes/runtime/cli.mjs'), 'show', String(created.data.id), '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
     assert.equal(local.status, 0, local.stdout || local.stderr)
     assert.equal(JSON.parse(local.stdout).data.id, created.data.id)
+    // The retained source skill can repair a host projection without npm.
+    write(root, entry, 'Local edit of the installed skill\n')
+    const repair = spawnSync(process.execPath, [join(root, '.agent-notes/runtime/cli.mjs'), 'upgrade', '--root', root, '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+    assert.equal(repair.status, 0, repair.stdout || repair.stderr)
+    assert.equal(readFileSync(join(root, entry), 'utf8'), skill)
   }
   console.log(`Offline npm/bin and individual targets smoke passed: ${tarball}`)
 }

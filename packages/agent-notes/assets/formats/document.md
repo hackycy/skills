@@ -1,6 +1,6 @@
 # Agent Note 文档契约
 
-本文定义 `agent-note/1` 与 `agent-note-archive/1` 的持久格式、关系及历史保护。工具升级持续读取合法的既有文档，保持其内容与路径。命令输入见 [CLI 契约](cli.md)和[写入参考](../writing.md)。
+本文定义 `agent-note/1` 与 `agent-note-archive/1` 的持久格式、关系及历史保护。工具升级持续读取合法的既有文档，保持其内容与路径。命令输入见 [CLI 契约](../references/cli.md)和[写入参考](../references/writing.md)。
 
 ## 1. 文档根、身份与编码
 

@@ -13,11 +13,12 @@ import { dirname, join, relative } from 'node:path'
 import process from 'node:process'
 import { diagnostic, NotesError } from '../notes/model'
 import { readConfig, readIndex } from '../notes/reader'
+import { rewriteLinks } from '../notes/rewrite'
 import { findRoot, Repository, safePath, sha256 } from '../notes/snapshot'
 import { currentDiagnostics } from '../notes/validation'
 import { assertNoTransaction, commitTransaction, recoverTransaction, verifyObservations } from '../workflow/transaction'
 import { bundleHash, loadBundle, managerVersion } from './bundle'
-import { planGitRules } from './git-rules'
+import { ancestors, planGitRules } from './git-rules'
 import { assetBytes, block, entryText, installPath, integrity, managedPath, readInstallation, replaceBlock, skillNames, versionPattern, wrapBlock } from './manifest'
 
 export interface ManageOptions {
@@ -43,7 +44,7 @@ export function installationRoot(explicit: string | undefined, cwd: string, init
 }
 
 function route(path: string, source: Snapshot, agents: boolean): string {
-  const runtime = `${relative(dirname(path), '.agent-notes/runtime').split('\\').join('/')}/writing.md`
+  const runtime = relative(dirname(path), '.agent-notes/runtime/assets/references/writing.md').split('\\').join('/')
   const inherited = path === '.claude/CLAUDE.md' && ((!source.read(path) && (agents || source.exists('AGENTS.md'))) || block(entryText(source.read(path), path), path)?.text.includes('@../AGENTS.md')) ? '@../AGENTS.md\n\n' : ''
   return wrapBlock(path, `${inherited}## Engineering decision Notes\n\nBefore planning related changes or first editing code, run \`node .agent-notes/runtime/cli.mjs context --paths <project-relative-paths> --topic <topic>\` from the project root. Include new, deleted and renamed paths; query again when scope or approach changes. Read only relevant returned Notes with \`show <id>\` or their paths.\n\nUse \`agent-note\` when durable rationale or discarded alternatives cannot live in code, tests or existing docs: suggest recording, then proceed on user acceptance or an explicit request; retain existing authorization. Ordinary Plan may finish with zero Notes. Ship required Notes with code in the same PR. Use \`agent-note-maintenance\` for lifecycle changes and cleanup; run \`check\` before delivery. [Command inputs and lifecycle rules](${runtime}) are available when writing or maintaining a Note.`)
 }
@@ -224,9 +225,19 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
       add(`.agent-notes/runtime/${path}`, 'file', bytes)
     }
     for (const target of targets) {
+      const destinations = new Map<string, { path: string }>()
+      for (const path of bundle.files.keys()) {
+        for (const source of [...ancestors(path), path])
+          destinations.set(source, { path: `.agent-notes/runtime/${source}` })
+      }
+      for (const path of bundle.skills.keys()) {
+        for (const source of [...ancestors(path), path])
+          destinations.set(`assets/skills/${source}`, { path: `.${target}/skills/${source}` })
+      }
       for (const [path, bytes] of bundle.skills) {
-        const text = bytes.toString('utf8').replaceAll('](../../../writing.md', '](../../../.agent-notes/runtime/writing.md').replaceAll('](../../templates/', '](../../../.agent-notes/runtime/assets/templates/')
-        add(`.${target}/skills/${path}`, 'file', Buffer.from(text))
+        const destination = `.${target}/skills/${path}`
+        const content = /\.md$/i.test(path) ? Buffer.from(rewriteLinks(bytes.toString('utf8'), `assets/skills/${path}`, destination, destinations)) : bytes
+        add(destination, 'file', content)
       }
       const ownedEntry = installation?.assets.find(asset => asset.kind === 'block' && (target === 'agents' ? asset.path === 'AGENTS.md' : ['CLAUDE.md', '.claude/CLAUDE.md'].includes(asset.path)))?.path
       const entry = ownedEntry ?? (target === 'agents' ? 'AGENTS.md' : source.exists('CLAUDE.md') ? 'CLAUDE.md' : '.claude/CLAUDE.md')

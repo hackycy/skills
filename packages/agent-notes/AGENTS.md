@@ -6,12 +6,12 @@
 
 | 改动范围 | 必须读取的材料 |
 | --- | --- |
-| 记录判据、skill 职责、模块边界或资产所有权 | [设计约束与依据](docs/design.md) |
-| Note 字段、章节、关系、发现或历史保护 | [文档契约](contracts/document.md)及对应 JSON Schema |
-| 参数、快照、输出、安装或升级 | [CLI 契约](contracts/cli.md) |
-| 写入、移动、引用修复、清理或恢复 | [写入与生命周期](writing.md) |
-| 校验变更、构建或分发资产 | [验证要求](docs/validation.md) |
-| 重新研究上游或调整治理原则 | [上游依据](docs/upstreams.md)与[版本锁](docs/upstreams.lock.json) |
+| 记录判据、skill 职责、模块边界或文档与资产归属 | [设计约束与依据](docs/maintainers/design.md) |
+| Note 字段、章节、关系、发现或历史保护 | [文档契约](assets/formats/document.md)及对应 JSON Schema |
+| 参数、快照、输出、安装或升级 | [CLI 契约](assets/references/cli.md) |
+| 写入、移动、引用修复、清理或恢复 | [写入与生命周期](assets/references/writing.md) |
+| 校验变更、构建或分发资产 | [验证要求](docs/maintainers/validation.md) |
+| 重新研究上游或调整治理原则 | [上游依据](docs/maintainers/upstreams.md)与[版本锁](docs/maintainers/upstreams.lock.json) |
 
 ## 保持的产品约束
 
@@ -33,11 +33,11 @@
 
 ## 文档与分发
 
-- README 只描述产品职责、能力边界和参考入口；操作参数与格式维护在契约和写入说明中。维护依据放 `docs/`，不积累阶段进度、讨论地图、测试次数或版本稳定性评价。
+- README 提供产品概览；[安装指南](docs/installation.md)编排接入、升级与修复步骤。维护依据放 `docs/maintainers/`。新增文档先按[内容归属](docs/maintainers/design.md#文档内容与分发)确定唯一维护位置与分发范围。
 - Schema 定义字段形状，文档契约定义跨文件规则；历史格式样例在 `tests/contract-examples.json`。修改模板不能给既有合法文档新增必填条件。
-- `assets/`、`contracts/`、README 与 `writing.md` 会进入项目 runtime。这些文件的相对链接必须在源码、npm 包和已安装项目中都可解析；维护专用的 AGENTS.md 和 `docs/` 留在仓库内。
+- `assets/` 是运行资源的唯一编辑源，原样进入 npm 与项目 runtime；宿主 skill 由它生成，链接按目标位置计算。产品资源只引用一同分发的文件；检查源码、npm 与安装产物的引用闭包。README 与安装指南只进入 npm，维护入口和 `docs/maintainers/` 只留仓库。
 - 上游研究保留固定 commit 和范围；学习副本放仓库根已忽略的 `.cache/upstreams/`，不纳入 Git 或 npm 包。更新研究时同步版本锁并说明采纳的变化。
 
 ## 完成条件
 
-运行仓库要求的 lint，检查所有受影响的文档链接。代码、契约或运行资产改动按[验证要求](docs/validation.md)运行对应测试；分发变更须验证实际 tarball 和安装后的引用。报告本次实际检查范围，临时产物放已忽略目录。
+运行仓库要求的 lint，检查所有受影响的文档链接。代码、契约或运行资产改动按[验证要求](docs/maintainers/validation.md)运行对应测试；分发变更须验证实际 tarball 和安装后的引用。报告本次实际检查范围，临时产物放已忽略目录。

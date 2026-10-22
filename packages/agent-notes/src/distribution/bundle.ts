@@ -1,12 +1,12 @@
-import type { Snapshot } from '../notes/snapshot'
 import { Buffer } from 'node:buffer'
 import { lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import packageJson from '../../package.json'
+import { checkLinks } from '../notes/markdown'
 import { NotesError } from '../notes/model'
-import { Repository, sha256 } from '../notes/snapshot'
+import { Repository, sha256, Snapshot } from '../notes/snapshot'
 import { readInstallation, skillNames } from './manifest'
 
 export interface Bundle { version: string, files: Map<string, Buffer>, skills: Map<string, Buffer> }
@@ -51,8 +51,7 @@ export function loadBundle(): Bundle {
   }
   try {
     files.set('cli.mjs', readFileSync(join(root, installed ? 'cli.mjs' : 'dist/cli.mjs')))
-    for (const path of ['assets', 'contracts', 'README.md', 'writing.md'])
-      collect(path)
+    collect('assets')
   }
   catch (error) {
     if (error instanceof NotesError)
@@ -69,10 +68,17 @@ export function loadBundle(): Bundle {
   }
   const skills = new Map<string, Buffer>()
   for (const name of skillNames) {
-    const bytes = files.get(`assets/skills/${name}/SKILL.md`)
-    if (!bytes)
+    const prefix = `assets/skills/${name}/`
+    if (!files.has(`${prefix}SKILL.md`))
       throw new NotesError('INVALID_BUNDLE', `Bundle is missing ${name}.`)
-    skills.set(`${name}/SKILL.md`, bytes)
+    for (const [path, bytes] of files) {
+      if (path.startsWith(prefix))
+        skills.set(path.slice('assets/skills/'.length), bytes)
+    }
   }
+  const content = new Snapshot(new Repository(root), 'commit', new Map()).overlay(files)
+  const problems = checkLinks(content, [...files.keys()].filter(path => /\.md$/i.test(path)))
+  if (problems.length)
+    throw new NotesError('INVALID_BUNDLE', `Distribution references must resolve within the bundle: ${problems[0].message}`, problems[0].path)
   return { version: managerVersion, files, skills }
 }

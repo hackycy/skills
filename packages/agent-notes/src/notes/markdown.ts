@@ -62,7 +62,7 @@ export function relativeTarget(source: string, url: string): { path: string, anc
   const beforeHash = hash < 0 ? url : url.slice(0, hash)
   const pathname = decodeURIComponent(beforeHash.split('?')[0])
   const anchor = hash < 0 ? '' : decodeURIComponent(url.slice(hash + 1))
-  const path = pathname ? posix.normalize(posix.join(posix.dirname(source), pathname)) : source
+  const path = pathname ? posix.normalize(posix.join(posix.dirname(source), pathname)).replace(/\/$/, '') : source
   if (path !== '.' && !safePath(path))
     throw new NotesError('BROKEN_REFERENCE', `Relative destination escapes the project: ${url}`, source)
   return { path, anchor }

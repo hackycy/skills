@@ -4,11 +4,11 @@
 
 所有命令支持 `--root`、`--json`、`--input <json-file|->` 和 `--dry-run`。输入文件与草稿路径相对项目根解析；`--input -` 从标准输入读取一个 JSON 对象。字段固定，未知字段和重复键拒绝。下面的命令在仓库根运行；将项目路径和 ID 替换为真实值。
 
-先用 `init --target agents` 或 `init --target claude` 安装，草稿和恢复 journal 放在已忽略的 `.agent-notes/local/`。在项目根执行 `node .agent-notes/runtime/cli.mjs`；从其他目录调用时可显式传 `--root`。写命令不会改 Git index、提交、推送、安装 hook 或配置 CI。
+在已初始化的项目中，草稿和恢复 journal 放在已忽略的 `.agent-notes/local/`。在项目根执行 `node .agent-notes/runtime/cli.mjs`；从其他目录调用时可显式传 `--root`。初始化参数见 [CLI 契约](cli.md#初始化与配置)。写命令不会改 Git index、提交、推送、安装 hook 或配置 CI。
 
 ## 新建
 
-先准备普通 Markdown 草稿，frontmatter 只含 `scope`、`read_when` 与可选 `relations`。不要提供 `format/id/status`。正文应满足 [文档章节契约](contracts/document.md#4-正文与生命周期)，正文链接按最终 Note 所在目录解释。草稿是输入，CLI 不会覆盖它。
+先准备普通 Markdown 草稿，frontmatter 只含 `scope`、`read_when` 与可选 `relations`。不要提供 `format/id/status`。正文应满足 [文档章节契约](../formats/document.md#4-正文与生命周期)，正文链接按最终 Note 所在目录解释。草稿是输入，CLI 不会覆盖它。
 
 ```yaml
 scope:

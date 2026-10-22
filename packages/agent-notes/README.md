@@ -33,6 +33,7 @@ CLI 校验格式、路径、关系、生命周期、引用、冻结和事务条�
 
 ## 参考
 
-- [CLI 契约](contracts/cli.md)：参数、安装与升级、查询、检查快照、输出和退出码。
-- [文档契约](contracts/document.md)：身份、字段、正文、关系与归档冻结。
-- [写入与生命周期](writing.md)：各写命令的输入、引用修复及中断恢复。
+- [安装与升级](docs/installation.md)：接入项目、确认安装、修复与版本切换。
+- [CLI 契约](assets/references/cli.md)：参数、安装与升级、查询、检查快照、输出和退出码。
+- [文档契约](assets/formats/document.md)：身份、字段、正文、关系与归档冻结。
+- [写入与生命周期](assets/references/writing.md)：各写命令的输入、引用修复及中断恢复。

@@ -19,7 +19,7 @@ Choose the operation by the actual outcome:
 | Rejected Note has lost prevention value | `prune` with rationale and explicit handling of all active incoming references |
 | Another active implemented Note absorbs all unique content | `prune` with owner/hash and section coverage for rationale, alternatives, consequences, verification and gaps; full supersession alone is insufficient |
 
-For the chosen action, read that section of [write inputs and recovery](../../../writing.md). Prepare explicit input in `.agent-notes/local/`, preview with `--dry-run --json`, then execute and run `check` with the intended Git baseline. The CLI moves files and repairs active references; resolve ambiguous anchors before retrying. Reuse authorization within the current task.
+For the chosen action, read that section of [write inputs and recovery](../../references/writing.md). Prepare explicit input in `.agent-notes/local/`, preview with `--dry-run --json`, then execute and run `check` with the intended Git baseline. The CLI moves files and repairs active references; resolve ambiguous anchors before retrying. Reuse authorization within the current task.
 
 Archive only implemented history. Frozen Notes, paths and seals are immutable: never edit, move, delete or reseal them. Keep a record active when deletion or archive conditions are not met. A proposal that is abandoned first becomes rejected; rejected Notes remain active until they lose prevention value.
 

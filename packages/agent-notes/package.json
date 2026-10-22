@@ -10,7 +10,7 @@
     "directory": "packages/agent-notes"
   },
   "bin": { "agent-notes": "./dist/cli.mjs" },
-  "files": ["assets", "contracts", "dist", "writing.md"],
+  "files": ["assets", "dist", "docs/installation.md"],
   "engines": { "node": ">=22.12.0" },
   "scripts": {
     "build": "tsdown",
