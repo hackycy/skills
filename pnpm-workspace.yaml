@@ -8,14 +8,17 @@ packages:
   - packages/*
   - examples/*
 catalog:
+  '@clack/prompts': ^1.8.1
   '@types/mdast': ^4.0.4
   ajv: ^8.17.1
   ajv-formats: ^3.0.1
+  cac: ^7.1.0
   github-slugger: ^2.0.0
   mdast-util-to-string: ^4.0.0
   remark-gfm: ^4.0.1
   remark-parse: ^11.0.0
   unified: ^11.0.5
+  zod: ^4.6.7
 catalogs:
   cli:
     '@antfu/eslint-config': ^6.7.3

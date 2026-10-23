@@ -172,15 +172,94 @@ export function assertNoTransaction(root: string): void {
   throw new NotesError('RECOVERY_REQUIRED', 'An interrupted transaction exists. Run a write command with --recover to roll back before retrying; never discard its journal.', lockPath)
 }
 
-export function recoverTransaction(root: string): boolean {
-  const full = local(root, lockPath)
-  if (!existsSync(full))
-    return false
+function recoveryOwner(root: string): Owner {
   const owner = ownerAt(root)
   if (!owner)
     throw new NotesError('RECOVERY_CONFLICT', 'Lock ownership is unreadable. Inspect the lock and journal before manual recovery; no files were changed.', lockPath)
   if (alive(owner))
     throw new NotesError('WRITE_BUSY', 'Cannot recover a live or remote writer’s transaction.', lockPath)
+  return owner
+}
+
+function readJournal(root: string, bytes: Buffer): Journal {
+  let journal: Journal
+  try {
+    journal = JSON.parse(bytes.toString('utf8')) as Journal
+  }
+  catch { throw new NotesError('RECOVERY_CONFLICT', 'Unreadable transaction journal; preserve it for manual recovery.', lockPath) }
+  if (!journal || journal.format !== 'agent-notes-transaction/1' || !['prepared', 'committed'].includes(journal.state) || !Array.isArray(journal.entries)
+    || (journal.purpose !== undefined && journal.purpose !== 'distribution')) {
+    throw new NotesError('RECOVERY_CONFLICT', 'Unknown transaction journal; preserve it for manual recovery.', lockPath)
+  }
+  const seen = new Set<string>()
+  for (const entry of journal.entries) {
+    if (!entry || typeof entry.path !== 'string' || !safePath(entry.path) || seen.has(entry.path)
+      || (journal.purpose === 'distribution'
+        ? !distributionPath(entry.path)
+        : entry.path.startsWith('.agent-notes/local/') || entry.path.startsWith('.agent-notes/runtime/')
+          || (!/\.md$/i.test(entry.path) && !entry.path.endsWith('/archived/manifest.json')))
+        || ![entry.before, entry.after].every(value => value === null || (typeof value === 'string' && Buffer.from(value, 'base64').toString('base64') === value))
+        || !Number.isInteger(entry.mode) || entry.mode < 0 || entry.mode > 0o777) {
+      throw new NotesError('RECOVERY_CONFLICT', 'Invalid transaction entry; no automatic recovery is safe.', lockPath)
+    }
+    local(root, entry.path)
+    seen.add(entry.path)
+  }
+  if (journal.directories !== undefined && (!Array.isArray(journal.directories)
+    || journal.directories.some(path => typeof path !== 'string' || !safePath(path)
+      || !journal.entries.some(entry => entry.path.startsWith(`${path}/`))))) {
+    throw new NotesError('RECOVERY_CONFLICT', 'Invalid created-directory inventory.', lockPath)
+  }
+  return journal
+}
+
+function recoveryEndpoints(root: string, journal: Journal): Map<string, Buffer | null> {
+  const projected = new Map<string, Buffer | null>()
+  for (const entry of journal.entries) {
+    const current = bytesAt(root, entry.path)
+    const before = decode(entry.before)
+    const after = decode(entry.after)
+    if (journal.state === 'prepared' ? !same(current, before) && !same(current, after) : !same(current, after))
+      throw new NotesError('RECOVERY_CONFLICT', 'File changed outside this transaction. Preserve the edit and reconcile it with the journal before retrying --recover.', entry.path)
+    projected.set(entry.path, journal.state === 'prepared' ? before : after)
+  }
+  return projected
+}
+
+/** Inspect recovery without acquiring a marker, modifying files or cleaning the lock. */
+export function recoveryView(source: Snapshot): { source: Snapshot, verify: () => void } {
+  const root = source.repository.root
+  const full = local(root, lockPath)
+  if (!existsSync(full)) {
+    return { source, verify: () => {
+      assertNoTransaction(root)
+      verifyObservations(source, source.repository.snapshot('worktree'))
+    } }
+  }
+  recoveryOwner(root)
+  const marker = local(root, `${lockPath}/recovering`)
+  if (existsSync(marker))
+    throw new NotesError('RECOVERY_CONFLICT', 'Another recovery is active or was interrupted; inspect the recovery marker before retrying.', lockPath)
+  // Observe raw owner/journal and every live endpoint, not only projected configuration.
+  source.read(`${lockPath}/owner.json`)
+  const bytes = source.read(`${lockPath}/journal.json`)
+  const journal = bytes ? readJournal(root, bytes) : undefined
+  const overlay = journal ? recoveryEndpoints(root, journal) : new Map<string, Buffer | null>()
+  for (const path of overlay.keys())
+    source.read(path)
+  return { source: source.overlay(overlay), verify: () => {
+    if (!existsSync(full) || existsSync(marker))
+      throw new NotesError('CONCURRENT_CHANGE', 'Transaction changed while collecting initialization input; retry.', lockPath)
+    verifyObservations(source, source.repository.snapshot('worktree'))
+    recoveryOwner(root)
+  } }
+}
+
+export function recoverTransaction(root: string): boolean {
+  const full = local(root, lockPath)
+  if (!existsSync(full))
+    return false
+  const owner = recoveryOwner(root)
   const marker = local(root, `${lockPath}/recovering`)
   try {
     mkdirSync(marker)
@@ -191,30 +270,8 @@ export function recoverTransaction(root: string): boolean {
       throw new NotesError('WRITE_BUSY', 'Lock ownership changed before recovery.', lockPath)
     const bytes = bytesAt(root, `${lockPath}/journal.json`)
     if (bytes) {
-      const journal = JSON.parse(bytes.toString('utf8')) as Journal
-      if (journal.format !== 'agent-notes-transaction/1' || !['prepared', 'committed'].includes(journal.state) || !Array.isArray(journal.entries)
-        || (journal.purpose !== undefined && journal.purpose !== 'distribution')) {
-        throw new NotesError('RECOVERY_CONFLICT', 'Unknown transaction journal; preserve it for manual recovery.', lockPath)
-      }
-      const seen = new Set<string>()
-      for (const entry of journal.entries) {
-        if (!entry || typeof entry.path !== 'string' || !safePath(entry.path) || seen.has(entry.path)
-          || (journal.purpose === 'distribution'
-            ? !distributionPath(entry.path)
-            : entry.path.startsWith('.agent-notes/local/') || entry.path.startsWith('.agent-notes/runtime/')
-              || (!/\.md$/i.test(entry.path) && !entry.path.endsWith('/archived/manifest.json')))
-            || ![entry.before, entry.after].every(value => value === null || (typeof value === 'string' && Buffer.from(value, 'base64').toString('base64') === value))
-            || !Number.isInteger(entry.mode) || entry.mode < 0 || entry.mode > 0o777) {
-          throw new NotesError('RECOVERY_CONFLICT', 'Invalid transaction entry; no automatic recovery is safe.', lockPath)
-        }
-        local(root, entry.path)
-        seen.add(entry.path)
-      }
-      if (journal.directories !== undefined && (!Array.isArray(journal.directories)
-        || journal.directories.some(path => typeof path !== 'string' || !safePath(path)
-          || !journal.entries.some(entry => entry.path.startsWith(`${path}/`))))) {
-        throw new NotesError('RECOVERY_CONFLICT', 'Invalid created-directory inventory.', lockPath)
-      }
+      const journal = readJournal(root, bytes)
+      recoveryEndpoints(root, journal)
       if (journal.state === 'prepared') {
         rollback(root, journal)
       }

@@ -1,8 +1,9 @@
+import type { Options } from '../cli/arguments'
 import { spawnSync } from 'node:child_process'
 import { realpathSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
-import { options } from '../cli/run'
+import { runtimeArguments } from '../cli/arguments'
 import { NotesError } from '../notes/model'
 import { findRoot, Repository, sha256 } from '../notes/snapshot'
 import { assertNoTransaction, recoverTransaction } from '../workflow/transaction'
@@ -10,14 +11,13 @@ import { managerVersion } from './bundle'
 import { readInstallation } from './manifest'
 
 /** Only the current installed runtime may execute; Git snapshot files are data. */
-export function delegate(args: string[], executable: string): number | undefined {
-  if (!['context', 'show', 'check', 'create', 'update', 'transition', 'archive', 'prune'].includes(args[0]))
+export function delegate(input: Options, executable: string): number | undefined {
+  if (!['context', 'show', 'check', 'create', 'update', 'transition', 'archive', 'prune'].includes(input.command))
     return undefined
-  const input = options(args)
   const root = findRoot(input.root, process.cwd())
-  if (args.includes('--recover'))
+  if (input.recover)
     recoverTransaction(root)
-  if (!args.includes('--staged') && !args.includes('--head'))
+  if (!input.staged && !input.head)
     assertNoTransaction(root)
   const source = new Repository(root).snapshot('worktree')
   const installation = readInstallation(source)
@@ -33,7 +33,7 @@ export function delegate(args: string[], executable: string): number | undefined
       throw new NotesError('CONCURRENT_CHANGE', 'The running tool version differs from the installed runtime. Retry after upgrade completes.', asset.path)
     return undefined
   }
-  const child = spawnSync(process.execPath, [runtime, ...args], { stdio: 'inherit' })
+  const child = spawnSync(process.execPath, [runtime, ...runtimeArguments(input)], { stdio: 'inherit' })
   if (child.error || child.signal || child.status === null)
     throw new NotesError('RUNTIME_FAILED', child.error?.message ?? `Project runtime terminated: ${child.signal}`)
   return child.status

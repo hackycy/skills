@@ -24,6 +24,23 @@ function invoke(args: string[], expectedExit = 0, input?: unknown, executable = 
   return JSON.parse(result.stdout) as Result
 }
 
+function canonicalDelegation(): void {
+  for (const [args, input] of [
+    [['context', '--paths=src/orders/new.ts', 'src/other.ts', '--topic=001', '--topic=events'], undefined],
+    [['create', '--input=-', '--dry-run'], { class: 'architecture', status: 'proposed', document: '.agent-notes/local/draft.md', rationale: 'Verify stdin reaches the locked runtime.' }],
+  ] as const) {
+    const result = spawnSync(node, [cli, `--root=${root}`, '--json', ...args], {
+      cwd: root,
+      encoding: 'utf8',
+      input: input && JSON.stringify(input),
+      env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' },
+    })
+    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(result.stderr, '')
+    assert.equal(JSON.parse(result.stdout).result, 'ok')
+  }
+}
+
 function operation(command: string, id: string | undefined, input: unknown, args: string[] = [], expectedExit = 0): Result {
   return invoke([command, ...(id ? [id] : []), '--input', '-', ...args], expectedExit, input)
 }
@@ -39,12 +56,16 @@ function createDraft(status: string, title: string, relations?: unknown): string
 }
 
 try {
+  assert.ok(String(invoke(['init', '--help']).data.help).includes('--no-interactive'))
+  assert.equal(invoke(['init'], 2).result, 'invalid-input')
+  assert.equal(invoke(['context', '--root.path=x'], 2).result, 'invalid-input')
   const previewInstall = invoke(['init', '--target', 'agents', '--target', 'claude', '--dry-run'])
   assert.ok(Array.isArray(previewInstall.data.changes))
   assert.equal(existsSync(join(root, '.agent-notes/install.json')), false)
   invoke(['init', '--target', 'agents', '--target', 'claude'])
   assert.equal(invoke(['status']).data.integrity, 'intact')
   assert.deepEqual(invoke(['init', '--target', 'agents', '--target', 'claude']).data.changes, [])
+  assert.deepEqual(invoke(['init']).data.changes, [])
   assert.equal(existsSync(join(root, '.agents/notes')), false)
   const path = note(root)
   const base = commit(root)
@@ -60,6 +81,7 @@ try {
   git(root, 'add', path)
   // Execute the actual write commands using stdin JSON, without a source-tree dependency.
   const input = { class: 'architecture', status: 'proposed', document: createDraft('proposed', 'Secondary ownership'), rationale: 'A distinct durable ownership tradeoff.' }
+  canonicalDelegation()
   assert.equal(operation('create', undefined, { ...input, rationale: '' }, [], 3).result, 'needs-decision')
   const preview = operation('create', undefined, input, ['--dry-run'])
   assert.equal(preview.data.id, null)
@@ -129,6 +151,7 @@ try {
     assert.equal(status.data.runtime_version, nextVersion)
     assert.notEqual(status.data.manager_version, status.data.runtime_version)
     assert.equal(invoke(['check']).result, 'ok')
+    canonicalDelegation()
     invoke(['upgrade'])
     assert.equal(invoke(['status']).data.runtime_version, status.data.manager_version)
   }

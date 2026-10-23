@@ -4,12 +4,22 @@
 
 ## 接入项目
 
-准备 Node >=22.12.0 与 Git，并选择要使用的完整 npm 包版本。将下列 `X.Y.Z` 与项目路径替换为真实值。先预览，再安装：
+准备 Node >=22.12.0 与 Git，并选择要使用的完整 npm 包版本。将下列 `X.Y.Z` 与项目路径替换为真实值。在项目目录运行 init，按提示选择安装目标、Notes 目录与模板语言：
+
+```sh
+pnpm dlx @hackycy/agent-notes@X.Y.Z init
+```
+
+已确定的选项可直接传入，例如 `init --target claude` 只询问目录和语言。可加 `--dry-run` 交互预览；重复 init 会复用已安装值。问答中按 Esc 或 Ctrl+C 可取消，项目不变。
+
+脚本或 CI 中显式提供目标，先预览再安装：
 
 ```sh
 pnpm dlx @hackycy/agent-notes@X.Y.Z init --root /path/to/project --target agents --dry-run --json
 pnpm dlx @hackycy/agent-notes@X.Y.Z init --root /path/to/project --target agents --json
 ```
+
+`--json` 禁用交互；需要普通文本输出的脚本可用 `--no-interactive`。无人值守时目录和语言采用默认值，缺少目标会直接报错。
 
 Claude 项目使用 `--target claude`；同时接入两种入口时传入 `--target agents --target claude`，它们共用 runtime 和 Notes 根。首次接入时可按[初始化与配置](../assets/references/cli.md#初始化与配置)选择文档根和模板语言。
 

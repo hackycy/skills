@@ -2,11 +2,13 @@
 
 可执行命令为 `agent-notes`；安装后的项目入口为 `node .agent-notes/runtime/cli.mjs`。所有命令支持 `--root <path>` 和 `--json`。未提供 root 时向上定位已有安装；新安装使用 Git 根或当前目录。
 
+通用参数可放在命令前后；带值选项接受 `--name value` 与 `--name=value`。`--help` / `-h` 显示总帮助，`<command> --help` 显示命令帮助。target/topic 可重复，paths 支持 `--paths a b --paths c`；单值选项、布尔开关与同一 target 不可重复。未知、错位、缺值或非法参数返回 `invalid-input`。
+
 ## 命令与参数
 
 | 命令 | 主要参数 | 输入与结果 |
 | --- | --- | --- |
-| `init` | `--target agents` / `--target claude`，可重复；`--notes-dir`、`--language` | 安装共享 runtime 和所选静态入口；target 必须显式指定 |
+| `init` | 可重复 `--target agents\|claude`；`--notes-dir`、`--language`、`--no-interactive` | 安装共享 runtime 和静态入口；未指定项按下文补齐 |
 | `status` | 通用参数 | 管理器/项目 runtime 版本、目标、文档根及资产完整性 |
 | `upgrade` | `--dry-run`、`--recover` | 使用本次调用的完整包替换项目受管资产 |
 | `context` | `--paths <paths...>`、可重复 `--topic`、`--include-archived` | 返回匹配 Note 的指针，不输出正文 |
@@ -20,9 +22,15 @@
 
 五个内容写命令及 init/upgrade 支持 `--dry-run` 与 `--recover`，两者互斥。预览只显示变更与诊断，不落盘、不创建备份、不分配永久身份；执行时重新预检。`--recover` 先恢复中断事务，再按当前输入执行。输入、expected_hash、草稿链接解释和恢复冲突见[写入参考](writing.md)。
 
-路径相对项目根解析，不随调用子目录改变。CLI 不弹交互式确认，不保存聊天记录或授权令牌；缺少操作材料直接报告。所有文件访问检查项目边界与 symlink，未知格式和读取错误不会作为空结果跳过。
+路径相对项目根解析，不随调用子目录改变。仅 init 可交互收集缺项；内容写命令仍要求完整操作材料。CLI 不保存聊天记录或授权令牌。所有文件访问检查项目边界与 symlink，未知格式和读取错误不会作为空结果跳过。
 
 ## 初始化与配置
+
+当 stdin 与 stderr 均为终端、未处于 CI、未传 `--json` 或 `--no-interactive` 时，init 只询问缺少的安装目标、Notes 目录与模板语言。目标默认选中 agents，目录默认 `.agents/notes`，语言默认 `zh-CN`；至少选择一个目标。项目根自动定位并展示，填完直接执行，不另加确认。显式非法参数先报错；交互中的非法目录可原地修正。`--dry-run` 使用相同问答并仅预览。
+
+补齐顺序为显式参数、已有安装清单与配置、交互回答或默认值。重复 init 省略参数时复用已安装值，不重复提问；显式配置或目标冲突报错。只有配置、没有清单时保留配置，目标仍需指定或选择。版本变化和资产修复使用 upgrade。
+
+无人值守调用不启动提示；新安装缺少 target 时退出 2，且不写入项目。目录与语言使用默认值。问答与取消消息写到 stderr，最终结果写到 stdout；Esc / Ctrl+C 取消退出 130，不产生 Result，也不写入项目或执行恢复。init --recover 在问答前只读检查恢复后的配置与清单，取消保留中断现场；收集完输入后复查现场，再进入实际恢复与安装。
 
 配置位于 `.agent-notes/config.json`：
 
@@ -82,7 +90,7 @@ context 返回 ID、标题、状态、路径、read_when、匹配原因及替代
 
 ## 输出与退出码
 
-`--json` 向 stdout 输出单个对象，包含 `command`、`result`、`scope`、`data`、`diagnostics`、`review`，不混入进度日志。scope 标明实际快照与解析后的基线；diagnostics 给出 code、相关对象或路径及说明；review 列出语义待复核项。
+`--json` 向 stdout 输出单个对象，包含 `command`、`result`、`scope`、`data`、`diagnostics`、`review`，不混入进度日志或提示。解析失败同样使用此结构；帮助文本位于 `data.help`，result 为 ok。scope 标明实际快照与解析后的基线；diagnostics 给出 code、相关对象或路径及说明；review 列出语义待复核项。
 
 | 退出码 | result | 含义 |
 | --- | --- | --- |
@@ -90,5 +98,6 @@ context 返回 ID、标题、状态、路径、read_when、匹配原因及替代
 | 1 | failed | 结构、读取或事务失败 |
 | 2 | invalid-input | 输入或格式无法解析 |
 | 3 | needs-decision | 写命令缺少必须的记录理由或决策材料 |
+| 130 | 无 | 初始化问答被取消，stderr 显示取消消息 |
 
 CLI 不能仅凭字段或 Git diff 证明是否必须记录、是否仍为同一决定、是否完整吸收，亦不能证明 Agent 已读或理解。被删除记录、无法从快照恢复的中间状态和首次归档来源不足等情况按实际检查范围列入 review；结构通过不等于语义审核完成。

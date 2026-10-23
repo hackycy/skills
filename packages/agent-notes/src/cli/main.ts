@@ -2,26 +2,40 @@
 import type { Result } from './run'
 import process from 'node:process'
 import { delegate } from '../distribution/delegate'
-import { diagnostic, NotesError } from '../notes/model'
-import { exitCode, help, render, run } from './run'
+import { parseArguments } from './arguments'
+import { completeInit, InitCancelled, interactiveInit, promptInit, reportCancellation } from './init'
+import { execute, exitCode, failure, render } from './run'
 
-const args = process.argv.slice(2)
-if (!args.length || (args.length === 1 && ['--help', '-h'].includes(args[0]))) {
-  console.log(help)
-}
-else {
-  let result: Result | undefined
-  try {
-    const delegated = delegate(args, process.argv[1])
+const parsed = parseArguments(process.argv.slice(2))
+let result: Result | undefined
+try {
+  if (parsed.error)
+    throw parsed.error
+  if (parsed.help) {
+    if (parsed.json)
+      result = { command: parsed.command, result: 'ok', scope: {}, data: { help: parsed.help }, diagnostics: [], review: [] }
+    else console.log(parsed.help)
+  }
+  else {
+    let input = parsed.input!
+    if (input.command === 'init')
+      input = interactiveInit(input) ? await promptInit(input, process.cwd()) : completeInit(input, process.cwd())
+    const delegated = delegate(input, process.argv[1])
     if (delegated !== undefined)
       process.exitCode = delegated
-    else result = run(args)
+    else result = execute(input)
   }
-  catch (error) {
-    result = { command: args[0], result: error instanceof NotesError && error.exitCode === 2 ? 'invalid-input' : 'failed', scope: {}, data: {}, diagnostics: [diagnostic(error)], review: [] }
+}
+catch (error) {
+  if (error instanceof InitCancelled) {
+    reportCancellation()
+    process.exitCode = 130
   }
-  if (result) {
-    console.log(args.includes('--json') ? JSON.stringify(result) : render(result))
-    process.exitCode = exitCode(result)
+  else {
+    result = failure(parsed.command, error)
   }
+}
+if (result) {
+  console.log(parsed.json ? JSON.stringify(result) : render(result))
+  process.exitCode = exitCode(result)
 }

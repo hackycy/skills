@@ -22,14 +22,17 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@clack/prompts": "catalog:",
     "@types/mdast": "catalog:",
     "ajv": "catalog:",
     "ajv-formats": "catalog:",
+    "cac": "catalog:",
     "github-slugger": "catalog:",
     "mdast-util-to-string": "catalog:",
     "remark-gfm": "catalog:",
     "remark-parse": "catalog:",
     "unified": "catalog:",
-    "yaml": "catalog:testing"
+    "yaml": "catalog:testing",
+    "zod": "catalog:"
   }
 }

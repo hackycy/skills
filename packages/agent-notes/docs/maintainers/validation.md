@@ -21,6 +21,8 @@
 - `transaction.test.ts`：写失败回滚、真实子进程 SIGKILL、锁竞争、输入/runtime 并发变化、恢复冲突保留外部编辑。
 - `distribution.test.ts`：单/双目标、静态导入复用、Git 忽略/属性、资产所有权、备份、重复安装、版本修复、升级与恢复。
 - `assets.test.ts`：产品资源的引用闭包、公开文档的 npm 可达性和维护文档链接。
+- `cli-input.test.ts`：全部命令参数、JSON 帮助与错误、初始化缺项/复用/冲突、取消零写入、恢复只读投影及真实 CLI 恢复入口。
+- `terminal.test.ts`：独立 PTY 进程覆盖默认问答、输入纠错、Esc/Ctrl+C、退出码 130、stdout 分离及无人值守开关。macOS/Linux 需 Python 3 标准库提供 PTY 驱动；Windows 跳过此组，不能据此宣称 Windows 终端已验证。
 
 改变行为时增加能观察到用户保证的回归场景，避免只重复实现。历史格式样例使用 [contract-examples.json](../../tests/contract-examples.json)，新增工具能力后仍须保持旧合法样例通过。完整替代与完整吸收、基线冻结与首次归档来源、结构通过与语义 review 都要分别覆盖。
 
