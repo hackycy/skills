@@ -2,10 +2,6 @@
 name: product-interface-design
 description: 以产品任务为依据，为仪表盘、后台、SaaS、工具、设置页和数据界面建立明确方向、视觉层级、设计系统与实现细节；强调反默认、非模板化和可验证的产品界面工艺。不用于营销页、落地页、活动页或纯品牌设计。
 disable-model-invocation: true
-metadata:
-  source: https://github.com/Dammyjay93/interface-design
-  upstream-commit: 2f9be3206855bcb2d1d0af262c8bae25cba6658d
-  derived-version: product-interface-design-v3
 ---
 
 # 产品界面设计
