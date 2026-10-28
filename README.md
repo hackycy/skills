@@ -27,6 +27,7 @@ Learn more about the CLI usage at [skills](https://github.com/vercel-labs/skills
 - [impeccable](https://github.com/pbakaus/impeccable)
 - [awesome-design-md](https://github.com/VoltAgent/awesome-design-md)
 - [andrej-karpathy-claude-md](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/CLAUDE.md)
+- [awesome-prompts](https://github.com/ai-boost/awesome-prompts)
 
 ## Links
 
