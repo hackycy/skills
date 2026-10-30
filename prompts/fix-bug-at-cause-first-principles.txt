@@ -1,0 +1,3 @@
+Fix a bug at its cause, reasoning from first principles and established best practice. Do not patch over the symptom
+
+结合第一性原理和成熟实践，从根因修复 Bug，避免只遮住表面症状。
