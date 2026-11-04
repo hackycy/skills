@@ -51,6 +51,43 @@ extracted CLI outside the checkout; the test accepts an optional Node executable
 and another version's CLI for upgrade/downgrade checks. No coverage threshold is
 configured.
 
+## CLI Releases
+
+Release only when explicitly requested. Each CLI versions independently; the
+root stays private. Register packages/builds in
+[`scripts/release/packages.json`](scripts/release/packages.json). Only the
+selected CLI and required public runtime dependencies publish, dependencies
+first. Internal dependencies use `workspace:*` and pack into exact versions.
+
+Start from clean `main` synchronized with `origin/main`, with nonempty CLI
+`CHANGELOG.md` Unreleased notes. Use macOS/Linux, Node 24, npm >=12.2.0, pinned
+pnpm, authenticated GitHub CLI and Git push access. Local mode requires npm web
+login and 2FA. Bootstrap new packages locally at `0.1.0`, then configure each
+package's GitHub trusted publisher for this repository and `release.yml`, with
+direct publish/dist-tag permission; first use it within npm's two-day window.
+
+```sh
+pnpm release --package @hackycy/agent-notes --version 0.1.0 --mode ci --dry-run
+pnpm release --package @hackycy/agent-notes --version 0.1.0 --mode local
+pnpm release --tag '@hackycy/agent-notes@0.1.0' --mode ci
+```
+
+Choose `--mode ci` or `local` explicitly; dry-run is read-only. New releases
+prepare versions/changelogs/lockfile, create one version commit and per-package
+tags, then atomic push. Both modes run only lint and type checking as release
+gates on the exact tagged commit, build/pack isolated source, upload the actual
+tarballs, and create GitHub Releases with tarballs/checksums. CI uses OIDC and
+waits for workflow completion; pushes alone never publish. Use
+`pnpm release --help` for explicit version/notes overrides when inference is ambiguous.
+
+On failure, preserve edits/artifacts and resume fixed targets with `--tag`.
+Already-published targets require original tarballs matching npm integrity,
+from GitHub Release or local `--artifacts-dir`; missing evidence needs manual
+handling. Keep tags immutable and latest moving forward; source fixes require a
+higher version. Local mode checks the CI queue and shares a same-machine lock;
+avoid concurrent multi-machine releases. Run `pnpm test:release` for release
+behavior changes; these development tests are separate from release gates.
+
 ## Commits and Pull Requests
 
 Follow the established Conventional Commit style: `feat: add ...`,

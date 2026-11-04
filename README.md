@@ -14,6 +14,8 @@ Learn more about the CLI usage at [skills](https://github.com/vercel-labs/skills
 
 - [Agent Notes](packages/agent-notes/README.md)
 
+CLI 维护者参见[发布流程](AGENTS.md#cli-releases)。
+
 ## Inspire
 
 - https://github.com/antfu/skills

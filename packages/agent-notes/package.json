@@ -4,6 +4,11 @@
   "version": "0.0.0",
   "description": "Portable engineering decision notes with explicit lifecycle governance",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org",
+    "tag": "latest"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hackycy/skills.git",
