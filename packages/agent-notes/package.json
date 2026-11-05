@@ -1,7 +1,7 @@
 {
   "name": "@hackycy/agent-notes",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Portable engineering decision notes with explicit lifecycle governance",
   "license": "MIT",
   "publishConfig": {
