@@ -1,9 +1,0 @@
-[
-  {
-    "name": "@hackycy/agent-notes",
-    "path": "packages/agent-notes",
-    "role": "cli",
-    "build": "build",
-    "inlinedBuildDependencies": []
-  }
-]

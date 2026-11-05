@@ -19,7 +19,6 @@
     "lint": "eslint --cache .",
     "prepublishOnly": "pnpm build",
     "release": "tsx scripts/release/cli.ts",
-    "release:execute": "tsx scripts/release/run.ts",
     "test:release": "vitest run --dir scripts/release",
     "test": "vitest run --dir packages",
     "typecheck": "tsc",
@@ -45,8 +44,7 @@
     "typescript": "catalog:cli",
     "vite": "catalog:cli",
     "vitest": "catalog:testing",
-    "vitest-package-exports": "catalog:testing",
-    "yaml": "catalog:testing"
+    "vitest-package-exports": "catalog:testing"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm i --frozen-lockfile --ignore-scripts && npx lint-staged"

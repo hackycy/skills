@@ -53,57 +53,33 @@ configured.
 
 ## CLI Releases
 
-Release only when explicitly requested. Each CLI versions independently; the
-root stays private. Register packages/builds in
-[`scripts/release/packages.json`](scripts/release/packages.json). Only the
-selected CLI and required public runtime dependencies publish, dependencies
-first. Internal dependencies use `workspace:*` and pack into exact versions.
-
-Start from clean `main` synchronized with `origin/main`, with nonempty CLI
-`CHANGELOG.md` Unreleased notes. Use macOS/Linux, Node 24, pinned pnpm,
-authenticated GitHub CLI and Git push access. Local mode requires npm >=11,
-npm web login and 2FA. CI requires npm >=12.2.0 for OIDC dist-tag writes.
-Bootstrap new packages locally at `0.1.0`, then configure each
-package's GitHub trusted publisher for this repository and `release.yml`, with
-direct publish/dist-tag permission; first use it within npm's two-day window.
+Release only when explicitly requested. Run locally from a clean working tree
+with npm publish access and Git push access to `origin`. Each CLI versions
+independently; the root stays private. The entry point discovers public packages
+with `bin` under `packages/` and releases only the selected CLI.
 
 ```sh
 pnpm release
-pnpm release --package @hackycy/agent-notes --dry-run
-pnpm release --package @hackycy/agent-notes --version 0.1.0 --mode ci --dry-run
-pnpm release --package @hackycy/agent-notes --version 0.1.0 --mode local
-pnpm release --tag '@hackycy/agent-notes@0.1.0' --mode ci
+pnpm release --package @hackycy/agent-notes
+pnpm release --package @hackycy/agent-notes --version 0.2.0 --yes
 ```
 
-Missing required arguments open a wizard only outside CI with terminal stdin
-and stderr. It preserves supplied arguments, defaults the mode selection to
-`local`, and supports version choices, inline overrides and existing-tag recovery.
-After reviewing the plan, choose publish, preview (default), or cancel. Complete
-commands run directly. CI and non-terminal callers must supply `--mode ci|local`
-and either `--package` plus `--version`, or `--tag`. Mode `ci` dispatches GitHub
-Actions; it does not enable or disable interaction.
+Omitted package names prompt for a CLI, or select the only candidate. Omitted
+versions use bumpp's native prompt; `--yes` skips its confirmation. CI and
+non-terminal callers must supply `--package`, `--version`, and `--yes`.
 
-Preview and `--dry-run` are read-only, use local tags and do not fetch. Sync
-missing tags with `git fetch origin main --tags` first. Explicit `--dry-run`
-cannot turn into a publish action. Interactive publishing locks, fetches and
-revalidates the source commit and plan; changes require another review.
-New releases prepare versions/changelogs/lockfile, create one version commit and
-per-package tags, then atomic push. Both modes run only lint and type checking as release
-gates on the exact tagged commit, build/pack isolated source, upload the actual
-tarballs, and create GitHub Releases with tarballs/checksums. CI uses OIDC and
-waits for workflow completion; pushes alone never publish. Use
-`pnpm release --help` for explicit version/notes overrides when inference is ambiguous.
+bumpp updates only the selected manifest, then runs `npm publish` in that
+package using its existing publish configuration and `prepack` build. After
+npm returns success, bumpp creates `chore(release): <name>@<version>` and the
+`<name>@<version>` tag. The entry point atomically pushes the current branch and
+that tag to `origin`. CHANGELOG history is left as-is; GitHub Releases are not
+created. Lint, type checking and tests remain development checks rather than
+release gates; run `pnpm test:release` when changing release behavior.
 
-On failure, preserve edits/artifacts and resume fixed targets with `--tag`.
-An accepted upload can remain temporarily invisible or staged. Wait for public
-visibility and check `npm stage list`; never automatically re-upload an
-unconfirmed version. Resume with the original `--artifacts-dir` once public.
-Already-published targets require original tarballs matching npm integrity,
-from GitHub Release or local `--artifacts-dir`; missing evidence needs manual
-handling. Keep tags immutable and latest moving forward; source fixes require a
-higher version. Local mode checks the CI queue and shares a same-machine lock;
-avoid concurrent multi-machine releases. Run `pnpm test:release` for release
-behavior changes; these development tests are separate from release gates.
+If npm fails, preserve the version edit and investigate before retrying. If Git
+fails after npm returns success, finish the reported Git step manually rather
+than rerunning publication. The script preserves the current state without
+automatic rollback or recovery.
 
 ## Commits and Pull Requests
 
