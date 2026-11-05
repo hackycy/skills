@@ -37,7 +37,7 @@ export async function upload(graph: Graph, plan: Plan, artifacts: Map<string, st
     const file = artifacts.get(pkg.name)
     if (!file || !existsSync(file))
       throw new Error(`缺少原 tarball：${pkg.name}`)
-    for (let attempt = 0; !data.versions[target.version] && attempt < 2; attempt++) {
+    if (!data.versions[target.version]) {
       newerThanLatest(data, pkg.name, target.version)
       for (const name of Object.keys({ ...pkg.manifest.dependencies, ...pkg.manifest.optionalDependencies })) {
         const version = versions.get(name)
@@ -47,18 +47,23 @@ export async function upload(graph: Graph, plan: Plan, artifacts: Map<string, st
       await ports.beforePublish()
       // Check again immediately before the irreversible upload.
       data = await ports.read(pkg.name)
-      if (data.versions[target.version])
-        break
-      newerThanLatest(data, pkg.name, target.version)
-      progress(`npm publish ${tagFor(pkg.name, target.version)}（${attempt + 1}/2）`)
-      let publishError: unknown
-      try {
-        await ports.publish(file)
+      if (!data.versions[target.version]) {
+        newerThanLatest(data, pkg.name, target.version)
+        progress(`npm publish ${tagFor(pkg.name, target.version)}`)
+        let publishError: unknown
+        try {
+          await ports.publish(file)
+        }
+        catch (error) { publishError = error }
+        // A successful publish can return 202 while the registry still reports
+        // 404. An uncertain request can also have been accepted. Neither is
+        // evidence that it is safe to upload the same immutable version again.
+        progress(`等待 npm 公开 ${tagFor(pkg.name, target.version)}`)
+        data = await ports.wait(pkg.name, target.version)
+        if (!data.versions[target.version]) {
+          throw new Error(`npm 尚不可查询 ${tagFor(pkg.name, target.version)}；${publishError ? String(publishError) : '上传命令已成功返回'}。版本可能仍在处理或等待暂存审批，不自动重传。\n保留原 tarball：${file}\n可运行 npm stage list ${pkg.name} --json --registry ${registry} 检查暂存状态；确认原产物后处理审批，公开后使用原 --tag 和 --artifacts-dir 补齐发布记录。`)
+        }
       }
-      catch (error) { publishError = error }
-      data = await ports.wait(pkg.name, target.version)
-      if (!data.versions[target.version] && attempt === 1)
-        throw new Error(`npm 仍无 ${tagFor(pkg.name, target.version)}：${String(publishError ?? '上传后不可查询')}`)
     }
     const published = data.versions[target.version]
     if (!published)

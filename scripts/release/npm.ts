@@ -57,9 +57,9 @@ export function verifyIntegrity(file: string, published: PublishedVersion): void
 }
 
 export async function visible(name: string, version: string, read: ReadRegistry = readRegistry): Promise<Packument> {
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 30; attempt++) {
     const data = await read(name)
-    if (data.versions[version] || attempt === 5)
+    if (data.versions[version] || attempt === 29)
       return data
     await setTimeout(2000)
   }

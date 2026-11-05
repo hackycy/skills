@@ -387,6 +387,36 @@ describe('npm 部分成功与证据边界', () => {
     expect(f.records.get('@test/core')!['dist-tags'].latest).toBe('0.2.0')
   })
 
+  it.each(['accepted', 'uncertain'])('上传后尚不可查询时保留原产物，避免覆盖暂存版本：%s', async (result) => {
+    const f = await uploading()
+    const publish = vi.fn(async () => {
+      if (result === 'uncertain')
+        throw new Error('connection lost after upload')
+    })
+    f.ports.publish = publish
+    await expect(upload(f.graph, f.plan, f.artifacts, f.ports, () => {})).rejects.toThrow('不自动重传')
+    expect(publish).toHaveBeenCalledOnce()
+    expect(f.releases).toEqual([])
+    expect(existsSync(f.artifacts.get('@test/core')!)).toBe(true)
+  })
+
+  it('上传成功但延迟公开时，在查询窗口内核对原产物且不重复上传', async () => {
+    const f = await uploading()
+    const pending = new Set<string>()
+    const publish = vi.fn(async (file: string) => {
+      pending.add([...f.artifacts].find(([, path]) => path === file)![0])
+    })
+    f.ports.publish = publish
+    f.ports.wait = async (name) => {
+      expect(pending.has(name)).toBe(true)
+      f.records.set(name, { 'versions': { '0.1.0': f.published(name) }, 'dist-tags': { latest: '0.1.0' } })
+      return f.read(name)
+    }
+    await upload(f.graph, f.plan, f.artifacts, f.ports, () => {})
+    expect(publish).toHaveBeenCalledTimes(3)
+    expect(f.releases).toEqual(['@test/core', '@test/mid', '@test/a'])
+  })
+
   it('只在原 tarball 匹配时修复缺失 latest；内容不同或产物丢失立即停止', async () => {
     const f = await uploading()
     f.records.set('@test/core', { 'versions': { '0.1.0': f.published('@test/core') }, 'dist-tags': {} })

@@ -95,6 +95,9 @@ waits for workflow completion; pushes alone never publish. Use
 `pnpm release --help` for explicit version/notes overrides when inference is ambiguous.
 
 On failure, preserve edits/artifacts and resume fixed targets with `--tag`.
+An accepted upload can remain temporarily invisible or staged. Wait for public
+visibility and check `npm stage list`; never automatically re-upload an
+unconfirmed version. Resume with the original `--artifacts-dir` once public.
 Already-published targets require original tarballs matching npm integrity,
 from GitHub Release or local `--artifacts-dir`; missing evidence needs manual
 handling. Keep tags immutable and latest moving forward; source fixes require a
