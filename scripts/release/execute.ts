@@ -92,8 +92,11 @@ export async function authPreflight(root: string, local: boolean): Promise<void>
   if (Number(process.versions.node.split('.')[0]) !== 24)
     throw new Error(`发布工具需要 Node 24（CI 固定 ${toolchain.node}）；产品运行下限不变`)
   const npm = await command(root, 'npm', ['--version'])
-  if (compare(npm, '12.2.0') < 0)
-    throw new Error(`发布需要 npm >=12.2.0（CI 固定 ${toolchain.npm}）`)
+  // npm 12.2 is needed for CI's OIDC dist-tag writes. Local publishing uses
+  // npm's web login and 2FA, supported by the npm 11 bundled with Node 24.
+  const minimum = local ? '11.0.0' : '12.2.0'
+  if (compare(npm, minimum) < 0)
+    throw new Error(`${local ? '本机发布' : 'CI 发布'}需要 npm >=${minimum}（当前 ${npm}）${local ? '' : `，CI 固定 ${toolchain.npm} 以支持 OIDC dist-tag`}；可运行 npm install --global npm@${toolchain.npm} --ignore-scripts 后重试原命令`)
   if (local) {
     await command(root, 'npm', ['whoami', '--registry', registry])
   }

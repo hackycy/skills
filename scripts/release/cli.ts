@@ -19,6 +19,5 @@ main().catch((error: unknown) => {
     return
   }
   console.error(error instanceof Error ? error.message : error)
-  console.error('修复后对已推送目标使用 --tag；基础门禁失败保留改动，绝不自动 reset。详见 AGENTS.md 的 CLI Releases。')
   process.exitCode = 1
 })

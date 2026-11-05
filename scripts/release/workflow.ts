@@ -53,12 +53,18 @@ async function analyze(root: string, input: ReleaseInput, state?: WizardState, a
 }
 
 async function publish(root: string, input: ReleaseInput, analysis: Analysis): Promise<void> {
-  if (input.kind === 'new')
-    await prepare(root, analysis.graph, analysis.plan)
-  if (input.mode === 'local')
-    await execute(root, analysis.plan.tag, true, input.artifactsDir)
-  else
-    await dispatch(root, analysis.repo, analysis.plan)
+  try {
+    if (input.kind === 'new')
+      await prepare(root, analysis.graph, analysis.plan)
+    if (input.mode === 'local')
+      await execute(root, analysis.plan.tag, true, input.artifactsDir)
+    else
+      await dispatch(root, analysis.repo, analysis.plan)
+  }
+  catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`${message}\n定版或发布已开始，请保留改动及产物；仅对已推送目标使用 --tag 重试，尚未推送时先核对工作区和本地 tag，绝不自动 reset。详见 AGENTS.md 的 CLI Releases。`, { cause: error })
+  }
 }
 
 interface ReleaseOptions {

@@ -60,9 +60,10 @@ selected CLI and required public runtime dependencies publish, dependencies
 first. Internal dependencies use `workspace:*` and pack into exact versions.
 
 Start from clean `main` synchronized with `origin/main`, with nonempty CLI
-`CHANGELOG.md` Unreleased notes. Use macOS/Linux, Node 24, npm >=12.2.0, pinned
-pnpm, authenticated GitHub CLI and Git push access. Local mode requires npm web
-login and 2FA. Bootstrap new packages locally at `0.1.0`, then configure each
+`CHANGELOG.md` Unreleased notes. Use macOS/Linux, Node 24, pinned pnpm,
+authenticated GitHub CLI and Git push access. Local mode requires npm >=11,
+npm web login and 2FA. CI requires npm >=12.2.0 for OIDC dist-tag writes.
+Bootstrap new packages locally at `0.1.0`, then configure each
 package's GitHub trusted publisher for this repository and `release.yml`, with
 direct publish/dist-tag permission; first use it within npm's two-day window.
 

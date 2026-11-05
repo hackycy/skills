@@ -1,6 +1,7 @@
 import type { ReleasePrompts } from './interactive'
 import type { Override, Plan, Registration } from './model'
 import type { Packument, PublishedVersion } from './npm'
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -632,6 +633,37 @@ async function fixedFixture() {
 }
 
 describe('发布交互与执行边界', () => {
+  it.each(['github', 'npm'])('发布入口的 %s 预检失败不附带已推送目标的恢复提示', async (failure) => {
+    const f = await fixture()
+    await git(f.root, 'remote', 'set-url', 'origin', 'https://github.com/test/repo.git')
+    const bin = temp()
+    write(bin, 'gh', failure === 'github'
+      ? '#!/bin/sh\nprintf "Not logged into GitHub\\n" >&2\nexit 1\n'
+      : '#!/bin/sh\nif [ "$1" = "repo" ]; then printf \'%s\\n\' \'{"isPrivate":false,"viewerPermission":"WRITE","defaultBranchRef":{"name":"main"}}\'; fi\n')
+    write(bin, 'npm', '#!/bin/sh\nprintf "10.9.0\\n"\n')
+    await command(bin, 'chmod', ['+x', resolve(bin, 'gh'), resolve(bin, 'npm')])
+    const result = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), resolve(import.meta.dirname, 'cli.ts'), '--package', '@test/a', '--version', '0.1.1', '--mode', 'local', '--dry-run'], {
+      cwd: f.root,
+      env: { ...process.env, CI: '1', PATH: `${bin}:${process.env.PATH}` },
+      encoding: 'utf8',
+      timeout: 10_000,
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain(failure === 'github' ? 'Not logged into GitHub' : '当前 10.9.0')
+    expect(result.stderr).not.toContain('已推送目标')
+    expect(result.stderr).not.toContain('reset')
+  })
+
+  it('真正开始定版后失败仍保留恢复提示，并释放发布锁', async () => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    s.prepare.mockRejectedValue(new Error('lint failed'))
+    await expect(runRelease({ package: '@test/a', version: '0.1.1', mode: 'local' }, s.options)).rejects.toThrow(/lint failed.*保留改动.*已推送目标/s)
+    expect(s.execute).not.toHaveBeenCalled()
+    expect(existsSync(resolve(f.root, '.git/release.lock'))).toBe(false)
+  })
+
   it.each([
     { ...terminal, ci: true },
     { ...terminal, stdinTTY: false },
