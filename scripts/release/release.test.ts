@@ -1,18 +1,25 @@
+import type { ReleasePrompts } from './interactive'
 import type { Override, Plan, Registration } from './model'
 import type { Packument, PublishedVersion } from './npm'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { execute, upload } from './execute'
+import * as execution from './execute'
 import { checkPreviousRecords, dispatch, downloadEvidence, githubPreflight, noActiveRelease, recordRelease } from './github'
+import * as github from './github'
+import { chooseVersion, collectReleaseInput, ReleaseCancelled } from './interactive'
 import { bump, compare, intent, loadGraph, section, source, tagFor, tarballName, upgrade } from './model'
-import { createPlan, fixedPlan } from './plan'
+import { createPlan, fixedPlan, PlanningInputError } from './plan'
+import * as planning from './plan'
 import { checkTags, lock, prepare, synchronizedMain } from './prepare'
+import * as preparation from './prepare'
 import { command, git } from './process'
 import * as processes from './process'
+import { runRelease } from './workflow'
 
 const temporary: string[] = []
 afterEach(() => {
@@ -576,5 +583,358 @@ process.stdout.write(output)
       await expect(dispatch(f.root, 'test/repo', plan)).resolves.toBeUndefined()
     else
       await expect(dispatch(f.root, 'test/repo', plan)).rejects.toThrow('release / publish stage')
+  })
+})
+
+function fakePrompts(): ReleasePrompts {
+  return {
+    start: vi.fn(),
+    info: vi.fn(),
+    select: vi.fn(async (_message, _options, initial) => initial),
+    text: vi.fn(async () => '- 人工审核通过'),
+    multiselect: vi.fn(async () => []),
+    finish: vi.fn(),
+  }
+}
+
+const terminal = { stdinTTY: true, stderrTTY: true, ci: false }
+
+function mockReleaseServices(f: Awaited<ReturnType<typeof fixture>>) {
+  vi.spyOn(github, 'githubPreflight').mockResolvedValue('test/repo')
+  vi.spyOn(github, 'checkPreviousRecords').mockResolvedValue()
+  vi.spyOn(github, 'noActiveRelease').mockResolvedValue()
+  vi.spyOn(execution, 'authPreflight').mockResolvedValue()
+  const execute = vi.spyOn(execution, 'execute').mockResolvedValue()
+  const dispatch = vi.spyOn(github, 'dispatch').mockResolvedValue()
+  const prepare = vi.spyOn(preparation, 'prepare').mockResolvedValue('prepared')
+  const originalGit = processes.git
+  const commands: string[][] = []
+  vi.spyOn(processes, 'git').mockImplementation(async (root, ...args) => {
+    commands.push(args)
+    return originalGit(root, ...args)
+  })
+  vi.stubGlobal('fetch', async (url: string) => new Response(JSON.stringify(await f.read(decodeURIComponent(url.split('/').at(-1)!)))))
+  const adapter = fakePrompts()
+  const printPlan = vi.fn<(plan: Plan) => void>()
+  return { adapter, printPlan, execute, dispatch, prepare, commands, options: { cwd: f.root, environment: terminal, adapter, printPlan } }
+}
+
+async function fixedFixture() {
+  const f = await fixture()
+  const plan = await f.plan()
+  editManifest(f.root, 'a', manifest => manifest.version = '0.1.1')
+  write(f.root, 'packages/a/CHANGELOG.md', '# Changelog\n\n## Unreleased\n\n## 0.1.1\n\n- Human notes\n\n## 0.1.0\n\n- Previous\n')
+  await git(f.root, 'add', '.')
+  await git(f.root, 'commit', '-m', `chore(release): ${plan.tag}`)
+  await git(f.root, 'tag', plan.tag)
+  await git(f.root, 'push', 'origin', 'main', '--tags')
+  return { ...f, tag: plan.tag }
+}
+
+describe('发布交互与执行边界', () => {
+  it.each([
+    { ...terminal, ci: true },
+    { ...terminal, stdinTTY: false },
+    { ...terminal, stderrTTY: false },
+  ])('cI 或缺少终端时立即列出缺参，不访问仓库：%j', async (environment) => {
+    const adapter = fakePrompts()
+    const git = vi.spyOn(processes, 'git')
+    await expect(runRelease({}, { environment, adapter })).rejects.toThrow('缺少参数')
+    expect(adapter.start).not.toHaveBeenCalled()
+    expect(git).not.toHaveBeenCalled()
+  })
+
+  it('非法显式参数不进入向导', async () => {
+    const adapter = fakePrompts()
+    await expect(runRelease({ mode: 'typo' }, { environment: terminal, adapter })).rejects.toThrow('--mode')
+    expect(adapter.start).not.toHaveBeenCalled()
+  })
+
+  it('无参默认新版本、本机和仅预览，不加锁、fetch 或修改文件', async () => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    const locking = vi.spyOn(preparation, 'lock')
+    await runRelease({}, s.options)
+    expect(s.adapter.start).toHaveBeenCalledWith(realpathSync(f.root))
+    expect(s.adapter.select).toHaveBeenCalledWith('选择发布方式', expect.any(Array), 'local')
+    expect(s.adapter.select).toHaveBeenCalledWith('下一步', expect.any(Array), 'preview')
+    expect(s.printPlan.mock.calls[0][0].tag).toBe('@test/a@0.1.1')
+    expect(s.adapter.info).toHaveBeenCalledWith(expect.stringContaining('源码 commit：'))
+    expect(locking).not.toHaveBeenCalled()
+    expect(s.commands.some(args => args[0] === 'fetch')).toBe(false)
+    expect(s.execute).not.toHaveBeenCalled()
+    expect(s.prepare).not.toHaveBeenCalled()
+    expect(await git(f.root, 'status', '--porcelain')).toBe('')
+  })
+
+  it('单个 CLI 自动选择，显式 dry-run 不提供发布动作', async () => {
+    const f = await fixture()
+    write(f.root, 'scripts/release/packages.json', f.registrations.filter(pkg => pkg.name !== '@test/b'))
+    const adapter = fakePrompts()
+    const state = await collectReleaseInput({ dryRun: true }, f.root, adapter)
+    expect(state.input).toMatchObject({ kind: 'new', package: '@test/a', mode: 'local', version: '0.1.1' })
+    expect(adapter.select).not.toHaveBeenCalledWith('选择发布 CLI', expect.anything(), expect.anything())
+    expect(adapter.info).toHaveBeenCalledWith(expect.stringContaining('已选择 @test/a'))
+
+    const fresh = await fixture()
+    const s = mockReleaseServices(fresh)
+    await runRelease({ package: '@test/a', version: '0.1.1', dryRun: true }, s.options)
+    expect(s.adapter.select).not.toHaveBeenCalledWith('下一步', expect.anything(), expect.anything())
+    expect(s.commands.some(args => args[0] === 'fetch')).toBe(false)
+    expect(s.execute).not.toHaveBeenCalled()
+  })
+
+  it.each(['ci', 'local'])('完整命令不交互，保留 mode=%s 的执行路径', async (mode) => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    await runRelease({ package: '@test/a', version: '0.1.1', mode }, { ...s.options, environment: { ...terminal, ci: true } })
+    expect(s.adapter.start).not.toHaveBeenCalled()
+    expect(s.adapter.select).not.toHaveBeenCalled()
+    expect(s.prepare).toHaveBeenCalledOnce()
+    expect(mode === 'local' ? s.execute : s.dispatch).toHaveBeenCalledOnce()
+    expect(mode === 'local' ? s.dispatch : s.execute).not.toHaveBeenCalled()
+    expect(s.commands.filter(args => args[0] === 'fetch')).toHaveLength(1)
+    expect(existsSync(resolve(f.root, '.git/release.lock'))).toBe(false)
+  })
+
+  it('完整 dry-run 不交互且只读', async () => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    const locking = vi.spyOn(preparation, 'lock')
+    await runRelease({ package: '@test/a', version: '0.1.1', mode: 'local', dryRun: true }, s.options)
+    expect(s.adapter.start).not.toHaveBeenCalled()
+    expect(s.printPlan).toHaveBeenCalledOnce()
+    expect(locking).not.toHaveBeenCalled()
+    expect(s.commands.some(args => args[0] === 'fetch')).toBe(false)
+  })
+
+  it('菜单取消退出成功，Esc/Ctrl+C 取消使用 130；均不触发执行', async () => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    vi.mocked(s.adapter.select).mockImplementation(async (message, _choices, initial) => message === '下一步' ? 'cancel' : initial)
+    await runRelease({}, s.options)
+    expect(s.adapter.finish).toHaveBeenCalledWith('已取消发布。')
+    expect(s.commands.some(args => args[0] === 'fetch')).toBe(false)
+    vi.mocked(s.adapter.select).mockResolvedValueOnce(Symbol('cancel'))
+    await expect(runRelease({}, s.options)).rejects.toMatchObject({ exitCode: 130 })
+    expect(s.prepare).not.toHaveBeenCalled()
+    expect(s.execute).not.toHaveBeenCalled()
+  })
+
+  it.each(['0.1.1', '0.2.0', '1.0.0', 'custom'])('版本菜单支持 patch/minor/major/自定义：%s', async (choice) => {
+    const adapter = fakePrompts()
+    vi.mocked(adapter.select).mockResolvedValue(choice)
+    vi.mocked(adapter.text).mockImplementation(async (_message, options) => {
+      expect(options?.validate?.('1.0.0-beta.1')).toContain('稳定 SemVer')
+      expect(options?.validate?.('0.1.0')).toContain('最低升级要求')
+      expect(options?.validate?.('0.3.0')).toBeUndefined()
+      return '0.3.0'
+    })
+    expect(await chooseVersion({ name: '@test/a', manifest: { name: '@test/a', version: '0.1.0' } }, adapter)).toBe(choice === 'custom' ? '0.3.0' : choice)
+    expect(adapter.select).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([
+      { value: '0.1.1', label: 'patch → 0.1.1' },
+      { value: '0.2.0', label: 'minor → 0.2.0' },
+      { value: '1.0.0', label: 'major → 1.0.0' },
+      { value: 'custom', label: '自定义版本' },
+    ]), '0.1.1')
+  })
+
+  it('首次发布限定 0.1.0，不显示其他升级选项', async () => {
+    const adapter = fakePrompts()
+    expect(await chooseVersion({ name: '@test/a', manifest: { name: '@test/a', version: '0.0.0' } }, adapter)).toBe('0.1.0')
+    expect(adapter.select).not.toHaveBeenCalled()
+  })
+
+  it('向导版本低于语义最低版本时重选，显式版本直接报错', async () => {
+    const f = await fixture()
+    await f.change('packages/tool/src/index.ts', 'feat!: bundled change')
+    await git(f.root, 'push', 'origin', 'main')
+    const s = mockReleaseServices(f)
+    await runRelease({ package: '@test/a', mode: 'local' }, s.options)
+    expect(s.printPlan.mock.calls[0][0].tag).toBe('@test/a@0.2.0')
+    expect(s.adapter.info).toHaveBeenCalledWith(expect.stringContaining('低于已识别变更要求 0.2.0'))
+    const before = vi.mocked(s.adapter.select).mock.calls.length
+    await expect(runRelease({ package: '@test/a', version: '0.1.1' }, s.options)).rejects.toMatchObject({ kind: 'version', packageName: '@test/a', minimumVersion: '0.2.0' })
+    expect(vi.mocked(s.adapter.select).mock.calls.slice(before).some(([message]) => message.includes('目标版本'))).toBe(false)
+  })
+
+  it('分析发现不明确变更时，直接收集对应依赖的版本和说明', async () => {
+    const f = await fixture()
+    await f.change('packages/core/src/index.ts', 'refactor: core internals')
+    await git(f.root, 'push', 'origin', 'main')
+    const s = mockReleaseServices(f)
+    vi.mocked(s.adapter.text).mockImplementation(async (_message, options) => {
+      expect(options?.validate?.(' ')).toBe('审核说明不能为空')
+      return '- 人工审核通过'
+    })
+    await runRelease({ package: '@test/a', mode: 'local' }, s.options)
+    expect(s.printPlan.mock.calls[0][0].targets[0]).toMatchObject({ name: '@test/core', version: '0.1.1', notes: '- 人工审核通过' })
+    expect(s.adapter.text).toHaveBeenCalledWith(expect.stringContaining('@test/core'), expect.anything())
+    expect(await git(f.root, 'status', '--porcelain')).toBe('')
+  })
+
+  it('高级覆盖只在内存中修改，CLI 发布说明仍来自 CHANGELOG', async () => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    vi.mocked(s.adapter.select).mockImplementation(async (message, _choices, initial) => message.startsWith('是否手动覆盖') ? 'yes' : initial)
+    vi.mocked(s.adapter.multiselect).mockResolvedValue(['@test/a', '@test/core'])
+    await runRelease({ package: '@test/a', mode: 'local' }, s.options)
+    const plan = s.printPlan.mock.calls[0][0]
+    expect(plan.targets.find(pkg => pkg.name === '@test/a')?.notes).toBe('- Human notes')
+    expect(plan.targets.find(pkg => pkg.name === '@test/core')?.notes).toBe('- 人工审核通过')
+    expect(plan.targets.find(pkg => pkg.name === '@test/a')?.version).toBe('0.1.1')
+    expect(await git(f.root, 'status', '--porcelain')).toBe('')
+  })
+
+  it('文件覆盖不被向导修改，低于最低版本时直接报错', async () => {
+    const f = await fixture()
+    await f.change('packages/core/src/index.ts', 'feat!: breaking core change')
+    await git(f.root, 'push', 'origin', 'main')
+    const file = resolve(temp(), 'overrides.json')
+    writeFileSync(file, JSON.stringify({ '@test/core': { version: '0.1.1', notes: 'Reviewed' } }))
+    const s = mockReleaseServices(f)
+    await expect(runRelease({ package: '@test/a', version: '0.2.0', override: file }, s.options)).rejects.toMatchObject({ kind: 'version', packageName: '@test/core', minimumVersion: '0.2.0' })
+    expect(s.adapter.text).not.toHaveBeenCalled()
+    expect(readFileSync(file, 'utf8')).toContain('0.1.1')
+  })
+
+  it('未知错误直接停止，不尝试交互覆盖', async () => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    vi.mocked(github.githubPreflight).mockRejectedValue(new Error('network failed'))
+    await expect(runRelease({}, s.options)).rejects.toThrow('network failed')
+    expect(s.adapter.text).not.toHaveBeenCalled()
+    expect(s.commands.some(args => args[0] === 'fetch')).toBe(false)
+  })
+
+  it('向导选择发布后加锁、fetch、复核，再准备和执行', async () => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    const locking = vi.spyOn(preparation, 'lock')
+    vi.mocked(s.adapter.select).mockImplementation(async (message, _choices, initial) => {
+      if (message !== '下一步')
+        return initial
+      expect(locking).not.toHaveBeenCalled()
+      expect(s.commands.some(args => args[0] === 'fetch')).toBe(false)
+      return 'publish'
+    })
+    s.prepare.mockImplementation(async () => {
+      expect(existsSync(resolve(f.root, '.git/release.lock'))).toBe(true)
+      expect(s.commands.filter(args => args[0] === 'fetch')).toHaveLength(1)
+      return 'prepared'
+    })
+    await runRelease({}, s.options)
+    expect(locking).toHaveBeenCalledOnce()
+    expect(s.prepare).toHaveBeenCalledOnce()
+    expect(s.execute).toHaveBeenCalledWith(realpathSync(f.root), '@test/a@0.1.1', true, undefined)
+    expect(existsSync(resolve(f.root, '.git/release.lock'))).toBe(false)
+  })
+
+  it.each(['commit', 'plan'])('发布前 %s 变化必须重新确认，取消后释放锁', async (changed) => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    if (changed === 'plan') {
+      const initialPlan = await f.plan()
+      const updated = structuredClone(initialPlan)
+      updated.targets[0].notes += '\n- New registry-driven plan'
+      vi.spyOn(planning, 'createPlan').mockResolvedValueOnce(initialPlan).mockResolvedValue(updated)
+    }
+    let confirmations = 0
+    vi.mocked(s.adapter.select).mockImplementation(async (message, _choices, initial) => {
+      if (message !== '下一步')
+        return initial
+      confirmations++
+      if (confirmations > 1)
+        return 'cancel'
+      if (changed === 'commit') {
+        await f.change('packages/a/src/index.ts', 'fix: changed after preview')
+        await git(f.root, 'push', 'origin', 'main')
+      }
+      return 'publish'
+    })
+    await runRelease({}, s.options)
+    expect(confirmations).toBe(2)
+    expect(s.printPlan).toHaveBeenCalledTimes(2)
+    expect(s.adapter.info).toHaveBeenCalledWith('源码 commit 或发布计划已变化，请重新检查。')
+    expect(s.prepare).not.toHaveBeenCalled()
+    expect(s.execute).not.toHaveBeenCalled()
+    expect(existsSync(resolve(f.root, '.git/release.lock'))).toBe(false)
+  })
+
+  it.each(['error', 'cancel'])('加锁后的 %s 也释放锁', async (outcome) => {
+    const f = await fixture()
+    const s = mockReleaseServices(f)
+    if (outcome === 'error') {
+      vi.mocked(execution.authPreflight).mockResolvedValueOnce().mockRejectedValue(new Error('auth failed'))
+    }
+    else {
+      const initialPlan = await f.plan()
+      const updated = structuredClone(initialPlan)
+      updated.targets[0].notes += '\n- Updated'
+      vi.spyOn(planning, 'createPlan').mockResolvedValueOnce(initialPlan).mockResolvedValue(updated)
+    }
+    let confirmations = 0
+    vi.mocked(s.adapter.select).mockImplementation(async (message, _choices, initial) => message === '下一步' ? ++confirmations === 1 ? 'publish' : Symbol('cancel') : initial)
+    if (outcome === 'error')
+      await expect(runRelease({}, s.options)).rejects.toThrow('auth failed')
+    else
+      await expect(runRelease({}, s.options)).rejects.toBeInstanceOf(ReleaseCancelled)
+    expect(existsSync(resolve(f.root, '.git/release.lock'))).toBe(false)
+    expect(s.execute).not.toHaveBeenCalled()
+  })
+
+  it('artifacts-dir 单独出现时进入 tag 本机流程，只列出 CLI tag', async () => {
+    const f = await fixedFixture()
+    const s = mockReleaseServices(f)
+    const directory = temp()
+    await runRelease({ artifactsDir: directory }, s.options)
+    expect(s.printPlan.mock.calls[0][0].tag).toBe(f.tag)
+    expect(s.adapter.select).toHaveBeenCalledWith('选择已有 CLI tag', expect.arrayContaining([{ value: f.tag, label: f.tag }]), f.tag)
+    const tagOptions = vi.mocked(s.adapter.select).mock.calls.find(([message]) => message === '选择已有 CLI tag')![1]
+    expect(tagOptions.some(option => option.value.startsWith('@test/core@'))).toBe(false)
+    expect(s.adapter.select).not.toHaveBeenCalledWith('选择发布方式', expect.anything(), expect.anything())
+    expect(s.adapter.text).not.toHaveBeenCalled()
+  })
+
+  it('显式 tag 保留固定源码，可切换至 CI 发布且不再定版', async () => {
+    const f = await fixedFixture()
+    editManifest(f.root, 'a', manifest => manifest.version = '9.9.9')
+    const s = mockReleaseServices(f)
+    vi.mocked(s.adapter.select).mockImplementation(async (message, _choices, initial) => message === '选择发布方式' ? 'ci' : message === '下一步' ? 'publish' : initial)
+    await runRelease({ tag: f.tag }, s.options)
+    expect(s.printPlan.mock.calls[0][0].tag).toBe(f.tag)
+    expect(s.prepare).not.toHaveBeenCalled()
+    expect(s.dispatch).toHaveBeenCalledOnce()
+    expect(s.execute).not.toHaveBeenCalled()
+    expect(s.adapter.text).not.toHaveBeenCalled()
+  })
+
+  it('支持手动输入已有 tag 和可跳过的产物目录，缺本地 tag 时提示同步', async () => {
+    const f = await fixedFixture()
+    const s = mockReleaseServices(f)
+    vi.mocked(s.adapter.select).mockImplementation(async (message, _choices, initial) => message === '选择发布任务' ? 'tag' : message === '选择已有 CLI tag' ? 'manual' : initial)
+    vi.mocked(s.adapter.text).mockImplementation(async (message, options) => {
+      if (message.includes('CLI tag')) {
+        expect(options?.validate?.('invalid')).toBeDefined()
+        expect(options?.validate?.(f.tag)).toBeUndefined()
+        return f.tag
+      }
+      expect(options?.validate?.('')).toBeUndefined()
+      expect(options?.validate?.('/missing/release-artifacts')).toBeDefined()
+      return ''
+    })
+    await runRelease({}, s.options)
+    expect(s.printPlan.mock.calls[0][0].tag).toBe(f.tag)
+    await expect(runRelease({ tag: '@test/a@8.0.0', mode: 'local', dryRun: true }, s.options)).rejects.toThrow('git fetch origin main --tags')
+  })
+
+  it('结构化错误携带包名、审核原因和最低版本', async () => {
+    const f = await fixture()
+    await f.change('packages/core/src/index.ts', 'refactor: core')
+    await expect(f.plan()).rejects.toBeInstanceOf(PlanningInputError)
+    await expect(f.plan()).rejects.toMatchObject({ kind: 'override', packageName: '@test/core', message: expect.stringContaining('refactor: core') })
+    const overrides = { '@test/core': { version: '0.1.1', notes: '- Reviewed' } }
+    await f.change('packages/tool/src/index.ts', 'feat!: bundled change')
+    await expect(f.plan('0.1.1', overrides)).rejects.toMatchObject({ kind: 'version', packageName: '@test/a', minimumVersion: '0.2.0' })
   })
 })

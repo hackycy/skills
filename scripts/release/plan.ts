@@ -6,6 +6,17 @@ import { bump, compare, intent, section, source, stable, tagFor, upgrade } from 
 import { newerThanLatest, verifyPublished } from './npm'
 import { ancestor, existsRef, git } from './process'
 
+export class PlanningInputError extends Error {
+  constructor(
+    readonly kind: 'override' | 'version',
+    readonly packageName: string,
+    message: string,
+    readonly minimumVersion?: string,
+  ) {
+    super(message)
+  }
+}
+
 export async function manifestAt(root: string, ref: string, path: string): Promise<Manifest | undefined> {
   const exists = await git(root, 'ls-tree', ref, '--', `${path}/package.json`)
   if (!exists)
@@ -26,7 +37,7 @@ async function baseline(root: string, pkg: Package, data: Packument): Promise<st
   const tag = tagFor(pkg.name, versions[0])
   const commit = await existsRef(root, `refs/tags/${tag}`)
   if (!commit || !await ancestor(root, commit, 'HEAD') || (await manifestAt(root, commit, pkg.path))?.version !== versions[0])
-    throw new Error(`${pkg.name} 的已发布版本 ${versions[0]} 缺少可核对源码基线；需要 --override 与说明`)
+    throw new PlanningInputError('override', pkg.name, `${pkg.name} 的已发布版本 ${versions[0]} 缺少可核对源码基线；需要 --override 与说明${!commit ? '；缺少本地 tag，请先运行 git fetch origin main --tags 同步标签' : ''}`)
   return commit
 }
 
@@ -99,7 +110,7 @@ export async function createPlan(root: string, graph: Graph, cli: string, versio
       base = await baseline(root, pkg, data)
     }
     catch (error) {
-      if (!overrides[pkg.name])
+      if (!(error instanceof PlanningInputError) || error.kind !== 'override' || !overrides[pkg.name])
         throw error
       missingBaseline = true
     }
@@ -110,7 +121,7 @@ export async function createPlan(root: string, graph: Graph, cli: string, versio
     const own = pkg.name !== cli
     const delta = base ? await changes(root, graph, pkg, base, own) : { level: 0 as Level, notes: [], ambiguous: [] }
     if (delta.ambiguous.length && !overrides[pkg.name])
-      throw new Error(`${pkg.name} 无法自动判断变更意图，需要 --override 与说明：\n${delta.ambiguous.join('\n')}`)
+      throw new PlanningInputError('override', pkg.name, `${pkg.name} 无法自动判断变更意图，需要 --override 与说明：\n${delta.ambiguous.join('\n')}`)
     const dependencyNotes: string[] = []
     for (const field of ['dependencies', 'optionalDependencies'] as const) {
       for (const name of Object.keys(pkg.manifest[field] ?? {})) {
@@ -142,9 +153,14 @@ export async function createPlan(root: string, graph: Graph, cli: string, versio
     const semanticMinimum = delta.level ? bump(semanticBase, delta.level) : bump(previous, 1)
     const automatic = compare(semanticMinimum, bump(previous, 1)) > 0 ? semanticMinimum : bump(previous, 1)
     const next = pkg.name === cli ? version : overrides[pkg.name]?.version ?? automatic
-    upgrade(previous, next)
+    try {
+      upgrade(previous, next)
+    }
+    catch (error) {
+      throw new PlanningInputError('version', pkg.name, error instanceof Error ? error.message : String(error), automatic)
+    }
     if (compare(next, semanticMinimum) < 0)
-      throw new Error(`${pkg.name} 版本 ${next} 低于已识别变更要求 ${semanticMinimum}`)
+      throw new PlanningInputError('version', pkg.name, `${pkg.name} 版本 ${next} 低于已识别变更要求 ${semanticMinimum}`, automatic)
     newerThanLatest(data, pkg.name, next)
     if (data.versions[next])
       throw new Error(`${pkg.name}@${next} 已在 npm；不能重新准备`)

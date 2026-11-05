@@ -269,6 +269,9 @@ importers:
       '@antfu/utils':
         specifier: catalog:inlined
         version: 9.3.0
+      '@clack/prompts':
+        specifier: 'catalog:'
+        version: 1.8.1
       '@types/node':
         specifier: catalog:types
         version: 24.12.2

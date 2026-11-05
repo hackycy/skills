@@ -67,14 +67,27 @@ package's GitHub trusted publisher for this repository and `release.yml`, with
 direct publish/dist-tag permission; first use it within npm's two-day window.
 
 ```sh
+pnpm release
+pnpm release --package @hackycy/agent-notes --dry-run
 pnpm release --package @hackycy/agent-notes --version 0.1.0 --mode ci --dry-run
 pnpm release --package @hackycy/agent-notes --version 0.1.0 --mode local
 pnpm release --tag '@hackycy/agent-notes@0.1.0' --mode ci
 ```
 
-Choose `--mode ci` or `local` explicitly; dry-run is read-only. New releases
-prepare versions/changelogs/lockfile, create one version commit and per-package
-tags, then atomic push. Both modes run only lint and type checking as release
+Missing required arguments open a wizard only outside CI with terminal stdin
+and stderr. It preserves supplied arguments, defaults the mode selection to
+`local`, and supports version choices, inline overrides and existing-tag recovery.
+After reviewing the plan, choose publish, preview (default), or cancel. Complete
+commands run directly. CI and non-terminal callers must supply `--mode ci|local`
+and either `--package` plus `--version`, or `--tag`. Mode `ci` dispatches GitHub
+Actions; it does not enable or disable interaction.
+
+Preview and `--dry-run` are read-only, use local tags and do not fetch. Sync
+missing tags with `git fetch origin main --tags` first. Explicit `--dry-run`
+cannot turn into a publish action. Interactive publishing locks, fetches and
+revalidates the source commit and plan; changes require another review.
+New releases prepare versions/changelogs/lockfile, create one version commit and
+per-package tags, then atomic push. Both modes run only lint and type checking as release
 gates on the exact tagged commit, build/pack isolated source, upload the actual
 tarballs, and create GitHub Releases with tarballs/checksums. CI uses OIDC and
 waits for workflow completion; pushes alone never publish. Use
