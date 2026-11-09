@@ -35,7 +35,7 @@
 
 - README 提供产品概览；[安装指南](docs/installation.md)编排接入、升级与修复步骤。维护依据放 `docs/maintainers/`。新增文档先按[内容归属](docs/maintainers/design.md#文档内容与分发)确定唯一维护位置与分发范围。
 - Schema 定义字段形状，文档契约定义跨文件规则；历史格式样例在 `tests/contract-examples.json`。修改模板不能给既有合法文档新增必填条件。
-- `assets/` 是运行资源的唯一编辑源，原样进入 npm 与项目 runtime；宿主 skill 由它生成，链接按目标位置计算。产品资源只引用一同分发的文件；检查源码、npm 与安装产物的引用闭包。README 与安装指南只进入 npm，维护入口和 `docs/maintainers/` 只留仓库。
+- `assets/` 是运行资源的唯一编辑源，进入 npm 与项目 runtime；安装时按实际 Notes 根替换文本中的命令和示例路径，宿主 skill 由它生成，链接按目标位置计算。产品资源只引用一同分发的文件；检查源码、npm 与安装产物的引用闭包。README 与安装指南只进入 npm，维护入口和 `docs/maintainers/` 只留仓库。
 - 上游研究保留固定 commit 和范围；学习副本放仓库根已忽略的 `.cache/upstreams/`，不纳入 Git 或 npm 包。更新研究时同步版本锁并说明采纳的变化。
 
 ## 完成条件

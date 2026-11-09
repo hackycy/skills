@@ -13,7 +13,7 @@ const roots: string[] = []
 const main = fileURLToPath(new URL('../src/cli/main.ts', import.meta.url))
 function setup(): string {
   const root = project()
-  rmSync(join(root, '.agent-notes'), { recursive: true })
+  rmSync(join(root, '.agents'), { recursive: true })
   roots.push(root)
   return root
 }
@@ -55,7 +55,7 @@ describe.skipIf(process.platform === 'win32')('real terminal initialization', ()
     expect(result.stderr).toContain(root)
     expect(result.stdout).toContain('init: ok')
     expect(result.stdout).not.toContain('Installation targets')
-    expect(existsSync(join(root, '.agent-notes'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes'))).toBe(false)
   })
 
   it('installs default answers, then reuses installed values without questions', () => {
@@ -66,7 +66,7 @@ describe.skipIf(process.platform === 'win32')('real terminal initialization', ()
       { expect: 'Template language', send: '\r' },
     ])
     expect(result.status, result.stderr || result.stdout).toBe(0)
-    expect(JSON.parse(readFileSync(join(root, '.agent-notes/install.json'), 'utf8')).targets).toEqual(['agents'])
+    expect(JSON.parse(readFileSync(join(root, '.agents/notes/install.json'), 'utf8')).targets).toEqual(['agents'])
     expect(terminal(root, ['init'], [])).toMatchObject({ status: 0, stderr: '' })
   })
 
@@ -93,6 +93,6 @@ describe.skipIf(process.platform === 'win32')('real terminal initialization', ()
       const output: Result = JSON.parse(result.stdout)
       expect(output.result).toBe('invalid-input')
     }
-    expect(existsSync(join(root, '.agent-notes'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes'))).toBe(false)
   })
 })

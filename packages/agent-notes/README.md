@@ -24,8 +24,8 @@ pnpm dlx @hackycy/agent-notes@latest init
 初始化成功后，在项目根目录验证：
 
 ```sh
-node .agent-notes/runtime/cli.mjs status --json
-node .agent-notes/runtime/cli.mjs check --json
+node .agents/notes/runtime/cli.mjs status --json
+node .agents/notes/runtime/cli.mjs check --json
 ```
 
 确认 `status` 的 `data.integrity` 为 `intact`，并处理 `check` 的 diagnostics 与 review。此后日常命令使用项目锁定的 runtime，其他成员检出已提交的安装文件后也能直接运行。
@@ -47,7 +47,7 @@ npx --yes @hackycy/agent-notes@latest upgrade
 例如，初始化生成的 `.agents/skills/agent-note/SKILL.md` 被误删或修改后，可以使用项目当前版本的原始文件恢复：
 
 ```sh
-node .agent-notes/runtime/cli.mjs repair
+node .agents/notes/runtime/cli.mjs repair
 ```
 
 `repair` 保持项目版本不变，覆盖已修改的工具文件前会备份。runtime 的源文件也损坏时，使用项目当前版本的 npm 包执行 `repair`；具体步骤见[修复当前安装](docs/installation.md#修复当前安装)。
@@ -62,11 +62,11 @@ node .agent-notes/runtime/cli.mjs repair
 | 记录与维护 | `create`、`update`、`transition`、`archive`、`prune` | 校验材料、管理身份与状态、修复引用、冻结或条件清理 |
 | 仓库检查 | `check` | 检查工作树、index 或指定提交；输出结构问题与语义评审项 |
 
-npm 包的可执行命令为 `agent-notes`；项目 runtime 位于 `.agent-notes/runtime/cli.mjs`，提供日常命令、`status` 和 `repair`。
+npm 包的可执行命令为 `agent-notes`；项目 runtime 位于 `.agents/notes/runtime/cli.mjs`，提供日常命令、`status` 和 `repair`。
 
 ## 项目集成
 
-支持通用 `.agents` 与 `.claude` 静态目标，共享一个 Notes 根和 runtime。默认文档布局为 `.agents/notes/<生命周期>/<分类>/YYYY-MM-DD-topic.md`；初始化可指定项目内的其他文档根与中英文模板。
+支持通用 `.agents` 与 `.claude` 静态目标。Note 文档、`runtime/`、`local/`、`config.json` 和 `install.json` 统一放在 `.agents/notes/`；文档布局为 `<根目录>/<生命周期>/<分类>/YYYY-MM-DD-topic.md`。初始化的 `--notes-dir` 调整整个根目录，例如 `docs/decisions` 对应 `node docs/decisions/runtime/cli.mjs`。模板可选中英文。两个 skill 仍安装到宿主规定的 skills 目录。
 
 两个内置 skill 随 CLI 一起安装：`agent-note` 负责记录、事实维护和交付，`agent-note-maintenance` 负责替代、吸收、归档与条件清理。入口只提供读取与记录规则，正文按需加载。
 

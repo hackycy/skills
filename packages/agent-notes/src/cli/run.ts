@@ -51,7 +51,7 @@ function changedFiles(target: Snapshot, baseline: Snapshot, index: NoteIndex, be
     if (!index.notes.has(id))
       paths.add(note.path)
   }
-  return [...paths].filter(path => !isRuntime(path)).sort()
+  return [...paths].filter(path => !isRuntime(path, index.config.notes_dir)).sort()
 }
 
 function maintenance(index: NoteIndex, target: Snapshot): Diagnostic[] {
@@ -123,10 +123,10 @@ export function execute(input: Options, cwd = process.cwd(), stdin?: string): Re
       output.diagnostics.push(...historical.diagnostics)
       output.review.push(...historical.review)
       const frozenPaths = new Set([...index.notes.values()].filter(note => note.lifecycle === 'archived').map(note => note.path))
-      output.diagnostics.push(...checkLinks(target, target.paths().filter(path => /\.md$/i.test(path) && !frozenPaths.has(path) && !isRuntime(path))))
+      output.diagnostics.push(...checkLinks(target, target.paths().filter(path => /\.md$/i.test(path) && !frozenPaths.has(path) && !isRuntime(path, index.config.notes_dir))))
       if (baseline) {
         const changes = changedFiles(target, baseline, index, before!)
-        const codeChanges = changes.filter(path => !path.startsWith(`${index.config.notes_dir}/`) && !path.startsWith(`${before!.config.notes_dir}/`) && !path.startsWith('.agent-notes/'))
+        const codeChanges = changes.filter(path => !path.startsWith(`${index.config.notes_dir}/`) && !path.startsWith(`${before!.config.notes_dir}/`))
         output.data.changed_paths = changes
         output.data.affected_notes = [...index.notes.values()].filter(note => note.lifecycle !== 'archived').flatMap((note) => {
           const reasons = matchReasons(note.metadata.scope, codeChanges, [])

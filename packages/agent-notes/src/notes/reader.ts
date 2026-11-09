@@ -1,3 +1,4 @@
+import type { NotesLayout } from '../distribution/layout'
 import type { Manifest, Metadata, Note, NoteIndex, ProjectConfig } from './model'
 import type { Snapshot } from './snapshot'
 import { Buffer } from 'node:buffer'
@@ -7,6 +8,7 @@ import { isAlias, isMap, isScalar, parseDocument, visit } from 'yaml'
 import noteSchema from '../../assets/formats/agent-note-1.schema.json'
 import archiveSchema from '../../assets/formats/agent-note-archive-1.schema.json'
 import { validPattern } from '../discovery/scope'
+import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from '../distribution/layout'
 import { checkBody } from './markdown'
 import { diagnostic, NotesError } from './model'
 import { safePath, sha256 } from './snapshot'
@@ -65,11 +67,12 @@ export function jsonYaml(text: string, path: string): unknown {
   return document.toJS({ maxAliasCount: 0, mapAsMap: false })
 }
 
-export function readConfig(snapshot: Snapshot): ProjectConfig {
-  const path = '.agent-notes/config.json'
+export function readConfig(snapshot: Snapshot, suppliedLayout?: NotesLayout): ProjectConfig {
+  const layout = suppliedLayout ?? layoutFromSnapshot(snapshot) ?? notesLayout(defaultNotesRoot)
+  const path = layout.configPath
   const bytes = snapshot.read(path)
   if (!bytes)
-    return { format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'zh-CN' }
+    return { format: 'agent-notes-config/1', notes_dir: layout.notesRoot, language: 'zh-CN' }
   const value = parseJson(bytes, path)
   format(value, 'agent-notes-config/1', path)
   if (!value || typeof value !== 'object' || !('format' in value) || !('notes_dir' in value)
@@ -77,7 +80,7 @@ export function readConfig(snapshot: Snapshot): ProjectConfig {
     || !['zh-CN', 'en'].includes(String(value.language))
     || Object.keys(value).some(key => !['format', 'notes_dir', 'language'].includes(key))
     || /(?:^|\/)(?:\.git|node_modules)(?:\/|$)/i.test(value.notes_dir)
-    || value.notes_dir.toLowerCase() === '.agent-notes' || value.notes_dir.toLowerCase().startsWith('.agent-notes/')) {
+    || value.notes_dir !== layout.notesRoot) {
     throw new NotesError('INVALID_CONFIG', 'Expected v1 config with a safe notes_dir and language zh-CN or en.', path, 2)
   }
   return value as ProjectConfig
@@ -112,7 +115,8 @@ export function parseNote(bytes: Buffer, path: string, notesDir: string): Note {
 }
 
 export function readIndex(snapshot: Snapshot): NoteIndex {
-  const config = readConfig(snapshot)
+  const layout = layoutFromSnapshot(snapshot) ?? notesLayout(defaultNotesRoot)
+  const config = readConfig(snapshot, layout)
   snapshot.includeDirectory(config.notes_dir)
   const result: NoteIndex = { config, notes: new Map(), manifest: { format: 'agent-note-archive/1', entries: {} }, diagnostics: [] }
   const manifestPath = `${config.notes_dir}/archived/manifest.json`
@@ -130,7 +134,7 @@ export function readIndex(snapshot: Snapshot): NoteIndex {
     result.diagnostics.push(diagnostic(error))
   }
   for (const path of snapshot.paths()) {
-    if (!path.startsWith(`${config.notes_dir}/`) || !/\.md$/i.test(path))
+    if (!path.startsWith(`${config.notes_dir}/`) || path.startsWith(`${layout.runtimeRoot}/`) || path.startsWith(`${layout.localRoot}/`) || !/\.md$/i.test(path))
       continue
     // Only the root README is a routing document; lifecycle trees contain Notes.
     if (path === `${config.notes_dir}/README.md`)

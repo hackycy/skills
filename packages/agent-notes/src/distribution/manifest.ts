@@ -1,7 +1,9 @@
 import type { Snapshot } from '../notes/snapshot'
+import type { NotesLayout } from './layout'
 import { NotesError } from '../notes/model'
 import { parseJson } from '../notes/reader'
 import { safePath, sha256 } from '../notes/snapshot'
+import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from './layout'
 
 export type Target = 'agents' | 'claude'
 export interface Asset { path: string, kind: 'file' | 'block', sha256: string }
@@ -12,7 +14,6 @@ export interface Installation {
   targets: Target[]
   assets: Asset[]
 }
-export const installPath = '.agent-notes/install.json'
 export const blockPaths = ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes']
 export const skillNames = ['agent-note', 'agent-note-maintenance'] as const
 export const versionPattern = /^\d+\.\d+\.\d+(?:-[\da-z.-]+)?(?:\+[\da-z.-]+)?$/i
@@ -26,15 +27,17 @@ export function entryText(bytes: Uint8Array | undefined, path: string): string {
   catch { throw new NotesError('INVALID_ENCODING', 'Entry files must be UTF-8; refusing a lossy rewrite.', path) }
 }
 
-export function managedPath(path: string, kind: Asset['kind'], targets: Target[]): boolean {
+export function managedPath(path: string, kind: Asset['kind'], targets: Target[], layout = notesLayout()): boolean {
   if (!safePath(path) || path.split('/').some(part => part.toLowerCase() === '.git'))
     return false
   if (kind === 'block')
     return ['.gitignore', '.gitattributes', ...(targets.includes('agents') ? ['AGENTS.md'] : []), ...(targets.includes('claude') ? ['CLAUDE.md', '.claude/CLAUDE.md'] : [])].includes(path)
-  return path.startsWith('.agent-notes/runtime/') || targets.some(target => skillNames.some(name => path.startsWith(`.${target}/skills/${name}/`)))
+  return path.startsWith(`${layout.runtimeRoot}/`) || targets.some(target => skillNames.some(name => path.startsWith(`.${target}/skills/${name}/`)))
 }
 
-export function readInstallation(source: Snapshot): Installation | undefined {
+export function readInstallation(source: Snapshot, suppliedLayout?: NotesLayout): Installation | undefined {
+  const layout = suppliedLayout ?? layoutFromSnapshot(source) ?? notesLayout(defaultNotesRoot)
+  const installPath = layout.installPath
   const bytes = source.read(installPath)
   if (!bytes)
     return undefined
@@ -49,13 +52,13 @@ export function readInstallation(source: Snapshot): Installation | undefined {
   const seen = new Set<string>()
   for (const asset of value.assets) {
     if (!asset || typeof asset.path !== 'string' || !['file', 'block'].includes(asset.kind)
-      || !managedPath(asset.path, asset.kind, value.targets) || !/^[\da-f]{64}$/.test(asset.sha256)
+      || !managedPath(asset.path, asset.kind, value.targets, layout) || !/^[\da-f]{64}$/.test(asset.sha256)
       || Object.keys(asset).some(key => !['path', 'kind', 'sha256'].includes(key)) || seen.has(asset.path)) {
       throw new NotesError('INVALID_INSTALLATION', 'Asset inventory contains an invalid, duplicate or unowned path.', asset?.path, 2)
     }
     seen.add(asset.path)
   }
-  if (!value.assets.some(asset => asset.path === '.agent-notes/runtime/cli.mjs' && asset.kind === 'file'))
+  if (!value.assets.some(asset => asset.path === layout.runtimeCli && asset.kind === 'file'))
     throw new NotesError('INVALID_INSTALLATION', 'Runtime is missing from the asset inventory.', installPath, 2)
   return value
 }

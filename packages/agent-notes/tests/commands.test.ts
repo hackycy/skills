@@ -59,8 +59,8 @@ describe('discovery', () => {
     note(root)
     mkdirSync(join(root, 'src/deep'), { recursive: true })
     expect(run(['show', ids[0]], join(root, 'src/deep')).scope.root).toBe(root)
-    rmSync(join(root, '.agent-notes'), { recursive: true })
-    expect(run(['show', ids[0], '--root', root]).result).toBe('ok')
+    rmSync(join(root, '.agents/notes'), { recursive: true })
+    expect(run(['show', ids[0], '--root', root]).result).toBe('invalid-input')
   })
 })
 
@@ -86,9 +86,9 @@ describe('snapshot isolation', () => {
     expect(check(root).result).toBe('ok')
     expect(check(root, '--staged').diagnostics.map(item => item.code)).toContain('BROKEN_REFERENCE')
     expect(check(root, '--base', base, '--head', base).result).toBe('ok')
-    write(root, '.agent-notes/config.json', '{"format":"agent-notes-config/99"}')
-    git(root, 'add', '.agent-notes/config.json')
-    write(root, '.agent-notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'zh-CN' }))
+    write(root, '.agents/notes/config.json', '{"format":"agent-notes-config/99"}')
+    git(root, 'add', '.agents/notes/config.json')
+    write(root, '.agents/notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'zh-CN' }))
     expect(check(root, '--staged').diagnostics.map(item => item.code)).toContain('UNSUPPORTED_FORMAT')
     expect(check(root).result).toBe('ok')
   })
@@ -110,7 +110,7 @@ describe('snapshot isolation', () => {
     const root = setup()
     note(root)
     const base = commit(root)
-    write(root, '.agent-notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'decisions', language: 'en' }))
+    write(root, '.agents/notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'decisions', language: 'en' }))
     expect(check(root, '--base', base, '--head', base).data.notes_checked).toBe(1)
   })
 
@@ -134,8 +134,8 @@ describe('snapshot isolation', () => {
 
   it('does not treat a non-file configuration as a missing installation', () => {
     const root = setup()
-    rmSync(join(root, '.agent-notes/config.json'))
-    mkdirSync(join(root, '.agent-notes/config.json'))
+    rmSync(join(root, '.agents/notes/config.json'))
+    mkdirSync(join(root, '.agents/notes/config.json'))
     expect(check(root).diagnostics.map(item => item.code)).toContain('NOT_REGULAR_FILE')
   })
 
@@ -203,6 +203,7 @@ describe('relations and references', () => {
     const root = setup()
     const outside = setup()
     note(outside)
+    rmSync(join(root, '.agents'), { recursive: true })
     mkdirSync(join(root, '.agents'), { recursive: true })
     symlinkSync(join(outside, '.agents/notes'), join(root, '.agents/notes'))
     expect(check(root).diagnostics.map(item => item.code)).toContain('SYMLINK_NOT_ALLOWED')
@@ -235,7 +236,7 @@ describe('historical protections', () => {
     archive(root, note(root))
     commit(root)
     rmSync(join(root, '.agents/notes'), { recursive: true })
-    write(root, '.agent-notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'other-notes', language: 'en' }))
+    write(root, 'other-notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'other-notes', language: 'en' }))
     expect(check(root).diagnostics.map(item => item.code)).toContain('FROZEN_NOTE_CHANGED')
   })
 

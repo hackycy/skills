@@ -10,8 +10,9 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { run } from '../src/cli/run'
+import { notesLayout } from '../src/distribution/layout'
 import { manage } from '../src/distribution/manage'
-import { block, installPath } from '../src/distribution/manifest'
+import { block } from '../src/distribution/manifest'
 import { checkLinks } from '../src/notes/markdown'
 import { Repository } from '../src/notes/snapshot'
 import { executeWrite } from '../src/workflow/execute'
@@ -21,6 +22,7 @@ import { archive, commit, git, ids, metadata, note, project, write } from './fix
 vi.setConfig({ testTimeout: 30_000 })
 
 const roots: string[] = []
+const installPath = notesLayout().installPath
 const runtime = 'console.log(JSON.stringify({command:"context",result:"ok",data:{notes:[]},diagnostics:[]}))\n'
 function bundle(version = '0.1.0'): Bundle {
   return { version, files: new Map([['cli.mjs', Buffer.from(runtime)], ['rules.md', Buffer.from(`Rules ${version}\n`)]]), skills: new Map(['agent-note', 'agent-note-maintenance'].map(name => [`${name}/SKILL.md`, Buffer.from(`Skill ${name} ${version}\n`)])) }
@@ -29,7 +31,7 @@ function setup(blank = false): string {
   const root = project()
   roots.push(root)
   if (blank)
-    rmSync(join(root, '.agent-notes'), { recursive: true })
+    rmSync(join(root, '.agents/notes'), { recursive: true })
   return root
 }
 function command(root: string, name: ManageOptions['command'] = 'init', targetBundle = bundle(), extra: Partial<ManageOptions> = {}, hooks: TransactionHooks = {}) {
@@ -44,14 +46,14 @@ function manifest(root: string): Installation {
 function expectOk(result: ReturnType<typeof manage>): void {
   expect(result.result, JSON.stringify(result)).toBe('ok')
 }
-function allFiles(root: string, prefix = ''): Map<string, string> {
+function allFiles(root: string, prefix = '', notesDir = '.agents/notes'): Map<string, string> {
   const result = new Map<string, string>()
   for (const entry of readdirSync(join(root, prefix), { withFileTypes: true })) {
     const path = prefix ? `${prefix}/${entry.name}` : entry.name
-    if (path === '.git' || path === '.agent-notes/local')
+    if (path === '.git' || path === `${notesDir}/local`)
       continue
     if (entry.isDirectory()) {
-      for (const [childPath, bytes] of allFiles(root, path))
+      for (const [childPath, bytes] of allFiles(root, path, notesDir))
         result.set(childPath, bytes)
     }
     else {
@@ -67,8 +69,8 @@ describe('installation ownership', () => {
     const root = setup(true)
     expectOk(command(root, 'init', bundle(), { targets }))
     expect(manifest(root).targets).toEqual(targets)
-    expect(JSON.parse(read(root, '.agent-notes/config.json')).notes_dir).toBe('.agents/notes')
-    expect(existsSync(join(root, '.agents/notes'))).toBe(false)
+    expect(JSON.parse(read(root, '.agents/notes/config.json')).notes_dir).toBe('.agents/notes')
+    expect(existsSync(join(root, '.agents/notes/runtime/cli.mjs'))).toBe(true)
     for (const target of ['agents', 'claude'])
       expect(existsSync(join(root, `.${target}/skills/agent-note/SKILL.md`))).toBe(targets.includes(target as Target))
     expect(existsSync(join(root, '.claude/settings.json'))).toBe(false)
@@ -79,19 +81,19 @@ describe('installation ownership', () => {
   })
 
   it('preserves custom configuration and original entry bytes outside its block', () => {
-    const root = setup()
+    const root = setup(true)
     const config = '{\n "format": "agent-notes-config/1", "notes_dir": "docs/decisions", "language": "en"\n}\n'
-    write(root, '.agent-notes/config.json', config)
+    write(root, 'docs/decisions/config.json', config)
     write(root, 'AGENTS.md', 'Original rules\r\n@project-guide.md\r\n')
     write(root, 'CLAUDE.md', '@AGENTS.md\nExtra rules\n')
     write(root, 'project-guide.md', '# Guide\n')
     expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    expect(read(root, '.agent-notes/config.json')).toBe(config)
+    expect(read(root, 'docs/decisions/config.json')).toBe(config)
     expect(read(root, 'AGENTS.md').startsWith('Original rules\r\n@project-guide.md\r\n')).toBe(true)
     expect(read(root, 'CLAUDE.md').startsWith('@AGENTS.md\nExtra rules\n')).toBe(true)
     expect(existsSync(join(root, '.claude/CLAUDE.md'))).toBe(false)
     expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(read(root, '.agent-notes/config.json')).toBe(config)
+    expect(read(root, 'docs/decisions/config.json')).toBe(config)
   })
 
   it('keeps inherited AGENTS rules when it creates a Claude entry, including after upgrade', () => {
@@ -143,7 +145,7 @@ describe('installation ownership', () => {
   it('uses a configured language and custom document directory on blank init', () => {
     const root = setup(true)
     expectOk(command(root, 'init', bundle(), { notesDir: 'docs/decisions', language: 'en' }))
-    expect(JSON.parse(read(root, '.agent-notes/config.json'))).toMatchObject({ notes_dir: 'docs/decisions', language: 'en' })
+    expect(JSON.parse(read(root, 'docs/decisions/config.json'))).toMatchObject({ notes_dir: 'docs/decisions', language: 'en' })
     expect(read(root, '.gitattributes')).toContain('/docs/decisions/** text eol=lf')
   })
 
@@ -165,19 +167,21 @@ describe('installation ownership', () => {
     expectOk(command(root, 'init', content, { targets: [target] }))
     const prefix = `.${target}/skills/agent-note`
     expect(read(root, `${prefix}/SKILL.md`)).toContain('[guide]: references/example.md#example')
-    expect(read(root, `${prefix}/SKILL.md`)).toContain('[Format](../../../.agent-notes/runtime/assets/formats/document.md)')
-    expect(read(root, `${prefix}/SKILL.md`)).toContain('[Formats](../../../.agent-notes/runtime/assets/formats)')
+    const formatLink = target === 'agents' ? '../../notes/runtime/assets/formats/document.md' : '../../../.agents/notes/runtime/assets/formats/document.md'
+    const formatsLink = target === 'agents' ? '../../notes/runtime/assets/formats' : '../../../.agents/notes/runtime/assets/formats'
+    expect(read(root, `${prefix}/SKILL.md`)).toContain(`[Format](${formatLink})`)
+    expect(read(root, `${prefix}/SKILL.md`)).toContain(`[Formats](${formatsLink})`)
     expect(read(root, `${prefix}/SKILL.md`)).toContain('[Local](references/)')
     expect(read(root, `${prefix}/SKILL.md`)).toContain('```md\n[Example](../../references/writing.md)\n```')
-    expect(read(root, `${prefix}/references/example.md`)).toContain('../../../../.agent-notes/runtime/assets/references/writing.md#inputs')
+    expect(read(root, `${prefix}/references/example.md`)).toContain(target === 'agents' ? '../../../notes/runtime/assets/references/writing.md#inputs' : '../../../../.agents/notes/runtime/assets/references/writing.md#inputs')
     expect(readFileSync(join(root, `${prefix}/references/example.bin`))).toEqual(Buffer.from([0, 255, 128]))
-    expect(read(root, '.agent-notes/runtime/assets/skills/agent-note/SKILL.md')).toBe(skill)
+    expect(read(root, '.agents/notes/runtime/assets/skills/agent-note/SKILL.md')).toBe(skill)
     const source = new Repository(root).snapshot('worktree')
-    source.includeDirectory('.agent-notes/runtime')
+    source.includeDirectory('.agents/notes/runtime')
     expect(checkLinks(source, source.paths().filter(path => path.endsWith('.md')))).toEqual([])
   })
 
-  it.each(['.GIT/private-notes', '.AGENT-NOTES/runtime'])('rejects reserved directory aliases on case-insensitive filesystems: %s', (notesDir) => {
+  it.each(['.GIT/private-notes', 'NODE_MODULES/private-notes'])('rejects reserved directory aliases on case-insensitive filesystems: %s', (notesDir) => {
     const root = setup(true)
     expect(command(root, 'init', bundle(), { notesDir }).diagnostics[0].code).toBe('INVALID_CONFIG')
     expect(existsSync(join(root, installPath))).toBe(false)
@@ -192,7 +196,7 @@ describe('installation ownership', () => {
 
   it.each(['runtime', 'skill', 'note', 'marker'])('does not adopt an unknown %s', (kind) => {
     const root = setup()
-    const path = kind === 'runtime' ? '.agent-notes/runtime/custom.txt' : kind === 'skill' ? '.agents/skills/agent-note/custom.txt' : kind === 'note' ? note(root) : 'AGENTS.md'
+    const path = kind === 'runtime' ? '.agents/notes/runtime/custom.txt' : kind === 'skill' ? '.agents/skills/agent-note/custom.txt' : kind === 'note' ? note(root) : 'AGENTS.md'
     if (kind !== 'note')
       write(root, path, kind === 'marker' ? '<!-- agent-notes:begin -->\nunknown\n<!-- agent-notes:end -->\n' : 'Unknown bytes\n')
     const before = allFiles(root)
@@ -200,9 +204,15 @@ describe('installation ownership', () => {
     expect(allFiles(root)).toEqual(before)
   })
 
-  it.each(['.agents', '.agent-notes/runtime', 'AGENTS.md'])('refuses symlink target %s', (path) => {
+  it.each(['.agents', '.agents/notes/runtime', 'AGENTS.md'])('refuses symlink target %s', (path) => {
     const root = setup()
     const outside = setup(true)
+    if (path === '.agents')
+      rmSync(join(root, '.agents'), { recursive: true })
+    else if (path.startsWith('.agents'))
+      rmSync(join(root, '.agents/notes'), { recursive: true })
+    if (path === '.agents/notes/runtime')
+      mkdirSync(join(root, '.agents/notes'), { recursive: true })
     symlinkSync(outside, join(root, path))
     const result = command(root)
     expect(result.diagnostics.map(item => item.code)).toContain('SYMLINK_NOT_ALLOWED')
@@ -223,19 +233,19 @@ describe('installation ownership', () => {
 describe('git distribution rules', () => {
   it('makes installed assets and future Notes trackable while other ignored skills stay ignored', () => {
     const root = setup()
-    write(root, '.gitignore', '# user rules\n.agents/\n.claude/\n.agent-notes/\n*.log\n')
+    write(root, '.gitignore', '# user rules\n.agents/\n.claude/\n.agents/notes/\n*.log\n')
     write(root, '.agents/skills/unrelated/SKILL.md', 'User skill\n')
     expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
     const ignored = (path: string) => spawnSync('git', ['-C', root, 'check-ignore', '--no-index', '-q', path]).status === 0
     for (const asset of manifest(root).assets)
       expect(ignored(asset.path), asset.path).toBe(false)
-    for (const path of ['.agent-notes/config.json', installPath, '.agents/notes/implemented/feature/future.md'])
+    for (const path of ['.agents/notes/config.json', installPath, '.agents/notes/implemented/feature/future.md'])
       expect(ignored(path), path).toBe(false)
-    for (const path of ['.agents/skills/unrelated/SKILL.md', '.claude/skills/other/SKILL.md', '.agent-notes/local/draft.md', 'app.log'])
+    for (const path of ['.agents/skills/unrelated/SKILL.md', '.claude/skills/other/SKILL.md', '.agents/notes/local/draft.md', 'app.log'])
       expect(ignored(path), path).toBe(true)
-    expect(read(root, '.gitignore').startsWith('# user rules\n.agents/\n.claude/\n.agent-notes/\n*.log\n')).toBe(true)
+    expect(read(root, '.gitignore').startsWith('# user rules\n.agents/\n.claude/\n.agents/notes/\n*.log\n')).toBe(true)
     expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(ignored('.agent-notes/local/backup')).toBe(true)
+    expect(ignored('.agents/notes/local/backup')).toBe(true)
     expect(ignored('.agents/notes/implemented/feature/future.md')).toBe(false)
   })
 
@@ -265,7 +275,7 @@ describe('git distribution rules', () => {
     git(root, '-c', 'core.autocrlf=true', 'clone', '--no-local', root, checkout)
     expect(read(checkout, 'AGENTS.md')).toContain('\r\n')
     expectOk(command(checkout, 'status'))
-    for (const protectedPath of [frozen, '.agents/notes/archived/manifest.json', '.agent-notes/config.json', '.agent-notes/runtime/cli.mjs'])
+    for (const protectedPath of [frozen, '.agents/notes/archived/manifest.json', '.agents/notes/config.json', '.agents/notes/runtime/cli.mjs'])
       expect(read(checkout, protectedPath), protectedPath).toBe(read(root, protectedPath))
     const before = allFiles(checkout)
     expect(command(checkout, 'upgrade').data.changes).toEqual([])
@@ -274,7 +284,7 @@ describe('git distribution rules', () => {
 
   it('reports conflicting runtime newline attributes before installing', () => {
     const root = setup()
-    write(root, '.gitattributes', '.agent-notes/runtime/** eol=crlf\n')
+    write(root, '.gitattributes', '.agents/notes/runtime/** eol=crlf\n')
     expect(command(root).diagnostics.map(item => item.code)).toContain('GIT_ATTRIBUTES_CONFLICT')
     expect(existsSync(join(root, installPath))).toBe(false)
   })
@@ -296,7 +306,7 @@ describe('upgrades and recovery boundaries', () => {
     const original = note(root, metadata({ id: ids[1] }), 'archive-source')
     archive(root, original, metadata({ id: ids[1] }))
     const prior = allFiles(root)
-    const protectedPaths = [...prior.keys()].filter(path => path.startsWith('.agents/notes/') || path === '.agent-notes/config.json')
+    const protectedPaths = [...prior.keys()].filter(path => path.startsWith('.agents/notes/') && path !== installPath && !path.startsWith('.agents/notes/runtime/'))
     for (const version of ['0.2.0', '0.1.0']) {
       expectOk(command(root, 'upgrade', bundle(version)))
       expect(manifest(root).version).toBe(version)
@@ -314,7 +324,7 @@ describe('upgrades and recovery boundaries', () => {
     expectOk(result)
     expect(result.data.modified_assets).toContain('.agents/skills/agent-note/SKILL.md')
     expect(result.data.changes).not.toEqual([])
-    expect(existsSync(join(root, '.agent-notes/local/backups'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/backups'))).toBe(false)
     expect(allFiles(root)).toEqual(before)
   })
 
@@ -338,7 +348,7 @@ describe('upgrades and recovery boundaries', () => {
   it('repairs same-version damage, and intact upgrade is a no-op', () => {
     const root = setup()
     expectOk(command(root))
-    rmSync(join(root, '.agent-notes/runtime/rules.md'))
+    rmSync(join(root, '.agents/notes/runtime/rules.md'))
     expect(command(root, 'status').data.integrity).toBe('damaged')
     const before = allFiles(root)
     expect(command(root).diagnostics[0].code).toBe('REPAIR_REQUIRED')
@@ -361,7 +371,7 @@ describe('upgrades and recovery boundaries', () => {
     changed.files.set('rules.md', Buffer.from('Different bundle, same version\n'))
     expect(command(root, 'repair', changed)).toMatchObject({ result: 'failed', diagnostics: [{ code: 'INVALID_BUNDLE' }] })
     expect(allFiles(root)).toEqual(before)
-    expect(existsSync(join(root, '.agent-notes/local/backups'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/backups'))).toBe(false)
   })
 
   it('repairs missing files and preserves Notes, seals, configuration and unknown neighbors', () => {
@@ -369,12 +379,12 @@ describe('upgrades and recovery boundaries', () => {
     expectOk(command(root))
     note(root, metadata({ id: ids[1] }), 'active')
     archive(root, note(root))
-    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agent-notes/config.json' || path === installPath)
+    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agents/notes/config.json' || path === installPath)
     rmSync(join(root, '.agents/skills/agent-note/SKILL.md'))
-    write(root, '.agent-notes/runtime/neighbor.txt', 'Project neighbor\n')
+    write(root, '.agents/notes/runtime/neighbor.txt', 'Project neighbor\n')
     expectOk(command(root, 'repair'))
     expect(read(root, '.agents/skills/agent-note/SKILL.md')).toBe('Skill agent-note 0.1.0\n')
-    expect(read(root, '.agent-notes/runtime/neighbor.txt')).toBe('Project neighbor\n')
+    expect(read(root, '.agents/notes/runtime/neighbor.txt')).toBe('Project neighbor\n')
     for (const [path, bytes] of preserved)
       expect(read(root, path), path).toBe(bytes)
   })
@@ -384,14 +394,14 @@ describe('upgrades and recovery boundaries', () => {
     const previous = bundle()
     previous.files.set('obsolete.txt', Buffer.from('Old managed asset\n'))
     expectOk(command(root, 'init', previous))
-    write(root, '.agent-notes/runtime/unknown.txt', 'Keep me\n')
+    write(root, '.agents/notes/runtime/unknown.txt', 'Keep me\n')
     expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(existsSync(join(root, '.agent-notes/runtime/obsolete.txt'))).toBe(false)
-    expect(read(root, '.agent-notes/runtime/unknown.txt')).toBe('Keep me\n')
+    expect(existsSync(join(root, '.agents/notes/runtime/obsolete.txt'))).toBe(false)
+    expect(read(root, '.agents/notes/runtime/unknown.txt')).toBe('Keep me\n')
     const collision = bundle('0.3.0')
     collision.files.set('unknown.txt', Buffer.from('Replacement\n'))
     expect(command(root, 'upgrade', collision).diagnostics[0].code).toBe('UNOWNED_ASSET')
-    expect(read(root, '.agent-notes/runtime/unknown.txt')).toBe('Keep me\n')
+    expect(read(root, '.agents/notes/runtime/unknown.txt')).toBe('Keep me\n')
   })
 
   it('upgrades and rolls back the resource layout while preserving project documents and seals', () => {
@@ -403,28 +413,28 @@ describe('upgrades and recovery boundaries', () => {
     note(root, metadata({ id: ids[1] }), 'active')
     archive(root, note(root))
     commit(root)
-    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agent-notes/config.json')
-    write(root, '.agent-notes/runtime/writing.md', '# Local edit of the old reference\n')
-    write(root, '.agent-notes/runtime/unknown.txt', 'Project neighboring file\n')
+    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agents/notes/config.json')
+    write(root, '.agents/notes/runtime/writing.md', '# Local edit of the old reference\n')
+    write(root, '.agents/notes/runtime/unknown.txt', 'Project neighboring file\n')
     const next = bundle('0.2.0')
     next.files.set('assets/references/writing.md', Buffer.from('# Write inputs\n'))
     next.files.set('assets/formats/document.md', Buffer.from('# Document format\n'))
     const upgraded = command(root, 'upgrade', next)
     expectOk(upgraded)
-    expect(read(root, `${upgraded.data.backup}/original/.agent-notes/runtime/writing.md`)).toBe('# Local edit of the old reference\n')
+    expect(read(root, `${upgraded.data.backup}/original/.agents/notes/runtime/writing.md`)).toBe('# Local edit of the old reference\n')
     for (const path of ['README.md', 'writing.md', 'contracts/document.md'])
-      expect(existsSync(join(root, '.agent-notes/runtime', path))).toBe(false)
-    expect(read(root, '.agent-notes/runtime/assets/references/writing.md')).toBe('# Write inputs\n')
+      expect(existsSync(join(root, '.agents/notes/runtime', path))).toBe(false)
+    expect(read(root, '.agents/notes/runtime/assets/references/writing.md')).toBe('# Write inputs\n')
     expectOk(command(root, 'upgrade', previous))
-    expect(read(root, '.agent-notes/runtime/writing.md')).toBe('# Previous resource\n')
-    expect(existsSync(join(root, '.agent-notes/runtime/assets/references/writing.md'))).toBe(false)
-    expect(read(root, '.agent-notes/runtime/unknown.txt')).toBe('Project neighboring file\n')
+    expect(read(root, '.agents/notes/runtime/writing.md')).toBe('# Previous resource\n')
+    expect(existsSync(join(root, '.agents/notes/runtime/assets/references/writing.md'))).toBe(false)
+    expect(read(root, '.agents/notes/runtime/unknown.txt')).toBe('Project neighboring file\n')
     for (const [path, bytes] of preserved)
       expect(read(root, path)).toBe(bytes)
     expectOk(command(root, 'status'))
   })
 
-  it.each(['../outside.md', 'README.md', '.agents/notes/implemented/architecture/2026-10-21-owned.md', '.agent-notes/config.json'])('rejects manifest ownership of %s', (path) => {
+  it.each(['../outside.md', 'README.md', '.agents/notes/implemented/architecture/2026-10-21-owned.md', '.agents/notes/config.json'])('rejects manifest ownership of %s', (path) => {
     const root = setup()
     expectOk(command(root))
     const state = manifest(root)
@@ -457,7 +467,7 @@ describe('upgrades and recovery boundaries', () => {
     const manifestBefore = read(root, installPath)
     const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), {}, { beforeCommit() {
       if (kind === 'config')
-        write(root, '.agent-notes/config.json', `${read(root, '.agent-notes/config.json')}\n`)
+        write(root, '.agents/notes/config.json', `${read(root, '.agents/notes/config.json')}\n`)
       if (kind === 'note')
         write(root, path, `${read(root, path)}\nIndependent edit\n`)
       if (kind === 'new-note')
@@ -465,7 +475,7 @@ describe('upgrades and recovery boundaries', () => {
       if (kind === 'entry')
         write(root, 'AGENTS.md', `${read(root, 'AGENTS.md')}Independent rule\n`)
       if (kind === 'runtime')
-        write(root, '.agent-notes/runtime/cli.mjs', '// external runtime edit\n')
+        write(root, '.agents/notes/runtime/cli.mjs', '// external runtime edit\n')
     } })
     expect(result.diagnostics.map(item => item.code)).toContain('CONCURRENT_CHANGE')
     expect(read(root, installPath)).toBe(manifestBefore)
@@ -506,30 +516,30 @@ describe('upgrades and recovery boundaries', () => {
     const root = setup()
     expectOk(command(root))
     write(root, '.agents/skills/agent-note/SKILL.md', 'My customization\n')
-    write(root, '.agent-notes/local/backups', 'Not a directory\n')
+    write(root, '.agents/notes/local/backups', 'Not a directory\n')
     const before = allFiles(root)
     expect(command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0')).result).toBe('failed')
     expect(allFiles(root)).toEqual(before)
   })
 
-  it.each(['init', 'upgrade', 'repair'] as const)('recovers an actual SIGKILL during %s and retries', (operation) => {
+  it.each((['init', 'upgrade', 'repair'] as const).flatMap(operation => ['.agents/notes', 'docs/decisions'].map(notesDir => ({ operation, notesDir }))))('recovers an actual SIGKILL during $operation in $notesDir and retries', ({ operation, notesDir }) => {
     const root = setup(true)
     if (operation !== 'init')
-      expectOk(command(root))
+      expectOk(command(root, 'init', bundle(), { notesDir }))
     if (operation === 'repair')
       write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
-    const before = allFiles(root)
-    const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation], { encoding: 'utf8' })
+    const before = allFiles(root, '', notesDir)
+    const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation, '', notesDir], { encoding: 'utf8' })
     expect(child.signal, child.stderr).toBe('SIGKILL')
     expect(recoverTransaction(root)).toBe(true)
-    expect(allFiles(root)).toEqual(before)
-    expectOk(command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), { recover: true }))
+    expect(allFiles(root, '', notesDir)).toEqual(before)
+    expectOk(command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), { notesDir, recover: true }))
   })
 
   it.each(['upgrade', 'repair'] as const)('%s retains an external edit and journal on recovery conflict', (operation) => {
     const root = setup()
     expectOk(command(root))
-    const path = operation === 'repair' ? '.agents/skills/agent-note/SKILL.md' : '.agent-notes/runtime/rules.md'
+    const path = operation === 'repair' ? '.agents/skills/agent-note/SKILL.md' : '.agents/notes/runtime/rules.md'
     if (operation === 'repair')
       write(root, path, 'Modified skill\n')
     const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation], { encoding: 'utf8' })
@@ -537,7 +547,7 @@ describe('upgrades and recovery boundaries', () => {
     write(root, path, 'Independent edit after interruption\n')
     expect(() => recoverTransaction(root)).toThrow(/File changed outside/)
     expect(read(root, path)).toBe('Independent edit after interruption\n')
-    expect(existsSync(join(root, '.agent-notes/local/write-lock/journal.json'))).toBe(true)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock/journal.json'))).toBe(true)
   })
 
   it('refuses malformed managed blocks instead of deleting user content', () => {

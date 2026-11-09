@@ -23,7 +23,7 @@ function setup(blank = true): string {
   const root = project()
   roots.push(root)
   if (blank)
-    rmSync(join(root, '.agent-notes'), { recursive: true })
+    rmSync(join(root, '.agents/notes'), { recursive: true })
   return root
 }
 function files(root: string): Record<string, string> {
@@ -169,10 +169,10 @@ describe('cLI argument boundary', () => {
     const root = setup()
     install(root)
     const input = options(['--root', root, 'context', '--paths=a', 'b', '--topic=001', '--json'])
-    const runtime = join(root, '.agent-notes/runtime/cli.mjs')
+    const runtime = join(root, 'docs/decisions/runtime/cli.mjs')
     const child = vi.spyOn(process, 'cwd').mockReturnValue(root)
     // The runtime hash remains authoritative; modified executables are refused.
-    write(root, '.agent-notes/runtime/cli.mjs', '// changed')
+    write(root, 'docs/decisions/runtime/cli.mjs', '// changed')
     expect(() => delegate(input, fileURLToPath(import.meta.url))).toThrow(/locked runtime/)
     child.mockRestore()
     expect(existsSync(runtime)).toBe(true)
@@ -190,7 +190,7 @@ describe('initialization input acquisition', () => {
     expect(prompts.directory).toHaveBeenCalledOnce()
     expect(prompts.language).toHaveBeenCalledOnce()
     expect(files(root)).toEqual(before)
-    expect(existsSync(join(root, '.agent-notes'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes'))).toBe(false)
   })
 
   it('reuses installation/configuration without questions and rejects explicit conflicts', async () => {
@@ -222,17 +222,17 @@ describe('initialization input acquisition', () => {
     const before = files(root)
     await expect(promptInit(options(['init']), root, adapter({ [field]: async () => Symbol('cancel') }))).rejects.toBeInstanceOf(InitCancelled)
     expect(files(root)).toEqual(before)
-    expect(existsSync(join(root, '.agent-notes'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes'))).toBe(false)
   })
 
   it('detects configuration changes while answering', async () => {
     const root = setup()
     await expect(promptInit(options(['init']), root, adapter({ language: async () => {
-      write(root, '.agent-notes/config.json', '{}')
+      write(root, '.agents/notes/config.json', '{}')
       return 'zh-CN'
     } }))).rejects.toThrow(/changed/)
-    expect(readFileSync(join(root, '.agent-notes/config.json'), 'utf8')).toBe('{}')
-    expect(existsSync(join(root, '.agent-notes/install.json'))).toBe(false)
+    expect(readFileSync(join(root, '.agents/notes/config.json'), 'utf8')).toBe('{}')
+    expect(existsSync(join(root, '.agents/notes/install.json'))).toBe(false)
   })
 
   it('gates interaction on both terminals, CI and explicit output preferences', () => {
@@ -254,50 +254,50 @@ describe('read-only recovery context', () => {
     const before = files(root)
     await expect(promptInit(options(['init', '--recover']), root, adapter({ targets: async () => Symbol('cancel') }))).rejects.toBeInstanceOf(InitCancelled)
     expect(files(root)).toEqual(before)
-    expect(existsSync(join(root, '.agent-notes/local/write-lock/recovering'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock/recovering'))).toBe(false)
     const view = recoveryView(new Repository(root).snapshot('worktree'))
-    expect(view.source.read('.agent-notes/config.json')).toBeUndefined()
-    expect(view.source.read('.agent-notes/install.json')).toBeUndefined()
+    expect(view.source.read('.agents/notes/config.json')).toBeUndefined()
+    expect(view.source.read('.agents/notes/install.json')).toBeUndefined()
     const explicit = step === 'after-install' ? ['--notes-dir', 'docs/decisions', '--language', 'en'] : []
     const cli = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('../src/cli/main.ts', import.meta.url)), 'init', '--recover', '--root', root, '--target', 'agents', ...explicit, '--json'], { encoding: 'utf8', timeout: 30_000 })
     expect(cli.status, cli.stderr || cli.stdout).toBe(0)
     expect(JSON.parse(cli.stdout).data.recovered).toBe(true)
-    expect(existsSync(join(root, '.agent-notes/local/write-lock'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock'))).toBe(false)
     if (explicit.length)
-      expect(JSON.parse(readFileSync(join(root, '.agent-notes/config.json'), 'utf8'))).toMatchObject({ notes_dir: 'docs/decisions', language: 'en' })
+      expect(JSON.parse(readFileSync(join(root, 'docs/decisions/config.json'), 'utf8'))).toMatchObject({ notes_dir: 'docs/decisions', language: 'en' })
   })
 
   it.each(['owner.json', 'journal.json'])('detects %s changes while collecting recovery input', async (file) => {
     const root = setup()
     const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'init', 'after-install'], { timeout: 30_000 })
     expect(child.signal).toBe('SIGKILL')
-    const path = `.agent-notes/local/write-lock/${file}`
+    const path = `.agents/notes/local/write-lock/${file}`
     const bytes = readFileSync(join(root, path), 'utf8')
     await expect(promptInit(options(['init', '--recover']), root, adapter({ language: async () => {
       write(root, path, `${bytes}\n`)
       return 'zh-CN'
     } }))).rejects.toThrow(/changed/)
     expect(readFileSync(join(root, path), 'utf8')).toBe(`${bytes}\n`)
-    expect(existsSync(join(root, '.agent-notes/local/write-lock/recovering'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock/recovering'))).toBe(false)
   })
 
   it('reuses committed endpoints and preserves external edits', () => {
     const root = setup()
     const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'init', 'after-install'], { encoding: 'utf8', timeout: 30_000 })
     expect(child.signal).toBe('SIGKILL')
-    const path = '.agent-notes/local/write-lock/journal.json'
+    const path = '.agents/notes/local/write-lock/journal.json'
     const journal = JSON.parse(readFileSync(join(root, path), 'utf8'))
     journal.state = 'committed'
     write(root, path, JSON.stringify(journal))
     const view = recoveryView(new Repository(root).snapshot('worktree'))
-    expect(view.source.read('.agent-notes/install.json')).toEqual(readFileSync(join(root, '.agent-notes/install.json')))
+    expect(view.source.read('.agents/notes/install.json')).toEqual(readFileSync(join(root, '.agents/notes/install.json')))
     view.verify()
     expect(recoverTransaction(root)).toBe(true)
     const other = setup()
     spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), other, 'init', 'after-config'], { timeout: 30_000 })
-    write(other, '.agent-notes/config.json', 'external edit')
+    write(other, '.agents/notes/config.json', 'external edit')
     expect(() => recoveryView(new Repository(other).snapshot('worktree'))).toThrow(/outside this transaction/)
     expect(() => recoverTransaction(other)).toThrow(/outside this transaction/)
-    expect(readFileSync(join(other, '.agent-notes/config.json'), 'utf8')).toBe('external edit')
+    expect(readFileSync(join(other, '.agents/notes/config.json'), 'utf8')).toBe('external edit')
   })
 })

@@ -13,11 +13,11 @@ const roots: string[] = []
 function setup(): { root: string, path: string, input: string } {
   const root = project()
   roots.push(root)
-  write(root, '.gitignore', '.agent-notes/local/\n')
+  write(root, '.gitignore', '.agents/notes/local/\n')
   const path = note(root, metadata({ status: 'proposed' }))
   write(root, 'README.md', `[Proposal](${path}#proposal)\n`)
   commit(root)
-  const input = '.agent-notes/local/input.json'
+  const input = '.agents/notes/local/input.json'
   write(root, input, JSON.stringify({ expected_hash: run(['show', ids[0], '--root', root]).data.hash, reason: 'This proposal does not preserve the transaction boundary.' }))
   return { root, path, input }
 }
@@ -39,11 +39,11 @@ describe('transaction guarantees', () => {
         if (kind === 'new-incoming')
           write(root, 'new.md', `[New reference](${path})\n`)
         if (kind === 'runtime')
-          write(root, '.agent-notes/runtime/cli.mjs', '// new runtime\n')
+          write(root, '.agents/notes/runtime/cli.mjs', '// new runtime\n')
         if (kind === 'input')
           write(root, input, '{}')
         if (kind === 'config')
-          write(root, '.agent-notes/config.json', '{"format":"agent-notes-config/1","notes_dir":"notes","language":"en"}')
+          write(root, '.agents/notes/config.json', '{"format":"agent-notes-config/1","notes_dir":"notes","language":"en"}')
       },
     })
     expect(result.diagnostics.map(item => item.code)).toContain('CONCURRENT_CHANGE')
@@ -51,7 +51,7 @@ describe('transaction guarantees', () => {
     expect(existsSync(join(root, path))).toBe(true)
     if (kind !== 'note')
       expect(readFileSync(join(root, path))).toEqual(before)
-    expect(existsSync(join(root, '.agent-notes/local/write-lock'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock'))).toBe(false)
   })
 
   it('rolls back a multi-file move when a write step fails', () => {
@@ -68,7 +68,7 @@ describe('transaction guarantees', () => {
     expect(readFileSync(join(root, path))).toEqual(before)
     expect(readFileSync(join(root, 'README.md'))).toEqual(readme)
     expect(existsSync(join(root, path.replace('/proposed/', '/rejected/')))).toBe(false)
-    expect(existsSync(join(root, '.agent-notes/local/write-lock'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock'))).toBe(false)
     expect(run(['check', '--root', root]).result).toBe('ok')
   })
 
@@ -78,12 +78,12 @@ describe('transaction guarantees', () => {
     const result = executeWrite(root, { command: 'transition', id: ids[0], to: 'rejected', input, dryRun: false, recover: false }, undefined, {
       afterStep(index) {
         if (index === 0)
-          write(root, '.agent-notes/runtime/cli.mjs', '// concurrent new runtime\n')
+          write(root, '.agents/notes/runtime/cli.mjs', '// concurrent new runtime\n')
       },
     })
     expect(result.diagnostics.map(item => item.code)).toContain('CONCURRENT_CHANGE')
     expect(readFileSync(join(root, path))).toEqual(original)
-    expect(readFileSync(join(root, '.agent-notes/runtime/cli.mjs'), 'utf8')).toBe('// concurrent new runtime\n')
+    expect(readFileSync(join(root, '.agents/notes/runtime/cli.mjs'), 'utf8')).toBe('// concurrent new runtime\n')
     expect(existsSync(join(root, path.replace('/proposed/', '/rejected/')))).toBe(false)
   })
 
@@ -106,12 +106,12 @@ describe('transaction guarantees', () => {
     const before = readFileSync(join(root, path))
     const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./transaction-child.ts', import.meta.url)), root, 'kill', ids[0]], { encoding: 'utf8' })
     expect(child.signal, child.stderr).toBe('SIGKILL')
-    expect(existsSync(join(root, '.agent-notes/local/write-lock/journal.json'))).toBe(true)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock/journal.json'))).toBe(true)
     expect(run(['check', '--root', root]).diagnostics.map(item => item.code)).toContain('RECOVERY_REQUIRED')
     expect(recoverTransaction(root)).toBe(true)
     expect(readFileSync(join(root, path))).toEqual(before)
     expect(run(['check', '--root', root]).result).toBe('ok')
-    const result = run(['transition', ids[0], '--to', 'rejected', '--root', root, '--input', '.agent-notes/local/input.json', '--recover'])
+    const result = run(['transition', ids[0], '--to', 'rejected', '--root', root, '--input', '.agents/notes/local/input.json', '--recover'])
     expect(result.result, JSON.stringify(result)).toBe('ok')
   })
 
@@ -124,7 +124,7 @@ describe('transaction guarantees', () => {
     expect(readFileSync(join(root, destination), 'utf8')).toBe('Independent editor content\n')
     expect(() => recoverTransaction(root)).toThrow(/File changed outside/)
     expect(readFileSync(join(root, destination), 'utf8')).toBe('Independent editor content\n')
-    const journal = JSON.parse(readFileSync(join(root, '.agent-notes/local/write-lock/journal.json'), 'utf8'))
+    const journal = JSON.parse(readFileSync(join(root, '.agents/notes/local/write-lock/journal.json'), 'utf8'))
     expect(journal.entries[0].path).toBe(destination)
     // The human has preserved/reconciled their edit; restoring either journal endpoint permits recovery.
     rmSync(join(root, destination))

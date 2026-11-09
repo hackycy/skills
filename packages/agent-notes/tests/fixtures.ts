@@ -24,7 +24,7 @@ export function project(): string {
   git(root, 'config', 'user.email', 'notes@example.invalid')
   git(root, 'config', 'commit.gpgsign', 'false')
   git(root, 'config', 'core.autocrlf', 'false')
-  write(root, '.agent-notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'zh-CN' }))
+  write(root, '.agents/notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'zh-CN' }))
   return root
 }
 

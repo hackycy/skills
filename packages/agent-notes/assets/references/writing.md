@@ -4,7 +4,7 @@
 
 所有命令支持 `--root`、`--json`、`--input <json-file|->` 和 `--dry-run`。输入文件与草稿路径相对项目根解析；`--input -` 从标准输入读取一个 JSON 对象。字段固定，未知字段和重复键拒绝。下面的命令在仓库根运行；将项目路径和 ID 替换为真实值。
 
-在已初始化的项目中，草稿和恢复 journal 放在已忽略的 `.agent-notes/local/`。在项目根执行 `node .agent-notes/runtime/cli.mjs`；从其他目录调用时可显式传 `--root`。初始化参数见 [CLI 契约](cli.md#初始化与配置)。写命令不会改 Git index、提交、推送、安装 hook 或配置 CI。
+在已初始化的项目中，草稿和恢复 journal 放在已忽略的 `.agents/notes/local/`。在项目根执行 `node .agents/notes/runtime/cli.mjs`；从其他目录调用时可显式传 `--root`。初始化参数见 [CLI 契约](cli.md#初始化与配置)。写命令不会改 Git index、提交、推送、安装 hook 或配置 CI。
 
 ## 新建
 
@@ -23,14 +23,14 @@ read_when: 修改订单事件的发布责任时。
 {
   "class": "architecture",
   "status": "proposed",
-  "document": ".agent-notes/local/event-ownership.md",
+  "document": ".agents/notes/local/event-ownership.md",
   "rationale": "代码不能解释为何放弃基础设施统一发布；该边界会影响后续入口。"
 }
 ```
 
 ```sh
-node .agent-notes/runtime/cli.mjs create --root /path/to/project --input .agent-notes/local/create.json --dry-run --json
-node .agent-notes/runtime/cli.mjs create --root /path/to/project --input .agent-notes/local/create.json --json
+node .agents/notes/runtime/cli.mjs create --root /path/to/project --input .agents/notes/local/create.json --dry-run --json
+node .agents/notes/runtime/cli.mjs create --root /path/to/project --input .agents/notes/local/create.json --json
 ```
 
 status 允许 `proposed` 或 `implemented`。CLI 从首次创建的 UTC 日期、class 和标题生成稳定路径，生成 UUID v4 身份；同路径冲突失败。`--dry-run` 不写入任何文件，以固定临时 ID 检验关系并展示 before/after，结果 `data.id` 为 null；实际执行才生成身份。
@@ -54,12 +54,12 @@ rejected 的 metadata 是局部更新，未传字段保持原值。传入 `"rela
 {
   "expected_hash": "从 show 返回的完整 SHA-256",
   "reason": "交付了所有订单入口并补充实际验证。",
-  "document": ".agent-notes/local/delivered.md"
+  "document": ".agents/notes/local/delivered.md"
 }
 ```
 
 ```sh
-node .agent-notes/runtime/cli.mjs transition <id> --to implemented --root /path/to/project --input .agent-notes/local/deliver.json --json
+node .agents/notes/runtime/cli.mjs transition <id> --to implemented --root /path/to/project --input .agents/notes/local/deliver.json --json
 ```
 
 编辑/交付草稿中的相对正文链接按该 Note 当前所在目录解释，转换时重算移动后的路径。新 supersedes 会在活跃目标补 related 反向关系；冻结目标不修改，反向查找来自索引。
@@ -76,7 +76,7 @@ node .agent-notes/runtime/cli.mjs transition <id> --to implemented --root /path/
 ```
 
 ```sh
-node .agent-notes/runtime/cli.mjs archive <id> --root /path/to/project --input .agent-notes/local/archive.json --json
+node .agents/notes/runtime/cli.mjs archive <id> --root /path/to/project --input .agents/notes/local/archive.json --json
 ```
 
 归档和清理要求可解析 Git 基线，默认 HEAD，可用 `--base <commit>` 显式选择。归档只接受 implemented，必须先处理所有现行 requires 和活跃校验错误。
@@ -94,7 +94,7 @@ rejected 需要 reason 说明为何已无防错价值，以及 references。impl
   "owner": {
     "id": "承接者的真实 Note ID",
     "expected_hash": "承接者的 SHA-256",
-    "document": ".agent-notes/local/owner.md"
+    "document": ".agents/notes/local/owner.md"
   },
   "coverage": [
     { "source": "#决策", "destination": "#决策" },
@@ -109,8 +109,8 @@ rejected 需要 reason 说明为何已无防错价值，以及 references。impl
 ```
 
 ```sh
-node .agent-notes/runtime/cli.mjs prune <id> --root /path/to/project --input .agent-notes/local/prune.json --dry-run --json
-node .agent-notes/runtime/cli.mjs prune <id> --root /path/to/project --input .agent-notes/local/prune.json --json
+node .agents/notes/runtime/cli.mjs prune <id> --root /path/to/project --input .agents/notes/local/prune.json --dry-run --json
+node .agents/notes/runtime/cli.mjs prune <id> --root /path/to/project --input .agents/notes/local/prune.json --json
 ```
 
 coverage 的 source/destination 使用实际存在的章节锚点，分别相对旧 Note 和 owner。映射应涵盖全部独有理由、替代方案、后果、验证与覆盖缺口；定位存在由脚本检查，语义覆盖的充分性由评审确认。
@@ -121,12 +121,12 @@ references 必须逐项处理所有活跃入链来源，含结构关系和正文
 
 ## 事务和恢复
 
-写命令先生成完整内存变更，校验终态及历史保护，再取得 `.agent-notes/local/write-lock`。取得锁后与落盘完成前都会核对 Git 基线、配置、已安装 runtime、输入、Notes 和引用来源；变化则中止或回滚。每个文件原子替换，多文件整体依靠 journal 与恢复协议，不声称多文件同时原子可见。
+写命令先生成完整内存变更，校验终态及历史保护，再取得 `.agents/notes/local/write-lock`。取得锁后与落盘完成前都会核对 Git 基线、配置、已安装 runtime、输入、Notes 和引用来源；变化则中止或回滚。每个文件原子替换，多文件整体依靠 journal 与恢复协议，不声称多文件同时原子可见。
 
 普通写入失败会恢复原文件。进程被终止后，工作树查询和新写入报告 `RECOVERY_REQUIRED`，避免把半完成状态当成正常文档；index/commit 检查仍可独立运行。将原写命令附加 `--recover`，会先恢复中断事务，再按当前输入重新预检执行：
 
 ```sh
-node .agent-notes/runtime/cli.mjs archive <id> --root /path/to/project --input .agent-notes/local/archive.json --recover --json
+node .agents/notes/runtime/cli.mjs archive <id> --root /path/to/project --input .agents/notes/local/archive.json --recover --json
 ```
 
 `--recover` 不能与 `--dry-run` 同用。活跃或其他主机的锁返回 WRITE_BUSY。恢复时只有文件仍匹配 journal 的 before/after 之一才允许恢复；外部编辑返回 RECOVERY_CONFLICT，保留原文和 journal，并指出路径。先保存并人工协调该编辑，使文件回到 journal 的某个端点后，再重试恢复。不要直接删除 journal 或 reset 仓库。

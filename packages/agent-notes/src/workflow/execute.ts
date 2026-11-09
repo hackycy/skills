@@ -59,13 +59,13 @@ export function executeWrite(root: string, options: WriteOptions, stdin?: string
         }),
       }
       if (!result.diagnostics.length && !options.dryRun && plan.changes.size) {
-        const inventory = source.paths().filter(path => !isRuntime(path) && (/\.md$/i.test(path) || path.startsWith(`${index.config.notes_dir}/`)))
+        const inventory = source.paths().filter(path => !isRuntime(path, index.config.notes_dir) && (/\.md$/i.test(path) || path.startsWith(`${index.config.notes_dir}/`)))
         commitTransaction(source, plan.changes, (applied) => {
           if (repository.revision(options.base ?? 'HEAD', Boolean(base)) !== base)
             throw new NotesError('CONCURRENT_CHANGE', 'The selected Git baseline changed during preflight; rerun.')
           const fresh = repository.snapshot('worktree')
           fresh.includeDirectory(index.config.notes_dir)
-          const freshInventory = fresh.paths().filter(path => !isRuntime(path) && (/\.md$/i.test(path) || path.startsWith(`${index.config.notes_dir}/`)))
+          const freshInventory = fresh.paths().filter(path => !isRuntime(path, index.config.notes_dir) && (/\.md$/i.test(path) || path.startsWith(`${index.config.notes_dir}/`)))
           const expectedInventory = new Set(inventory)
           if (applied) {
             for (const [path, bytes] of plan.changes) {

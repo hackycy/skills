@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { NotesError } from '../notes/model'
 
@@ -9,7 +9,7 @@ export interface DistributionSource {
 
 export function distributionSource(): DistributionSource {
   const directory = dirname(fileURLToPath(import.meta.url))
-  if (directory.replaceAll('\\', '/').endsWith('/.agent-notes/runtime'))
+  if (basename(directory) === 'runtime')
     return { kind: 'runtime', root: directory }
   return { kind: 'package', root: directory.replaceAll('\\', '/').endsWith('/dist') ? dirname(directory) : join(directory, '../..') }
 }

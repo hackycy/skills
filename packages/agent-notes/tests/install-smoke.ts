@@ -42,14 +42,14 @@ try {
     const incomplete = spawnSync(bin, ['init', '--root', incompleteRoot, '--target', 'agents', '--json'], { encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
     assert.equal(incomplete.status, 1, incomplete.stdout || incomplete.stderr)
     assert.equal((JSON.parse(incomplete.stdout) as Result).diagnostics[0].code, 'INVALID_BUNDLE')
-    assert.equal(existsSync(join(incompleteRoot, '.agent-notes/install.json')), false)
-    assert.equal(existsSync(join(incompleteRoot, '.agent-notes/runtime')), false)
+    assert.equal(existsSync(join(incompleteRoot, '.agents/notes/install.json')), false)
+    assert.equal(existsSync(join(incompleteRoot, '.agents/notes/runtime')), false)
   }
   finally { writeFileSync(writing, original) }
-  for (const [target, language] of [['agents', 'zh-CN'], ['claude', 'en']] as const) {
+  for (const [target, language, notesDir] of [['agents', 'zh-CN', '.agents/notes'], ['claude', 'en', 'docs/decisions'], ['agents', 'en', 'docs/architecture/team/decisions/notes']] as const) {
     const root = project()
     roots.push(root)
-    rmSync(join(root, '.agent-notes'), { recursive: true })
+    rmSync(join(root, '.agents/notes'), { recursive: true })
     if (target === 'claude')
       rmSync(join(root, '.git'), { recursive: true }) // Plain project initialization also works.
     write(root, 'AGENTS.md', '# Project rules\nUse the existing architecture.\n')
@@ -63,28 +63,28 @@ try {
       assert.equal(parsed.result, 'ok', result.stdout)
       return parsed
     }
-    invoke(['init', '--root', root, '--target', target, '--notes-dir', 'docs/decisions', '--language', language])
-    assert.equal(invoke(['status']).data.notes_dir, 'docs/decisions')
+    invoke(['init', '--root', root, '--target', target, '--notes-dir', notesDir, '--language', language])
+    assert.equal(invoke(['status']).data.notes_dir, notesDir)
     for (const path of ['README.md', 'docs', 'contracts', 'writing.md'])
-      assert.equal(existsSync(join(root, '.agent-notes/runtime', path)), false, `Unexpected runtime content: ${path}`)
-    assert.ok(existsSync(join(root, '.agent-notes/runtime/assets/references/writing.md')))
-    assert.ok(existsSync(join(root, '.agent-notes/runtime/assets/formats/document.md')))
+      assert.equal(existsSync(join(root, `${notesDir}/runtime`, path)), false, `Unexpected runtime content: ${path}`)
+    assert.ok(existsSync(join(root, `${notesDir}/runtime/assets/references/writing.md`)))
+    assert.ok(existsSync(join(root, `${notesDir}/runtime/assets/formats/document.md`)))
     const entry = `.${target}/skills/agent-note/SKILL.md`
     const skill = readFileSync(join(root, entry), 'utf8')
     const frontmatter = /^---\n([\s\S]*?)\n---/.exec(skill)![1]
     assert.equal((jsonYaml(frontmatter, entry) as { name: string }).name, 'agent-note')
     const source = new Repository(root).snapshot('worktree')
-    source.includeDirectory('.agent-notes/runtime')
+    source.includeDirectory(`${notesDir}/runtime`)
     source.includeDirectory(`.${target}/skills`)
     assert.deepEqual(checkLinks(source, source.paths().filter(path => path.endsWith('.md'))), [])
-    const draft = readFileSync(join(root, `.agent-notes/runtime/assets/templates/implemented.${language}.md`), 'utf8')
+    const draft = readFileSync(join(root, `${notesDir}/runtime/assets/templates/implemented.${language}.md`), 'utf8')
       .replace('paths: [src/affected-area/**]', 'paths: [src/orders/**]')
       .replaceAll('Replace this prompt with concrete reasoning or evidence for this section.', 'Only the order aggregate publishes events; duplicate entry-point delivery tests passed. The infrastructure alternative would obscure the transaction boundary.')
       .replaceAll('将这段提示替换为本节的具体理由或证据。', '订单聚合独占事件发布；两个入口的重复投递回归测试通过。基础设施统一代发会隐藏事务边界，因此不采用。')
-    write(root, '.agent-notes/local/decision.md', draft)
-    write(root, '.agent-notes/local/input.json', JSON.stringify({ class: 'architecture', status: 'implemented', document: '.agent-notes/local/decision.md', rationale: 'Code does not explain why infrastructure publication was rejected; future entry points need this boundary.' }))
-    const created = invoke(['create', '--input', '.agent-notes/local/input.json'])
-    assert.ok(String(created.data.path).startsWith('docs/decisions/implemented/architecture/'))
+    write(root, `${notesDir}/local/decision.md`, draft)
+    write(root, `${notesDir}/local/input.json`, JSON.stringify({ class: 'architecture', status: 'implemented', document: `${notesDir}/local/decision.md`, rationale: 'Code does not explain why infrastructure publication was rejected; future entry points need this boundary.' }))
+    const created = invoke(['create', '--input', `${notesDir}/local/input.json`])
+    assert.ok(String(created.data.path).startsWith(`${notesDir}/implemented/architecture/`))
     const context = invoke(['context', '--paths', 'src/orders/order.ts'])
     const pointers = context.data.notes as Record<string, unknown>[]
     assert.equal(pointers.length, 1)
@@ -92,12 +92,12 @@ try {
     assert.equal('text' in pointers[0], false)
     invoke(['check'])
     // Once installed, ordinary use does not depend on the npm package or source checkout.
-    const local = spawnSync(process.execPath, [join(root, '.agent-notes/runtime/cli.mjs'), 'show', String(created.data.id), '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+    const local = spawnSync(process.execPath, [join(root, `${notesDir}/runtime/cli.mjs`), 'show', String(created.data.id), '--json'], { cwd: sandbox, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
     assert.equal(local.status, 0, local.stdout || local.stderr)
     assert.equal(JSON.parse(local.stdout).data.id, created.data.id)
     // The retained source skill can repair a host projection without npm.
     write(root, entry, 'Local edit of the installed skill\n')
-    const installed = join(root, '.agent-notes/runtime/cli.mjs')
+    const installed = join(root, `${notesDir}/runtime/cli.mjs`)
     const runtime = (args: string[]): SpawnSyncReturns<string> => spawnSync(process.execPath, [installed, ...args, '--root', root, '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
     const files = (): Record<string, string> => Object.fromEntries(readdirSync(root, { recursive: true, withFileTypes: true })
       .filter(entry => entry.isFile() && !entry.parentPath.startsWith(join(root, '.git')))
@@ -120,7 +120,7 @@ try {
     assert.ok(help.includes('repair') && help.includes('status'))
     assert.ok(!help.includes('init') && !help.includes('upgrade'))
     // A blocked management command must not inspect or recover this journal.
-    write(root, '.agent-notes/local/write-lock/journal.json', 'Interrupted transaction placeholder\n')
+    write(root, `${notesDir}/local/write-lock/journal.json`, 'Interrupted transaction placeholder\n')
     for (const command of ['init', 'upgrade']) {
       for (const flags of [[], ['--help'], ['--recover']]) {
         const before = files()
@@ -130,13 +130,13 @@ try {
         assert.deepEqual(files(), before)
       }
     }
-    rmSync(join(root, '.agent-notes/local/write-lock'), { recursive: true })
+    rmSync(join(root, `${notesDir}/local/write-lock`), { recursive: true })
 
     // Every source file is required, including templates with no incoming links.
-    const template = '.agent-notes/runtime/assets/templates/proposed.en.md'
-    const sourceSkill = '.agent-notes/runtime/assets/skills/agent-note/SKILL.md'
-    const unknown = '.agent-notes/runtime/assets/unknown.txt'
-    const version = JSON.parse(readFileSync(join(root, '.agent-notes/install.json'), 'utf8')).version
+    const template = `${notesDir}/runtime/assets/templates/proposed.en.md`
+    const sourceSkill = `${notesDir}/runtime/assets/skills/agent-note/SKILL.md`
+    const unknown = `${notesDir}/runtime/assets/unknown.txt`
+    const version = JSON.parse(readFileSync(join(root, `${notesDir}/install.json`), 'utf8')).version
     for (const damage of ['missing', 'modified', 'unknown']) {
       if (damage === 'missing')
         rmSync(join(root, template))

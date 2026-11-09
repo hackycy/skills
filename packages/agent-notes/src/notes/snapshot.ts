@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import process from 'node:process'
+import { hasProjectRoute, layoutFromDisk, notesLayout, projectFromRuntime } from '../distribution/layout'
 import { NotesError } from './model'
 
 interface Entry { mode: string, oid?: string }
@@ -37,30 +38,42 @@ function git(root: string, args: string[], encoding?: 'utf8'): string | Buffer {
 export function findRoot(explicit: string | undefined, cwd: string): string {
   if (explicit)
     return realpathSync(resolve(cwd, explicit))
+  const runtime = process.argv[1] ? projectFromRuntime(process.argv[1]) : undefined
+  if (runtime) {
+    layoutFromDisk(runtime.root)
+    return realpathSync(runtime.root)
+  }
+  let gitRoot: string | undefined
+  try {
+    gitRoot = realpathSync(git(cwd, ['rev-parse', '--show-toplevel'], 'utf8').trim())
+  }
+  catch {}
   let directory = realpathSync(cwd)
+  const initial = directory
   while (true) {
-    try {
-      const files = ['.agent-notes/config.json', '.agent-notes/install.json', '.agent-notes/local/write-lock']
-      if (files.some((path) => {
-        try {
-          lstatSync(join(directory, path))
-          return true
-        }
-        catch (error) {
-          if (!missing(error))
-            throw error
-          return false
-        }
-      })) {
-        return directory
+    const defaults = notesLayout()
+    const marker = [defaults.configPath, defaults.installPath, defaults.lockPath].some((path) => {
+      try {
+        lstatSync(join(directory, path))
+        return true
+      }
+      catch (error) {
+        if (!missing(error))
+          throw error
+        return false
+      }
+    })
+    if (directory === initial || directory === gitRoot || marker || hasProjectRoute(directory)) {
+      const layout = layoutFromDisk(directory)
+      if (layout) {
+        const project = projectFromRuntime(join(directory, layout.runtimeCli))
+        const root = project?.root ?? directory
+        layoutFromDisk(root)
+        return realpathSync(root)
       }
     }
-    catch (error) {
-      if (!missing(error))
-        throw error
-    }
     const parent = dirname(directory)
-    if (parent === directory)
+    if (directory === gitRoot || parent === directory)
       throw new NotesError('ROOT_NOT_FOUND', 'No installation found. Run npx --yes @hackycy/agent-notes@latest init, or pass --root <project>.', undefined, 2)
     directory = parent
   }
@@ -204,13 +217,14 @@ export class Snapshot {
     const absolute = path ? this.localPath(path) : this.repository.root
     if (!absolute)
       return
+    const layout = layoutFromDisk(this.repository.root)
     const walk = (directory: string): void => {
       for (const child of readdirSync(directory, { withFileTypes: true })) {
         if (child.name === '.git' || child.name === 'node_modules')
           continue
         const full = join(directory, child.name)
         const local = relative(this.repository.root, full).split('\u005C').join('/')
-        if (local === '.agent-notes/runtime' || local === '.agent-notes/local')
+        if (local === layout?.runtimeRoot || local === layout?.localRoot)
           continue
         if (child.isDirectory())
           walk(full)

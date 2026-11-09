@@ -27,7 +27,7 @@ function invoke(args: string[], expectedExit = 0, input?: unknown, executable = 
 function canonicalDelegation(): void {
   for (const [args, input] of [
     [['context', '--paths=src/orders/new.ts', 'src/other.ts', '--topic=001', '--topic=events'], undefined],
-    [['create', '--input=-', '--dry-run'], { class: 'architecture', status: 'proposed', document: '.agent-notes/local/draft.md', rationale: 'Verify stdin reaches the locked runtime.' }],
+    [['create', '--input=-', '--dry-run'], { class: 'architecture', status: 'proposed', document: '.agents/notes/local/draft.md', rationale: 'Verify stdin reaches the locked runtime.' }],
   ] as const) {
     const result = spawnSync(node, [cli, `--root=${root}`, '--json', ...args], {
       cwd: root,
@@ -50,7 +50,7 @@ function currentHash(id: string): string {
 }
 
 function createDraft(status: string, title: string, relations?: unknown): string {
-  const path = '.agent-notes/local/draft.md'
+  const path = '.agents/notes/local/draft.md'
   write(root, path, `---\n${stringify({ scope: { topics: ['events'] }, read_when: 'When changing ownership.', ...(relations ? { relations } : {}) })}---\n${body(status).replace('# Event ownership', `# ${title}`)}`)
   return path
 }
@@ -61,12 +61,12 @@ try {
   assert.equal(invoke(['context', '--root.path=x'], 2).result, 'invalid-input')
   const previewInstall = invoke(['init', '--target', 'agents', '--target', 'claude', '--dry-run'])
   assert.ok(Array.isArray(previewInstall.data.changes))
-  assert.equal(existsSync(join(root, '.agent-notes/install.json')), false)
+  assert.equal(existsSync(join(root, '.agents/notes/install.json')), false)
   invoke(['init', '--target', 'agents', '--target', 'claude'])
   assert.equal(invoke(['status']).data.integrity, 'intact')
   assert.deepEqual(invoke(['init', '--target', 'agents', '--target', 'claude']).data.changes, [])
   assert.deepEqual(invoke(['init']).data.changes, [])
-  assert.equal(existsSync(join(root, '.agents/notes')), false)
+  assert.equal(existsSync(join(root, '.agents/notes/implemented')), false)
   const path = note(root)
   const base = commit(root)
   assert.equal(invoke(['context', '--paths', 'src/orders/new.ts']).result, 'ok')
@@ -90,10 +90,10 @@ try {
   const id = String(created.data.id)
   const proposed = String(created.data.path)
   write(root, 'README.md', `[Second note](${proposed}#problem)\n`)
-  write(root, '.agent-notes/local/edit.md', document(metadata({ id, status: 'proposed' }), body('proposed').replace('# Event ownership', '# Secondary ownership')))
-  operation('update', id, { expected_hash: currentHash(id), reason: 'Clarify the scope.', document: '.agent-notes/local/edit.md' })
-  write(root, '.agent-notes/local/edit.md', document(metadata({ id }), body().replace('# Event ownership', '# Secondary ownership')))
-  const delivered = operation('transition', id, { expected_hash: currentHash(id), reason: 'Both callers are delivered.', document: '.agent-notes/local/edit.md' }, ['--to', 'implemented'])
+  write(root, '.agents/notes/local/edit.md', document(metadata({ id, status: 'proposed' }), body('proposed').replace('# Event ownership', '# Secondary ownership')))
+  operation('update', id, { expected_hash: currentHash(id), reason: 'Clarify the scope.', document: '.agents/notes/local/edit.md' })
+  write(root, '.agents/notes/local/edit.md', document(metadata({ id }), body().replace('# Event ownership', '# Secondary ownership')))
+  const delivered = operation('transition', id, { expected_hash: currentHash(id), reason: 'Both callers are delivered.', document: '.agents/notes/local/edit.md' }, ['--to', 'implemented'])
   assert.ok(readFileSync(join(root, 'README.md'), 'utf8').includes(String(delivered.data.path)))
   const ownerInput = { class: 'architecture', status: 'implemented', document: createDraft('implemented', 'Consolidated ownership', { supersedes: [{ id, extent: 'full', reason: 'All unique guidance has been absorbed.' }] }), rationale: 'Consolidate the same responsibility with retained rationale.' }
   const owner = operation('create', undefined, ownerInput)
@@ -118,15 +118,15 @@ try {
   try {
     git(root, '-c', 'core.autocrlf=true', 'clone', '--no-local', root, checkout)
     for (const command of ['status', 'check']) {
-      const result = spawnSync(node, [join(checkout, '.agent-notes/runtime/cli.mjs'), command, '--root', checkout, '--json'], { encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+      const result = spawnSync(node, [join(checkout, '.agents/notes/runtime/cli.mjs'), command, '--root', checkout, '--json'], { encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
       assert.equal(result.status, 0, result.stdout || result.stderr)
       assert.equal(JSON.parse(result.stdout).result, 'ok')
     }
-    for (const path of [frozen, '.agents/notes/archived/manifest.json', '.agent-notes/config.json'])
+    for (const path of [frozen, '.agents/notes/archived/manifest.json', '.agents/notes/config.json'])
       assert.deepEqual(readFileSync(join(checkout, path)), readFileSync(join(root, path)), path)
   }
   finally { rmSync(checkout, { recursive: true, force: true }) }
-  const preserved = new Map<string, string>([['.agent-notes/config.json', readFileSync(join(root, '.agent-notes/config.json'), 'utf8')]])
+  const preserved = new Map<string, string>([['.agents/notes/config.json', readFileSync(join(root, '.agents/notes/config.json'), 'utf8')]])
   const collect = (directory: string): void => {
     for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
       const path = `${directory}/${entry.name}`
@@ -135,13 +135,16 @@ try {
       else preserved.set(path, readFileSync(join(root, path), 'utf8'))
     }
   }
-  collect('.agents/notes')
+  for (const lifecycle of ['proposed', 'implemented', 'rejected', 'archived']) {
+    if (existsSync(join(root, '.agents/notes', lifecycle)))
+      collect(`.agents/notes/${lifecycle}`)
+  }
   write(root, '.agents/skills/agent-note/SKILL.md', 'Local customization to preserve in backup\n')
-  write(root, '.agent-notes/runtime/unmanaged.txt', 'Unmanaged neighboring file\n')
+  write(root, '.agents/notes/runtime/unmanaged.txt', 'Unmanaged neighboring file\n')
   assert.ok(invoke(['upgrade'], 1).diagnostics.some(item => item.code === 'REPAIR_REQUIRED'))
   const repairPreview = invoke(['repair', '--dry-run'])
   assert.ok((repairPreview.data.modified_assets as string[]).includes('.agents/skills/agent-note/SKILL.md'))
-  assert.equal(existsSync(join(root, '.agent-notes/local/backups')), false)
+  assert.equal(existsSync(join(root, '.agents/notes/local/backups')), false)
   const repaired = invoke(['repair'])
   assert.equal(readFileSync(join(root, String(repaired.data.backup), 'original/.agents/skills/agent-note/SKILL.md'), 'utf8'), 'Local customization to preserve in backup\n')
   assert.deepEqual(invoke(['repair']).data.changes, [])
@@ -158,10 +161,10 @@ try {
     invoke(['upgrade'])
     assert.equal(invoke(['status']).data.runtime_version, status.data.manager_version)
   }
-  assert.equal(readFileSync(join(root, '.agent-notes/runtime/unmanaged.txt'), 'utf8'), 'Unmanaged neighboring file\n')
+  assert.equal(readFileSync(join(root, '.agents/notes/runtime/unmanaged.txt'), 'utf8'), 'Unmanaged neighboring file\n')
   for (const [path, text] of preserved)
     assert.equal(readFileSync(join(root, path), 'utf8'), text, path)
-  const installed = join(root, '.agent-notes/runtime/cli.mjs')
+  const installed = join(root, '.agents/notes/runtime/cli.mjs')
   assert.deepEqual(invoke(['repair', '--dry-run'], 0, undefined, installed).data.changes, [])
   assert.equal(invoke(['upgrade'], 2, undefined, installed).diagnostics[0].code, 'PACKAGE_COMMAND_REQUIRED')
   assert.equal(invoke(['check'], 0, undefined, installed).result, 'ok')

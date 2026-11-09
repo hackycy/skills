@@ -11,7 +11,7 @@ const roots: string[] = []
 function setup(): string {
   const root = project()
   roots.push(root)
-  write(root, '.gitignore', '.agent-notes/local/\n')
+  write(root, '.gitignore', '.agents/notes/local/\n')
   return root
 }
 afterEach(() => {
@@ -25,7 +25,7 @@ function action(root: string, command: string, input: unknown, args: string[] = 
   return run([command, ...args, '--root', root, '--input', '-'], root, JSON.stringify(input))
 }
 function newDraft(root: string, status = 'proposed', title = 'Event ownership', extra: Record<string, unknown> = {}): string {
-  const path = '.agent-notes/local/draft.md'
+  const path = '.agents/notes/local/draft.md'
   write(root, path, `---\n${stringify({ scope: { topics: ['events'] }, read_when: 'Changing event ownership.', ...extra })}---\n${body(status).replace('# Event ownership', `# ${title}`)}`)
   return path
 }
@@ -41,13 +41,13 @@ describe('create and update', () => {
     const root = setup()
     const draft = newDraft(root)
     const params = { class: 'architecture', status: 'proposed', document: draft, rationale: 'Code cannot explain why infrastructure publication was discarded.' }
-    const before = readdirSync(join(root, '.agent-notes/local'))
+    const before = readdirSync(join(root, '.agents/notes/local'))
     const preview = action(root, 'create', params, ['--dry-run'])
     expect(preview.result, JSON.stringify(preview)).toBe('ok')
     expect(preview.data.id).toBeNull()
     expect(preview.data.changes).toMatchObject([{ action: 'create', before: null, after: expect.stringContaining('## Proposal') }])
-    expect(existsSync(join(root, '.agents/notes'))).toBe(false)
-    expect(readdirSync(join(root, '.agent-notes/local'))).toEqual(before)
+    expect(existsSync(join(root, '.agents/notes/runtime/cli.mjs'))).toBe(false)
+    expect(readdirSync(join(root, '.agents/notes/local'))).toEqual(before)
     const result = action(root, 'create', params)
     expect(result.result, JSON.stringify(result)).toBe('ok')
     expect(result.data.id).toMatch(/^an-[a-f\d-]{36}$/)
@@ -91,26 +91,26 @@ describe('create and update', () => {
     const path = note(root)
     commit(root)
     const before = hash(root)
-    write(root, '.agent-notes/local/edit.md', document(metadata(), body().replace('both order entry points', 'all three order entry points')))
-    const result = action(root, 'update', input(root, { document: '.agent-notes/local/edit.md' }), [ids[0]])
+    write(root, '.agents/notes/local/edit.md', document(metadata(), body().replace('both order entry points', 'all three order entry points')))
+    const result = action(root, 'update', input(root, { document: '.agents/notes/local/edit.md' }), [ids[0]])
     expect(result.result, JSON.stringify(result)).toBe('ok')
     expect(result.data.path).toBe(path)
     expect(hash(root)).not.toBe(before)
-    expect(action(root, 'update', { expected_hash: before, reason: 'Stale edit.', document: '.agent-notes/local/edit.md' }, [ids[0]]).diagnostics.map(item => item.code)).toContain('CONCURRENT_CHANGE')
-    write(root, '.agent-notes/local/edit.md', document(metadata({ id: ids[1] })))
-    expect(exitCode(action(root, 'update', input(root, { document: '.agent-notes/local/edit.md' }), [ids[0]]))).toBe(2)
+    expect(action(root, 'update', { expected_hash: before, reason: 'Stale edit.', document: '.agents/notes/local/edit.md' }, [ids[0]]).diagnostics.map(item => item.code)).toContain('CONCURRENT_CHANGE')
+    write(root, '.agents/notes/local/edit.md', document(metadata({ id: ids[1] })))
+    expect(exitCode(action(root, 'update', input(root, { document: '.agents/notes/local/edit.md' }), [ids[0]]))).toBe(2)
   })
 
   it('checks anchors before committing an update to a referenced section', () => {
     const root = setup()
     const path = note(root)
     write(root, 'README.md', `[Decision](${path}#event-ownership)\n`)
-    write(root, '.agent-notes/local/edit.md', document().replace('# Event ownership', '# New title'))
+    write(root, '.agents/notes/local/edit.md', document().replace('# Event ownership', '# New title'))
     const before = readFileSync(join(root, path))
-    const result = action(root, 'update', input(root, { document: '.agent-notes/local/edit.md' }), [ids[0]])
+    const result = action(root, 'update', input(root, { document: '.agents/notes/local/edit.md' }), [ids[0]])
     expect(result.diagnostics.map(item => item.code)).toContain('BROKEN_ANCHOR')
     expect(readFileSync(join(root, path))).toEqual(before)
-    expect(existsSync(join(root, '.agent-notes/local/write-lock'))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/local/write-lock'))).toBe(false)
   })
 })
 
@@ -122,8 +122,8 @@ describe('delivery and rejection', () => {
     const readme = `[Decision](${path}#problem)\n\n[Reference][owner]\n\n[owner]: ${path}#problem "Title"\n\n\`\`\`md\n[Example](${path})\n\`\`\`\n`
     write(root, 'README.md', readme)
     commit(root)
-    write(root, '.agent-notes/local/implemented.md', document(metadata(), body()))
-    const result = action(root, 'transition', input(root, { document: '.agent-notes/local/implemented.md' }), [ids[0], '--to', 'implemented'])
+    write(root, '.agents/notes/local/implemented.md', document(metadata(), body()))
+    const result = action(root, 'transition', input(root, { document: '.agents/notes/local/implemented.md' }), [ids[0], '--to', 'implemented'])
     expect(result.result, JSON.stringify(result)).toBe('ok')
     const destination = path.replace('/proposed/', '/implemented/')
     expect(existsSync(join(root, path))).toBe(false)
@@ -169,8 +169,8 @@ describe('delivery and rejection', () => {
   it('refuses delivery without implemented sections and avoids any file movement', () => {
     const root = setup()
     const path = note(root, metadata({ status: 'proposed' }))
-    write(root, '.agent-notes/local/edit.md', document(metadata({ status: 'proposed' })))
-    const result = action(root, 'transition', input(root, { document: '.agent-notes/local/edit.md' }), [ids[0], '--to', 'implemented'])
+    write(root, '.agents/notes/local/edit.md', document(metadata({ status: 'proposed' })))
+    const result = action(root, 'transition', input(root, { document: '.agents/notes/local/edit.md' }), [ids[0], '--to', 'implemented'])
     expect(result.diagnostics.map(item => item.code)).toContain('INVALID_BODY')
     expect(existsSync(join(root, path))).toBe(true)
     expect(existsSync(join(root, path.replace('/proposed/', '/implemented/')))).toBe(false)
@@ -195,9 +195,9 @@ describe('delivery and rejection', () => {
     const root = setup()
     const path = note(root, metadata({ status: 'proposed' }))
     write(root, 'README.md', `[Proposal](${path}#proposal)\n`)
-    write(root, '.agent-notes/local/edit.md', document())
+    write(root, '.agents/notes/local/edit.md', document())
     const before = readFileSync(join(root, 'README.md'))
-    const result = action(root, 'transition', input(root, { document: '.agent-notes/local/edit.md' }), [ids[0], '--to', 'implemented'])
+    const result = action(root, 'transition', input(root, { document: '.agents/notes/local/edit.md' }), [ids[0], '--to', 'implemented'])
     expect(result.diagnostics.map(item => item.code)).toContain('BROKEN_ANCHOR')
     expect(readFileSync(join(root, 'README.md'))).toEqual(before)
     expect(existsSync(join(root, path))).toBe(true)
@@ -321,9 +321,9 @@ describe('conditional prune', () => {
     const root = setup()
     const { owner } = absorption(root)
     const ownerMeta: Metadata = metadata({ id: ids[1], relations: { supersedes: [{ id: ids[0], extent: 'full', reason: 'All responsibility absorbed.' }] } })
-    write(root, '.agent-notes/local/owner.md', document(ownerMeta, `${body()}\n## Legacy coverage gap\nThe old retry worker remains uncovered and requires integration evidence.\n`))
+    write(root, '.agents/notes/local/owner.md', document(ownerMeta, `${body()}\n## Legacy coverage gap\nThe old retry worker remains uncovered and requires integration evidence.\n`))
     const result = action(root, 'prune', input(root, {
-      owner: { id: ids[1], expected_hash: hash(root, ids[1]), document: '.agent-notes/local/owner.md' },
+      owner: { id: ids[1], expected_hash: hash(root, ids[1]), document: '.agents/notes/local/owner.md' },
       coverage: [{ source: '#verification', destination: '#legacy-coverage-gap' }],
       references: [{ path: owner, target_id: null }],
     }), [ids[0]])
@@ -372,13 +372,13 @@ describe('write input boundaries', () => {
     const root = setup()
     const draft = newDraft(root)
     const params = { class: 'architecture', status: 'proposed', document: draft, rationale: 'Durable rationale.' }
-    write(root, '.agent-notes/local/input.json', JSON.stringify(params))
-    const result = run(['create', '--input', '.agent-notes/local/input.json'], join(root, '.agent-notes/local'))
+    write(root, '.agents/notes/local/input.json', JSON.stringify(params))
+    const result = run(['create', '--input', '.agents/notes/local/input.json'], join(root, '.agents/notes/local'))
     expect(result.result, JSON.stringify(result)).toBe('ok')
     const duplicate = run(['create', '--root', root, '--input', '-'], root, '{"class":"architecture","class":"testing"}')
     expect(exitCode(duplicate)).toBe(2)
-    symlinkSync(join(root, draft), join(root, '.agent-notes/local/link.md'))
-    expect(action(root, 'create', { ...params, document: '.agent-notes/local/link.md' }).diagnostics.map(item => item.code)).toContain('SYMLINK_NOT_ALLOWED')
+    symlinkSync(join(root, draft), join(root, '.agents/notes/local/link.md'))
+    expect(action(root, 'create', { ...params, document: '.agents/notes/local/link.md' }).diagnostics.map(item => item.code)).toContain('SYMLINK_NOT_ALLOWED')
     expect(exitCode(action(root, 'create', { ...params, document: '../outside.md' }))).toBe(2)
   })
 })

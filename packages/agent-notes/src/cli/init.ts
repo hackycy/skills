@@ -2,6 +2,7 @@ import type { Target } from '../distribution/manifest'
 import type { Options } from './arguments'
 import process from 'node:process'
 import { cancel, intro, isCancel, isCI, multiselect, select, text } from '@clack/prompts'
+import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from '../distribution/layout'
 import { installationRoot } from '../distribution/manage'
 import { readInstallation } from '../distribution/manifest'
 import { NotesError } from '../notes/model'
@@ -43,15 +44,16 @@ function initContext(input: Options, cwd: string): { input: Options, verify: () 
   if (!input.recover)
     assertNoTransaction(root)
   const view = recoveryView(new Repository(root).snapshot('worktree'))
-  const installation = readInstallation(view.source)
-  const hasConfig = Boolean(view.source.read('.agent-notes/config.json'))
+  const layout = layoutFromSnapshot(view.source) ?? notesLayout(input.notesDir ?? defaultNotesRoot)
+  const installation = readInstallation(view.source, layout)
+  const hasConfig = Boolean(view.source.read(layout.configPath))
   if (installation && !hasConfig)
-    throw new NotesError('CONFIG_CONFLICT', 'Installed configuration is missing; restore it explicitly.', '.agent-notes/config.json')
-  const config = readConfig(view.source)
+    throw new NotesError('CONFIG_CONFLICT', 'Installed configuration is missing; restore it explicitly.', layout.configPath)
+  const config = readConfig(view.source, layout)
   if (hasConfig && ((input.notesDir && input.notesDir !== config.notes_dir) || (input.language && input.language !== config.language)))
-    throw new NotesError('CONFIG_CONFLICT', 'Existing project configuration is preserved. Requested initialization options disagree with it.', '.agent-notes/config.json', 2)
+    throw new NotesError('CONFIG_CONFLICT', 'Existing project configuration is preserved. Requested initialization options disagree with it.', layout.configPath, 2)
   if (installation && input.targets.length && [...input.targets].sort().join() !== [...installation.targets].sort().join())
-    throw new NotesError('TARGET_CONFLICT', 'Changing installation targets is not supported by v1.', '.agent-notes/install.json', 2)
+    throw new NotesError('TARGET_CONFLICT', 'Changing installation targets is not supported by v1.', layout.installPath, 2)
   return {
     input: { ...input, root, targets: input.targets.length ? input.targets : installation?.targets ?? [], notesDir: input.notesDir ?? (hasConfig ? config.notes_dir : undefined), language: input.language ?? (hasConfig ? config.language : undefined) },
     verify: view.verify,

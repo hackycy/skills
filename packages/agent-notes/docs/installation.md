@@ -46,17 +46,17 @@ Claude 项目使用 `--target claude`；同时接入两种入口时传入 `--tar
 安装完成后，在项目根检查工具文件：
 
 ```sh
-node .agent-notes/runtime/cli.mjs status --json
-node .agent-notes/runtime/cli.mjs check --json
+node .agents/notes/runtime/cli.mjs status --json
+node .agents/notes/runtime/cli.mjs check --json
 ```
 
-确认 status 的完整性为 `intact`，并处理 check 返回的 diagnostics 与 review。将入口受管块、runtime、skill、配置、安装清单和生成的 Git 规则一同提交；`.agent-notes/local/` 由安装器忽略。
+确认 status 的完整性为 `intact`，并处理 check 返回的 diagnostics 与 review。将入口受管块、runtime、skill、配置、安装清单和生成的 Git 规则一同提交；`.agents/notes/local/` 由安装器忽略。
 
 ## 使用项目锁定版本
 
-日常查询和写入直接调用 `node .agent-notes/runtime/cli.mjs`。CLI npm 包负责首次接入和工具版本切换；项目 runtime 随安装文件一同提交，其他成员检出后可直接离线使用，无需先全局安装 CLI。相关代码变更前先运行 context，按返回的指针读取 Note，交付前运行 check；具体规则见[查询](../assets/references/cli.md#查询)与[检查快照](../assets/references/cli.md#检查快照)。
+日常查询和写入直接调用 `node .agents/notes/runtime/cli.mjs`。CLI npm 包负责首次接入和工具版本切换；项目 runtime 随安装文件一同提交，其他成员检出后可直接离线使用，无需先全局安装 CLI。相关代码变更前先运行 context，按返回的指针读取 Note，交付前运行 check；具体规则见[查询](../assets/references/cli.md#查询)与[检查快照](../assets/references/cli.md#检查快照)。
 
-共享参考、格式和模板位于 `.agent-notes/runtime/assets/`。该目录和宿主 skill 是工具受管资产；项目规则放在独立补充文档中，Notes 和配置分别由项目维护。
+Note 文档、runtime、配置、安装清单和 local 统一位于初始化时选择的 Notes 根目录。上面的命令使用默认 `.agents/notes`；若指定 `--notes-dir docs/decisions`，则将命令中的根目录替换为 `docs/decisions`。共享参考、格式和模板位于 `<根目录>/runtime/assets/`，该目录和宿主 skill 是工具受管资产；项目规则放在独立补充文档中，Notes 和配置分别由项目维护。
 
 ## 升级项目版本
 
@@ -83,13 +83,13 @@ pnpm dlx @hackycy/agent-notes@X.Y.Z upgrade --root /path/to/project --json
 修复指恢复 `init` 安装的工具文件。例如 `.agents/skills/agent-note/SKILL.md` 被误删或修改，而 runtime 中的原始 skill 仍完整时，可以离线重新生成：
 
 ```sh
-node .agent-notes/runtime/cli.mjs repair --dry-run
-node .agent-notes/runtime/cli.mjs repair
+node .agents/notes/runtime/cli.mjs repair --dry-run
+node .agents/notes/runtime/cli.mjs repair
 ```
 
 `repair` 保持项目版本和 bundle 不变，恢复受管文件与规则块，保留 Notes、归档 seal、项目配置及规则块外原文。已修改的受管文件在覆盖前备份，输出会列出具体位置。
 
-本地修复要求 runtime 的源文件完整。源文件也被删除、修改或混入未知文件时，命令会指出问题并提供同版本的 npm 修复命令。使用 `.agent-notes/install.json` 的 `version` 替换下列 `X.Y.Z`：
+本地修复要求 runtime 的源文件完整。源文件也被删除、修改或混入未知文件时，命令会指出问题并提供同版本的 npm 修复命令。使用 `.agents/notes/install.json` 的 `version` 替换下列 `X.Y.Z`：
 
 ```sh
 pnpm dlx @hackycy/agent-notes@X.Y.Z repair --dry-run

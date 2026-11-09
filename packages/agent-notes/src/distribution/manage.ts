@@ -3,6 +3,7 @@ import type { ProjectConfig } from '../notes/model'
 import type { Snapshot } from '../notes/snapshot'
 import type { TransactionHooks } from '../workflow/transaction'
 import type { Bundle } from './bundle'
+import type { NotesLayout } from './layout'
 import type { Asset, Installation, Target } from './manifest'
 import { Buffer } from 'node:buffer'
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -17,9 +18,10 @@ import { rewriteLinks } from '../notes/rewrite'
 import { findRoot, Repository, safePath, sha256 } from '../notes/snapshot'
 import { currentDiagnostics } from '../notes/validation'
 import { assertNoTransaction, commitTransaction, recoverTransaction, verifyObservations } from '../workflow/transaction'
-import { bundleHash, loadBundle, managerVersion } from './bundle'
+import { bundleHash, loadBundle, localizeBundle, managerVersion } from './bundle'
 import { ancestors, planGitRules } from './git-rules'
-import { assetBytes, block, entryText, installPath, integrity, managedPath, readInstallation, replaceBlock, skillNames, versionPattern, wrapBlock } from './manifest'
+import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from './layout'
+import { assetBytes, block, entryText, integrity, managedPath, readInstallation, replaceBlock, skillNames, versionPattern, wrapBlock } from './manifest'
 import { assertPackageCommand, repairCommand } from './source'
 
 export interface ManageOptions {
@@ -44,15 +46,15 @@ export function installationRoot(explicit: string | undefined, cwd: string, init
   }
 }
 
-function route(path: string, source: Snapshot, agents: boolean): string {
-  const runtime = relative(dirname(path), '.agent-notes/runtime/assets/references/writing.md').split('\\').join('/')
+function route(path: string, source: Snapshot, agents: boolean, layout: NotesLayout): string {
+  const runtime = relative(dirname(path), `${layout.runtimeAssets}/references/writing.md`).split('\\').join('/')
   const inherited = path === '.claude/CLAUDE.md' && ((!source.read(path) && (agents || source.exists('AGENTS.md'))) || block(entryText(source.read(path), path), path)?.text.includes('@../AGENTS.md')) ? '@../AGENTS.md\n\n' : ''
-  return wrapBlock(path, `${inherited}## Engineering decision Notes\n\nBefore planning related changes or first editing code, run \`node .agent-notes/runtime/cli.mjs context --paths <project-relative-paths> --topic <topic>\` from the project root. Include new, deleted and renamed paths; query again when scope or approach changes. Read only relevant returned Notes with \`show <id>\` or their paths.\n\nUse \`agent-note\` when durable rationale or discarded alternatives cannot live in code, tests or existing docs: suggest recording, then proceed on user acceptance or an explicit request; retain existing authorization. Ordinary Plan may finish with zero Notes. Ship required Notes with code in the same PR. Use \`agent-note-maintenance\` for lifecycle changes and cleanup; run \`check\` before delivery. [Command inputs and lifecycle rules](${runtime}) are available when writing or maintaining a Note.`)
+  return wrapBlock(path, `${inherited}## Engineering decision Notes\n\nBefore planning related changes or first editing code, run \`node ${layout.runtimeCli} context --paths <project-relative-paths> --topic <topic>\` from the project root. Include new, deleted and renamed paths; query again when scope or approach changes. Read only relevant returned Notes with \`show <id>\` or their paths.\n\nUse \`agent-note\` when durable rationale or discarded alternatives cannot live in code, tests or existing docs: suggest recording, then proceed on user acceptance or an explicit request; retain existing authorization. Ordinary Plan may finish with zero Notes. Ship required Notes with code in the same PR. Use \`agent-note-maintenance\` for lifecycle changes and cleanup; run \`check\` before delivery. [Command inputs and lifecycle rules](${runtime}) are available when writing or maintaining a Note.`)
 }
 
-function claudeRoute(path: string, source: Snapshot, agents: boolean): string | undefined {
+function claudeRoute(path: string, source: Snapshot, agents: boolean, layout: NotesLayout): string | undefined {
   if (!agents)
-    return route(path, source, false)
+    return route(path, source, false, layout)
   const original = entryText(source.read(path), path)
   const unmanaged = block(original, path) ? replaceBlock(original, path, '') : original
   const importPath = path === 'CLAUDE.md' ? 'AGENTS.md' : '../AGENTS.md'
@@ -74,27 +76,29 @@ function claudeRoute(path: string, source: Snapshot, agents: boolean): string | 
   return wrapBlock(path, `@${importPath}`)
 }
 
-function configFor(source: Snapshot, options: ManageOptions): ProjectConfig {
-  const existing = source.read('.agent-notes/config.json')
+function configFor(source: Snapshot, options: ManageOptions, discovered?: NotesLayout): ProjectConfig {
+  const layout = discovered ?? notesLayout(options.notesDir ?? defaultNotesRoot)
+  const existing = source.read(layout.configPath)
   if (existing) {
-    const config = readConfig(source)
+    const config = readConfig(source, layout)
     if ((options.notesDir && options.notesDir !== config.notes_dir) || (options.language && options.language !== config.language))
-      throw new NotesError('CONFIG_CONFLICT', 'Existing project configuration is preserved. Requested initialization options disagree with it.', '.agent-notes/config.json', 2)
+      throw new NotesError('CONFIG_CONFLICT', 'Existing project configuration is preserved. Requested initialization options disagree with it.', layout.configPath, 2)
     return config
   }
-  const config: ProjectConfig = { format: 'agent-notes-config/1', notes_dir: options.notesDir ?? '.agents/notes', language: options.language ?? 'zh-CN' }
-  return readConfig(source.overlay(new Map([['.agent-notes/config.json', Buffer.from(JSON.stringify(config))]])))
+  const config: ProjectConfig = { format: 'agent-notes-config/1', notes_dir: layout.notesRoot, language: options.language ?? 'zh-CN' }
+  return readConfig(source.overlay(new Map([[layout.configPath, Buffer.from(JSON.stringify(config))]])), layout)
 }
 
 function protectLayout(config: ProjectConfig): void {
-  const roots = ['.agent-notes', '.agents/skills', '.claude/skills', 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes']
+  const roots = ['.agents/skills', '.claude/skills', 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes']
   if (roots.some(root => config.notes_dir.toLowerCase() === root.toLowerCase() || root.toLowerCase().startsWith(`${config.notes_dir.toLowerCase()}/`) || config.notes_dir.toLowerCase().startsWith(`${root.toLowerCase()}/`)))
     throw new NotesError('CONFIG_CONFLICT', 'Notes must have their own directory, disjoint from installation assets and rule files.', config.notes_dir, 2)
 }
 
 function noteInventory(source: Snapshot, notesDir: string): string[] {
+  const layout = notesLayout(notesDir)
   source.includeDirectory(notesDir)
-  return source.paths().filter(path => path.startsWith(`${notesDir}/`) && source.exists(path)).sort()
+  return source.paths().filter(path => path.startsWith(`${notesDir}/`) && !path.startsWith(`${layout.runtimeRoot}/`) && !path.startsWith(`${layout.localRoot}/`) && path !== layout.configPath && path !== layout.installPath && source.exists(path)).sort()
 }
 
 function smoke(cli: string, root: string): void {
@@ -113,11 +117,11 @@ function writeScratch(root: string, path: string, bytes: Uint8Array): void {
   writeFileSync(join(root, path), bytes)
 }
 
-function backup(source: Snapshot, modified: Asset[], changes: Map<string, Buffer | null>): string | undefined {
+function backup(source: Snapshot, modified: Asset[], changes: Map<string, Buffer | null>, layout: NotesLayout): string | undefined {
   const originals = modified.filter(asset => source.read(asset.path))
   if (!originals.length)
     return undefined
-  const directory = `.agent-notes/local/backups/${randomUUID()}`
+  const directory = `${layout.localRoot}/backups/${randomUUID()}`
   // Snapshot.exists checks every ancestor, including ignored local paths.
   if (source.exists(directory))
     throw new NotesError('BACKUP_FAILED', 'Backup destination already exists.', directory)
@@ -169,36 +173,38 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
     assertNoTransaction(root)
     const repository = new Repository(root)
     const source = repository.snapshot('worktree')
-    const installation = readInstallation(source)
+    const discoveredLayout = layoutFromSnapshot(source)
+    const config = configFor(source, options, discoveredLayout)
+    const layout = notesLayout(config.notes_dir)
+    const installation = readInstallation(source, layout)
     if (!installation && options.command !== 'init')
-      throw new NotesError('NOT_INSTALLED', 'Run npx --yes @hackycy/agent-notes@latest init to initialize this project first.', installPath, 2)
-    if (installation && !source.read('.agent-notes/config.json'))
-      throw new NotesError('CONFIG_CONFLICT', 'Installed configuration is missing; restore it explicitly.', '.agent-notes/config.json')
-    const config = configFor(source, options)
+      throw new NotesError('NOT_INSTALLED', 'Run npx --yes @hackycy/agent-notes@latest init to initialize this project first.', layout.installPath, 2)
+    if (installation && !source.read(layout.configPath))
+      throw new NotesError('CONFIG_CONFLICT', 'Installed configuration is missing; restore it explicitly.', layout.configPath)
     protectLayout(config)
     if (options.command === 'status') {
       const problems = integrity(source, installation!)
       output.data = { manager_version: managerVersion, runtime_version: installation!.version, bundle_sha256: installation!.bundle_sha256, targets: installation!.targets, notes_dir: config.notes_dir, assets: installation!.assets.length, integrity: problems.length ? 'damaged' : 'intact', problems }
       if (problems.length) {
         output.result = 'failed'
-        output.diagnostics = problems.map(item => ({ code: 'ASSET_INTEGRITY', path: item.path, message: `Installed tool file ${item.state}; run node .agent-notes/runtime/cli.mjs repair, or ${repairCommand(installation!.version)} if runtime source files are damaged.` }))
+        output.diagnostics = problems.map(item => ({ code: 'ASSET_INTEGRITY', path: item.path, message: `Installed tool file ${item.state}; run node ${layout.runtimeCli} repair, or ${repairCommand(installation!.version)} if runtime source files are damaged.` }))
       }
       return output
     }
-    const bundle = suppliedBundle ?? loadBundle()
+    const bundle = localizeBundle(suppliedBundle ?? loadBundle(), layout.notesRoot)
     if (!versionPattern.test(bundle.version) || !bundle.files.has('cli.mjs') || skillNames.some(name => !bundle.skills.has(`${name}/SKILL.md`)))
       throw new NotesError('INVALID_BUNDLE', 'Bundle version, runtime or required skills are missing.', undefined, 2)
     if (installation && options.command === 'repair') {
       if (bundle.version !== installation.version)
-        throw new NotesError('REPAIR_VERSION_MISMATCH', `Repair keeps project version ${installation.version}. Run ${repairCommand(installation.version)}, or use upgrade to change versions.`, installPath, 2)
+        throw new NotesError('REPAIR_VERSION_MISMATCH', `Repair keeps project version ${installation.version}. Run ${repairCommand(installation.version)}, or use upgrade to change versions.`, layout.installPath, 2)
       if (bundleHash(bundle) !== installation.bundle_sha256)
-        throw new NotesError('INVALID_BUNDLE', `Repair requires the installed bundle. Run ${repairCommand(installation.version)} using the complete npm package.`, installPath)
+        throw new NotesError('INVALID_BUNDLE', `Repair requires the installed bundle. Run ${repairCommand(installation.version)} using the complete npm package.`, layout.installPath)
     }
     if (installation && options.command === 'init') {
       if (bundle.version !== installation.version)
-        throw new NotesError('UPGRADE_REQUIRED', 'Run npx --yes @hackycy/agent-notes@latest upgrade to change the installed tool version.', installPath, 2)
+        throw new NotesError('UPGRADE_REQUIRED', 'Run npx --yes @hackycy/agent-notes@latest upgrade to change the installed tool version.', layout.installPath, 2)
       if (JSON.stringify([...options.targets].sort()) !== JSON.stringify([...installation.targets].sort()))
-        throw new NotesError('TARGET_CONFLICT', 'Repeat init with the installed targets. Changing installation targets is not supported by v1.', installPath, 2)
+        throw new NotesError('TARGET_CONFLICT', 'Repeat init with the installed targets. Changing installation targets is not supported by v1.', layout.installPath, 2)
       const problems = integrity(source, installation)
       if (problems.length)
         throw new NotesError('REPAIR_REQUIRED', `Installed tool files need repair; run ${repairCommand(installation.version)}.`, problems[0].path)
@@ -217,8 +223,8 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
     for (const path of notes)
       source.read(path)
     if (!installation) {
-      if (notes.length || source.exists('.agent-notes/runtime'))
-        throw new NotesError('UNOWNED_ASSET', 'Existing Notes or runtime have no install manifest; init does not adopt them.', notes[0] ?? '.agent-notes/runtime')
+      if (notes.length || source.exists(layout.runtimeRoot))
+        throw new NotesError('UNOWNED_ASSET', 'Existing Notes or runtime have no install manifest; init does not adopt them.', notes[0] ?? layout.runtimeRoot)
       for (const target of targets) {
         for (const name of skillNames) {
           if (source.exists(`.${target}/skills/${name}`))
@@ -230,20 +236,20 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
     const desired = new Map<string, { kind: Asset['kind'], bytes: Buffer }>()
     const entries = new Set<string>()
     const add = (path: string, kind: Asset['kind'], bytes: Buffer): void => {
-      if (!managedPath(path, kind, targets) || desired.has(path))
+      if (!managedPath(path, kind, targets, layout) || desired.has(path))
         throw new NotesError('INVALID_BUNDLE', 'Bundle contains an invalid or duplicate asset path.', path)
       desired.set(path, { kind, bytes })
     }
     for (const [path, bytes] of bundle.files) {
       if (!safePath(path))
         throw new NotesError('INVALID_BUNDLE', 'Unsafe bundle path.', path)
-      add(`.agent-notes/runtime/${path}`, 'file', bytes)
+      add(`${layout.runtimeRoot}/${path}`, 'file', bytes)
     }
     for (const target of targets) {
       const destinations = new Map<string, { path: string }>()
       for (const path of bundle.files.keys()) {
         for (const source of [...ancestors(path), path])
-          destinations.set(source, { path: `.agent-notes/runtime/${source}` })
+          destinations.set(source, { path: `${layout.runtimeRoot}/${source}` })
       }
       for (const path of bundle.skills.keys()) {
         for (const source of [...ancestors(path), path])
@@ -257,7 +263,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
       const ownedEntry = installation?.assets.find(asset => asset.kind === 'block' && (target === 'agents' ? asset.path === 'AGENTS.md' : ['CLAUDE.md', '.claude/CLAUDE.md'].includes(asset.path)))?.path
       const entry = ownedEntry ?? (target === 'agents' ? 'AGENTS.md' : source.exists('CLAUDE.md') ? 'CLAUDE.md' : '.claude/CLAUDE.md')
       entries.add(entry)
-      const text = target === 'claude' ? claudeRoute(entry, source, targets.includes('agents')) : route(entry, source, true)
+      const text = target === 'claude' ? claudeRoute(entry, source, targets.includes('agents'), layout) : route(entry, source, true, layout)
       if (text !== undefined)
         add(entry, 'block', Buffer.from(text))
     }
@@ -296,12 +302,12 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
       }
       else { changes.set(asset.path, null) }
     }
-    if (!source.read('.agent-notes/config.json'))
-      changes.set('.agent-notes/config.json', Buffer.from(`${JSON.stringify(config, null, 2)}\n`))
+    if (!source.read(layout.configPath))
+      changes.set(layout.configPath, Buffer.from(`${JSON.stringify(config, null, 2)}\n`))
     const next: Installation = { format: 'agent-notes-install/1', version: bundle.version, bundle_sha256: bundleHash(bundle), targets, assets: nextAssets.sort((a, b) => a.path.localeCompare(b.path)) }
     const manifest = Buffer.from(`${JSON.stringify(next, null, 2)}\n`)
-    if (!source.read(installPath)?.equals(manifest))
-      changes.set(installPath, manifest) // The install manifest always switches last.
+    if (!source.read(layout.installPath)?.equals(manifest))
+      changes.set(layout.installPath, manifest) // The install manifest always switches last.
     const index = readIndex(source.overlay(changes))
     const diagnostics = currentDiagnostics(index)
     if (diagnostics.length) {
@@ -320,7 +326,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
     const candidate = join(scratch, 'candidate.mjs')
     writeFileSync(candidate, bundle.files.get('cli.mjs')!)
     const smokeRoot = join(scratch, 'project')
-    writeScratch(smokeRoot, '.agent-notes/config.json', changes.get('.agent-notes/config.json') ?? source.read('.agent-notes/config.json')!)
+    writeScratch(smokeRoot, layout.configPath, changes.get(layout.configPath) ?? source.read(layout.configPath)!)
     for (const path of notes)
       writeScratch(smokeRoot, path, source.read(path)!)
     smoke(candidate, smokeRoot)
@@ -332,7 +338,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
         throw new NotesError('CONCURRENT_CHANGE', 'Note inventory changed during installation; retry with the current project.')
       verifyObservations(source, fresh, applied ? changes : undefined)
       if (applied) {
-        smoke(join(root, '.agent-notes/runtime/cli.mjs'), smokeRoot)
+        smoke(join(root, layout.runtimeCli), smokeRoot)
         const completed = repository.snapshot('worktree')
         if (JSON.stringify(noteInventory(completed, config.notes_dir)) !== JSON.stringify(notes))
           throw new NotesError('CONCURRENT_CHANGE', 'Note inventory changed during runtime validation; retry.')
@@ -343,7 +349,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
       beforeCommit: () => {
         hooks.beforeCommit?.()
         verifyObservations(source, repository.snapshot('worktree'))
-        const saved = backup(source, modified, changes)
+        const saved = backup(source, modified, changes, layout)
         if (saved)
           output.data.backup = saved
       },

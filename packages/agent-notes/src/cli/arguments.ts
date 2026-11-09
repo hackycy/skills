@@ -9,8 +9,7 @@ import { writeCommands } from '../workflow/input'
 const commands = ['context', 'show', 'check', 'init', 'upgrade', 'repair', 'status', 'create', 'update', 'transition', 'archive', 'prune'] as const
 const nonempty = z.string().refine(value => Boolean(value.trim()), 'Supply a nonempty value.')
 export const notesDirectory = nonempty.refine(value => safePath(value) && !/[\s*?[\]#!]/.test(value)
-  && !/(?:^|\/)(?:\.git|node_modules)(?:\/|$)/i.test(value)
-  && !/^\.agent-notes(?:\/|$)/i.test(value), 'Supply a literal project-relative Notes directory without whitespace or Git wildcards.')
+  && !/(?:^|\/)(?:\.git|node_modules)(?:\/|$)/i.test(value), 'Supply a literal project-relative Notes directory without whitespace or Git wildcards.')
 const repeated = <T extends z.ZodType>(schema: T): z.ZodType<z.output<T>[]> => z.union([schema, z.array(schema)]).optional().transform(value => value === undefined ? [] : Array.isArray(value) ? value : [value])
 const flag = z.boolean().optional().default(false)
 const schema = z.strictObject({
@@ -68,7 +67,7 @@ function declarations(kind: 'package' | 'runtime'): CAC {
   if (kind === 'package') {
     const init = cli.command('init', 'Install runtime and static skill entries')
       .option('--target <agents|claude>', 'Installation target (repeat for both)')
-      .option('--notes-dir <path>', 'Notes directory (default: .agents/notes)')
+      .option('--notes-dir <path>', 'Root for Notes, runtime and configuration (default: .agents/notes)')
       .option('--language <zh-CN|en>', 'Template language (default: zh-CN)')
       .option('--no-interactive', 'Disable initialization questions')
     installation.push(init, cli.command('upgrade', 'Apply this npm package version to the project'))
