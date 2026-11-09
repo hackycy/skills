@@ -9,6 +9,7 @@ import { findRoot, Repository, sha256 } from '../notes/snapshot'
 import { assertNoTransaction, recoverTransaction } from '../workflow/transaction'
 import { managerVersion } from './bundle'
 import { readInstallation } from './manifest'
+import { repairCommand } from './source'
 
 /** Only the current installed runtime may execute; Git snapshot files are data. */
 export function delegate(input: Options, executable: string): number | undefined {
@@ -26,7 +27,7 @@ export function delegate(input: Options, executable: string): number | undefined
   const asset = installation.assets.find(asset => asset.path === '.agent-notes/runtime/cli.mjs')!
   const bytes = source.read(asset.path)
   if (!bytes || sha256(bytes) !== asset.sha256)
-    throw new NotesError('ASSET_INTEGRITY', 'The locked runtime is missing or modified. Run upgrade using a complete npm package to repair it.', asset.path)
+    throw new NotesError('ASSET_INTEGRITY', `The locked runtime is missing or modified. Run ${repairCommand(installation.version)} using the complete npm package.`, asset.path)
   const runtime = join(root, asset.path)
   if (realpathSync(executable) === realpathSync(runtime)) {
     if (installation.version !== managerVersion)

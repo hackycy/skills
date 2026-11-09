@@ -1,13 +1,14 @@
+import type { SpawnSyncReturns } from 'node:child_process'
 import type { Result } from '../src/cli/run'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
 import { checkLinks } from '../src/notes/markdown'
 import { jsonYaml } from '../src/notes/reader'
-import { Repository } from '../src/notes/snapshot'
+import { Repository, sha256 } from '../src/notes/snapshot'
 import { project, write } from './fixtures'
 
 // Exercise npm's actual bin link, then use each installed runtime without npm.
@@ -96,9 +97,65 @@ try {
     assert.equal(JSON.parse(local.stdout).data.id, created.data.id)
     // The retained source skill can repair a host projection without npm.
     write(root, entry, 'Local edit of the installed skill\n')
-    const repair = spawnSync(process.execPath, [join(root, '.agent-notes/runtime/cli.mjs'), 'upgrade', '--root', root, '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+    const installed = join(root, '.agent-notes/runtime/cli.mjs')
+    const runtime = (args: string[]): SpawnSyncReturns<string> => spawnSync(process.execPath, [installed, ...args, '--root', root, '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+    const files = (): Record<string, string> => Object.fromEntries(readdirSync(root, { recursive: true, withFileTypes: true })
+      .filter(entry => entry.isFile() && !entry.parentPath.startsWith(join(root, '.git')))
+      .map(entry => [join(entry.parentPath, entry.name), sha256(readFileSync(join(entry.parentPath, entry.name)))]))
+    const beforeRepair = files()
+    const preview = runtime(['repair', '--dry-run'])
+    assert.equal(preview.status, 0, preview.stdout || preview.stderr)
+    assert.ok(JSON.parse(preview.stdout).data.modified_assets.includes(entry))
+    assert.deepEqual(files(), beforeRepair)
+    const repair = runtime(['repair'])
     assert.equal(repair.status, 0, repair.stdout || repair.stderr)
     assert.equal(readFileSync(join(root, entry), 'utf8'), skill)
+    assert.equal(JSON.parse(repair.stdout).command, 'repair')
+    assert.deepEqual(JSON.parse(runtime(['repair', '--dry-run']).stdout).data.changes, [])
+    rmSync(join(root, entry))
+    assert.equal(runtime(['repair']).status, 0)
+    assert.equal(readFileSync(join(root, entry), 'utf8'), skill)
+
+    const help = JSON.parse(runtime(['--help']).stdout).data.help as string
+    assert.ok(help.includes('repair') && help.includes('status'))
+    assert.ok(!help.includes('init') && !help.includes('upgrade'))
+    // A blocked management command must not inspect or recover this journal.
+    write(root, '.agent-notes/local/write-lock/journal.json', 'Interrupted transaction placeholder\n')
+    for (const command of ['init', 'upgrade']) {
+      for (const flags of [[], ['--help'], ['--recover']]) {
+        const before = files()
+        const rejected = runtime([command, ...flags])
+        assert.equal(rejected.status, 2, rejected.stdout || rejected.stderr)
+        assert.equal(JSON.parse(rejected.stdout).diagnostics[0].code, 'PACKAGE_COMMAND_REQUIRED')
+        assert.deepEqual(files(), before)
+      }
+    }
+    rmSync(join(root, '.agent-notes/local/write-lock'), { recursive: true })
+
+    // Every source file is required, including templates with no incoming links.
+    const template = '.agent-notes/runtime/assets/templates/proposed.en.md'
+    const sourceSkill = '.agent-notes/runtime/assets/skills/agent-note/SKILL.md'
+    const unknown = '.agent-notes/runtime/assets/unknown.txt'
+    const version = JSON.parse(readFileSync(join(root, '.agent-notes/install.json'), 'utf8')).version
+    for (const damage of ['missing', 'modified', 'unknown']) {
+      if (damage === 'missing')
+        rmSync(join(root, template))
+      else write(root, damage === 'modified' ? sourceSkill : unknown, 'Changed source\n')
+      const before = files()
+      const rejected = runtime(['repair'])
+      assert.equal(rejected.status, 1, rejected.stdout || rejected.stderr)
+      const diagnostic = JSON.parse(rejected.stdout).diagnostics[0]
+      assert.equal(diagnostic.code, 'INVALID_BUNDLE')
+      assert.ok(diagnostic.message.includes(`@${version} repair`))
+      assert.deepEqual(files(), before)
+      if (damage === 'unknown')
+        rmSync(join(root, unknown)) // Unknown project files remain the owner's responsibility.
+      invoke(['repair']) // The complete npm package restores the exact installed bundle.
+      assert.equal(invoke(['status']).data.integrity, 'intact')
+    }
+    rmSync(installed)
+    invoke(['repair'])
+    assert.equal(invoke(['status']).data.integrity, 'intact')
   }
   console.log(`Offline npm/bin and individual targets smoke passed: ${tarball}`)
 }

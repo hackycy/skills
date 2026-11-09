@@ -305,12 +305,12 @@ describe('upgrades and recovery boundaries', () => {
     }
   })
 
-  it('dry-run lists exact changes and modified assets without backups or project writes', () => {
+  it.each(['upgrade', 'repair'] as const)('%s dry-run lists exact changes without backups or project writes', (operation) => {
     const root = setup()
     expectOk(command(root))
     write(root, '.agents/skills/agent-note/SKILL.md', 'My modified skill\n')
     const before = allFiles(root)
-    const result = command(root, 'upgrade', bundle('0.2.0'), { dryRun: true })
+    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), { dryRun: true })
     expectOk(result)
     expect(result.data.modified_assets).toContain('.agents/skills/agent-note/SKILL.md')
     expect(result.data.changes).not.toEqual([])
@@ -318,13 +318,13 @@ describe('upgrades and recovery boundaries', () => {
     expect(allFiles(root)).toEqual(before)
   })
 
-  it('backs up edited assets and diffs before replacement, including owned blocks', () => {
+  it.each(['upgrade', 'repair'] as const)('%s backs up edited files and owned blocks before replacement', (operation) => {
     const root = setup()
     expectOk(command(root))
     write(root, '.agents/skills/agent-note/SKILL.md', 'My modified skill\n')
     write(root, 'AGENTS.md', `User prefix\n${read(root, 'AGENTS.md').replace('Engineering decision Notes', 'Edited title')}User suffix\n`)
     const entry = read(root, 'AGENTS.md')
-    const result = command(root, 'upgrade', bundle('0.2.0'))
+    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'))
     expectOk(result)
     const backup = result.data.backup as string
     expect(read(root, `${backup}/original/.agents/skills/agent-note/SKILL.md`)).toBe('My modified skill\n')
@@ -340,10 +340,43 @@ describe('upgrades and recovery boundaries', () => {
     expectOk(command(root))
     rmSync(join(root, '.agent-notes/runtime/rules.md'))
     expect(command(root, 'status').data.integrity).toBe('damaged')
-    expect(command(root).diagnostics[0].code).toBe('UPGRADE_REQUIRED')
-    expectOk(command(root, 'upgrade'))
+    const before = allFiles(root)
+    expect(command(root).diagnostics[0].code).toBe('REPAIR_REQUIRED')
+    expect(command(root, 'upgrade').diagnostics[0].code).toBe('REPAIR_REQUIRED')
+    expect(allFiles(root)).toEqual(before)
+    expectOk(command(root, 'repair'))
+    expect(command(root, 'repair').data.changes).toEqual([])
     expect(command(root, 'upgrade').data.changes).toEqual([])
     expect(command(root, 'init', bundle('0.2.0')).diagnostics[0].code).toBe('UPGRADE_REQUIRED')
+  })
+
+  it('rejects a different repair version or bundle without changing project files', () => {
+    const root = setup()
+    expectOk(command(root))
+    write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
+    const before = allFiles(root)
+    const mismatch = command(root, 'repair', bundle('0.2.0'))
+    expect(mismatch).toMatchObject({ result: 'invalid-input', diagnostics: [{ code: 'REPAIR_VERSION_MISMATCH', message: expect.stringContaining('@0.1.0 repair') }] })
+    const changed = bundle()
+    changed.files.set('rules.md', Buffer.from('Different bundle, same version\n'))
+    expect(command(root, 'repair', changed)).toMatchObject({ result: 'failed', diagnostics: [{ code: 'INVALID_BUNDLE' }] })
+    expect(allFiles(root)).toEqual(before)
+    expect(existsSync(join(root, '.agent-notes/local/backups'))).toBe(false)
+  })
+
+  it('repairs missing files and preserves Notes, seals, configuration and unknown neighbors', () => {
+    const root = setup()
+    expectOk(command(root))
+    note(root, metadata({ id: ids[1] }), 'active')
+    archive(root, note(root))
+    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agent-notes/config.json' || path === installPath)
+    rmSync(join(root, '.agents/skills/agent-note/SKILL.md'))
+    write(root, '.agent-notes/runtime/neighbor.txt', 'Project neighbor\n')
+    expectOk(command(root, 'repair'))
+    expect(read(root, '.agents/skills/agent-note/SKILL.md')).toBe('Skill agent-note 0.1.0\n')
+    expect(read(root, '.agent-notes/runtime/neighbor.txt')).toBe('Project neighbor\n')
+    for (const [path, bytes] of preserved)
+      expect(read(root, path), path).toBe(bytes)
   })
 
   it('removes only obsolete manifest assets and preserves unknown neighboring files', () => {
@@ -415,12 +448,14 @@ describe('upgrades and recovery boundaries', () => {
     expect(read(root, installPath)).toBe(before)
   })
 
-  it.each(['config', 'note', 'new-note', 'entry', 'runtime'])('preserves a concurrent %s edit and cancels upgrade', (kind) => {
+  it.each((['upgrade', 'repair'] as const).flatMap(operation => ['config', 'note', 'new-note', 'entry', 'runtime'].map(kind => ({ operation, kind }))))('$operation preserves a concurrent $kind edit', ({ operation, kind }) => {
     const root = setup()
     expectOk(command(root))
     const path = note(root)
+    if (operation === 'repair')
+      write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
     const manifestBefore = read(root, installPath)
-    const result = command(root, 'upgrade', bundle('0.2.0'), {}, { beforeCommit() {
+    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), {}, { beforeCommit() {
       if (kind === 'config')
         write(root, '.agent-notes/config.json', `${read(root, '.agent-notes/config.json')}\n`)
       if (kind === 'note')
@@ -438,11 +473,13 @@ describe('upgrades and recovery boundaries', () => {
       expect(read(root, 'AGENTS.md')).toContain('Independent rule')
   })
 
-  it('rolls back all installer files on a failed switch and keeps manifest last', () => {
+  it.each(['upgrade', 'repair'] as const)('%s rolls back on failure and keeps the manifest last', (operation) => {
     const root = setup()
     expectOk(command(root))
+    if (operation === 'repair')
+      write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
     const before = allFiles(root)
-    const result = command(root, 'upgrade', bundle('0.2.0'), {}, { afterStep(index) {
+    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), {}, { afterStep(index) {
       if (index === 0) {
         expect(read(root, installPath)).toBe(before.get(installPath))
         throw new Error('Disk failure')
@@ -465,36 +502,41 @@ describe('upgrades and recovery boundaries', () => {
     expectOk(result)
   })
 
-  it('leaves original bytes untouched when the backup location is unusable', () => {
+  it.each(['upgrade', 'repair'] as const)('%s preserves original bytes when backup is unusable', (operation) => {
     const root = setup()
     expectOk(command(root))
     write(root, '.agents/skills/agent-note/SKILL.md', 'My customization\n')
     write(root, '.agent-notes/local/backups', 'Not a directory\n')
     const before = allFiles(root)
-    expect(command(root, 'upgrade', bundle('0.2.0')).result).toBe('failed')
+    expect(command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0')).result).toBe('failed')
     expect(allFiles(root)).toEqual(before)
   })
 
-  it.each(['init', 'upgrade'] as const)('recovers an actual SIGKILL during %s and retries', (operation) => {
+  it.each(['init', 'upgrade', 'repair'] as const)('recovers an actual SIGKILL during %s and retries', (operation) => {
     const root = setup(true)
-    if (operation === 'upgrade')
+    if (operation !== 'init')
       expectOk(command(root))
+    if (operation === 'repair')
+      write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
     const before = allFiles(root)
     const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation], { encoding: 'utf8' })
     expect(child.signal, child.stderr).toBe('SIGKILL')
     expect(recoverTransaction(root)).toBe(true)
     expect(allFiles(root)).toEqual(before)
-    expectOk(command(root, operation, bundle('0.2.0'), { recover: true }))
+    expectOk(command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), { recover: true }))
   })
 
-  it('retains an external edit and journal when interrupted upgrade recovery conflicts', () => {
+  it.each(['upgrade', 'repair'] as const)('%s retains an external edit and journal on recovery conflict', (operation) => {
     const root = setup()
     expectOk(command(root))
-    const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'upgrade'], { encoding: 'utf8' })
+    const path = operation === 'repair' ? '.agents/skills/agent-note/SKILL.md' : '.agent-notes/runtime/rules.md'
+    if (operation === 'repair')
+      write(root, path, 'Modified skill\n')
+    const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation], { encoding: 'utf8' })
     expect(child.signal, child.stderr).toBe('SIGKILL')
-    write(root, '.agent-notes/runtime/rules.md', 'Independent edit after interruption\n')
+    write(root, path, 'Independent edit after interruption\n')
     expect(() => recoverTransaction(root)).toThrow(/File changed outside/)
-    expect(read(root, '.agent-notes/runtime/rules.md')).toBe('Independent edit after interruption\n')
+    expect(read(root, path)).toBe('Independent edit after interruption\n')
     expect(existsSync(join(root, '.agent-notes/local/write-lock/journal.json'))).toBe(true)
   })
 
@@ -503,7 +545,7 @@ describe('upgrades and recovery boundaries', () => {
     expectOk(command(root))
     const entry = read(root, 'AGENTS.md').replace('<!-- agent-notes:end -->', '')
     write(root, 'AGENTS.md', entry)
-    expect(command(root, 'upgrade').diagnostics[0].code).toBe('BLOCK_CONFLICT')
+    expect(command(root, 'repair').diagnostics[0].code).toBe('BLOCK_CONFLICT')
     expect(read(root, 'AGENTS.md')).toBe(entry)
     expect(() => block('<!-- agent-notes:end -->\n<!-- agent-notes:begin -->', 'AGENTS.md')).toThrow()
   })

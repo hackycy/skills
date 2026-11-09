@@ -8,7 +8,7 @@
 | --- | --- |
 | 记录判据、skill 职责、模块边界或文档与资产归属 | [设计约束与依据](docs/maintainers/design.md) |
 | Note 字段、章节、关系、发现或历史保护 | [文档契约](assets/formats/document.md)及对应 JSON Schema |
-| 参数、快照、输出、安装或升级 | [CLI 契约](assets/references/cli.md) |
+| 参数、快照、输出、安装、升级或修复 | [CLI 契约](assets/references/cli.md) |
 | 写入、移动、引用修复、清理或恢复 | [写入与生命周期](assets/references/writing.md) |
 | 校验变更、构建或分发资产 | [验证要求](docs/maintainers/validation.md) |
 | 重新研究上游或调整治理原则 | [上游依据](docs/maintainers/upstreams.md)与[版本锁](docs/maintainers/upstreams.lock.json) |
@@ -26,10 +26,10 @@
 
 - `src/cli/` 处理参数、输出和分发；`src/notes/` 统一读取、快照、格式、关系、链接与历史校验；`src/discovery/` 负责范围匹配和指针查询；`src/workflow/` 规划并执行内容事务；`src/distribution/` 管理 bundle、资产与项目 runtime 委派。
 - 扩展命令时复用 reader、snapshot 和校验器。工作树、index、commit 的配置、正文和引用目标必须来自同一个快照；快照内容只作为数据读取。
-- 内容写入、安装和升级共用事务锁与 journal。保留预检、持锁后及完成前的 hash 复查；恢复冲突保留外部编辑。多文件一致性由恢复协议保证。
+- 内容写入、安装、升级和修复共用事务锁与 journal。保留预检、持锁后及完成前的 hash 复查；恢复冲突保留外部编辑。多文件一致性由恢复协议保证。
 - 引用修复使用 Markdown AST；无法确定目标或锚点时停止事务。冻结出链保持历史原样，活跃入链仍需有效。
 - 完整受管文件和归档按原始字节计算 hash。只有项目入口受管块的比较允许 CRLF 归一；保存时保留块外原文。修改 Git 属性规则时覆盖真实换行转换场景。
-- `init` 是新安装，`upgrade` 是已有安装的资产替换；遇到未知同名文件或未知格式要报错。兼容边界从本包契约开始，不添加旧 agent-governance 接管或迁移层。
+- `init`、`upgrade` 由 npm 包负责首次接入和版本切换；项目 runtime 提供日常命令、`status` 与 `repair`。`repair` 只恢复相同版本及 bundle 的工具文件，源文件损坏时使用同版本 npm 包修复。遇到未知同名文件或未知格式要报错。
 
 ## 文档与分发
 

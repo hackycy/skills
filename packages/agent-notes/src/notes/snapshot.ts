@@ -61,7 +61,7 @@ export function findRoot(explicit: string | undefined, cwd: string): string {
     }
     const parent = dirname(directory)
     if (parent === directory)
-      throw new NotesError('ROOT_NOT_FOUND', 'No installation found. Run init with --target, or pass --root <project>.', undefined, 2)
+      throw new NotesError('ROOT_NOT_FOUND', 'No installation found. Run npx --yes @hackycy/agent-notes@latest init, or pass --root <project>.', undefined, 2)
     directory = parent
   }
 }

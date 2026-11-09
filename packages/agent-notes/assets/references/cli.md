@@ -1,6 +1,6 @@
 # CLI 契约
 
-可执行命令为 `agent-notes`；安装后的项目入口为 `node .agent-notes/runtime/cli.mjs`。所有命令支持 `--root <path>` 和 `--json`。未提供 root 时向上定位已有安装；新安装使用 Git 根或当前目录。
+npm 包的可执行命令为 `agent-notes`，提供全部命令；项目入口 `node .agent-notes/runtime/cli.mjs` 提供日常命令、`status` 和 `repair`。`init`、`upgrade` 通过 npm 包执行，项目帮助不展示这两个命令；本地误用返回 `PACKAGE_COMMAND_REQUIRED`、退出 2，并提供 npm 命令，在问答或恢复前停止。所有命令支持 `--root <path>` 和 `--json`。未提供 root 时向上定位已有安装；新安装使用 Git 根或当前目录。
 
 通用参数可放在命令前后；带值选项接受 `--name value` 与 `--name=value`。`--help` / `-h` 显示总帮助，`<command> --help` 显示命令帮助。target/topic 可重复，paths 支持 `--paths a b --paths c`；单值选项、布尔开关与同一 target 不可重复。未知、错位、缺值或非法参数返回 `invalid-input`。
 
@@ -10,7 +10,8 @@
 | --- | --- | --- |
 | `init` | 可重复 `--target agents\|claude`；`--notes-dir`、`--language`、`--no-interactive` | 安装共享 runtime 和静态入口；未指定项按下文补齐 |
 | `status` | 通用参数 | 管理器/项目 runtime 版本、目标、文档根及资产完整性 |
-| `upgrade` | `--dry-run`、`--recover` | 使用本次调用的完整包替换项目受管资产 |
+| `upgrade` | `--dry-run`、`--recover` | 通过 npm 包将项目工具切换到本次调用的版本 |
+| `repair` | `--dry-run`、`--recover` | 使用当前版本及相同 bundle 恢复工具文件 |
 | `context` | `--paths <paths...>`、可重复 `--topic`、`--include-archived` | 返回匹配 Note 的指针，不输出正文 |
 | `show <id>` | 通用参数 | 返回当前路径、原文字节 SHA-256 和正文 |
 | `check` | `--base <ref>`、`--head <ref>`、`--staged`、`--maintenance` | 检查指定快照、历史差异及维护候选 |
@@ -20,7 +21,7 @@
 | `archive <id>` | 同上，可选 `--base <ref>` | 封存 implemented；需要可解析的 Git 基线 |
 | `prune <id>` | 同上，可选 `--base <ref>` | 条件清理未归档记录；需要可解析的 Git 基线 |
 
-五个内容写命令及 init/upgrade 支持 `--dry-run` 与 `--recover`，两者互斥。预览只显示变更与诊断，不落盘、不创建备份、不分配永久身份；执行时重新预检。`--recover` 先恢复中断事务，再按当前输入执行。输入、expected_hash、草稿链接解释和恢复冲突见[写入参考](writing.md)。
+五个内容写命令及 init/upgrade/repair 支持 `--dry-run` 与 `--recover`，两者互斥。预览只显示变更与诊断，不落盘、不创建备份、不分配永久身份；执行时重新预检。`--recover` 先恢复中断事务，再按当前输入执行。输入、expected_hash、草稿链接解释和恢复冲突见[写入参考](writing.md)。
 
 路径相对项目根解析，不随调用子目录改变。仅 init 可交互收集缺项；内容写命令仍要求完整操作材料。CLI 不保存聊天记录或授权令牌。所有文件访问检查项目边界与 symlink，未知格式和读取错误不会作为空结果跳过。
 
@@ -28,7 +29,7 @@
 
 当 stdin 与 stderr 均为终端、未处于 CI、未传 `--json` 或 `--no-interactive` 时，init 只询问缺少的安装目标、Notes 目录与模板语言。目标默认选中 agents，目录默认 `.agents/notes`，语言默认 `zh-CN`；至少选择一个目标。项目根自动定位并展示，填完直接执行，不另加确认。显式非法参数先报错；交互中的非法目录可原地修正。`--dry-run` 使用相同问答并仅预览。
 
-补齐顺序为显式参数、已有安装清单与配置、交互回答或默认值。重复 init 省略参数时复用已安装值，不重复提问；显式配置或目标冲突报错。只有配置、没有清单时保留配置，目标仍需指定或选择。版本变化和资产修复使用 upgrade。
+补齐顺序为显式参数、已有安装清单与配置、交互回答或默认值。重复 init 省略参数时复用已安装值，不重复提问；显式配置或目标冲突报错。只有配置、没有清单时保留配置，目标仍需指定或选择。版本变化使用 npm 包的 upgrade，同版本工具文件损坏使用 repair。
 
 无人值守调用不启动提示；新安装缺少 target 时退出 2，且不写入项目。目录与语言使用默认值。问答与取消消息写到 stderr，最终结果写到 stdout；Esc / Ctrl+C 取消退出 130，不产生 Result，也不写入项目或执行恢复。init --recover 在问答前只读检查恢复后的配置与清单，取消保留中断现场；收集完输入后复查现场，再进入实际恢复与安装。
 
@@ -54,13 +55,17 @@ Notes、完整受管文件、配置与安装清单使用 `text eol=lf`，避免 
 
 ## 版本与升级
 
-init/upgrade 使用本次调用的完整工具包；版本选择由调用者及包管理器完成。日常命令委派给项目锁定 runtime，离线执行，不查询或下载其他版本。status 区分管理器与项目 runtime 版本。
+init/upgrade 通过 npm 包执行，使用本次调用的完整工具包；版本选择与下载由调用者及包管理器完成。upgrade 的包版本与项目不同才替换工具文件；版本相同且安装完整时无改动，损坏则返回 REPAIR_REQUIRED、退出 1，提示 repair。重复 init 同版本损坏也返回 REPAIR_REQUIRED。日常命令委派给项目锁定 runtime，离线执行，不查询或下载其他版本。status 区分本次调用版本与项目 runtime 版本，并在安装损坏时提供修复命令。
+
+repair 要求已有安装，保持项目版本及 bundle hash 不变。项目 runtime 从完整内置源文件重新生成宿主 skill 等工具文件；例如误删的 `.agents/skills/agent-note/SKILL.md` 可从 runtime 中的原始 skill 恢复。加载前核验源文件清单和原始字节 hash，缺失、修改或未知源文件返回 INVALID_BUNDLE、退出 1，并提示 `npx --yes @hackycy/agent-notes@X.Y.Z repair`，版本来自项目清单。runtime 源目录之外的未知邻接文件保留。
+
+完整 npm 包也能 repair，包括恢复损坏的 runtime；包版本不符返回 REPAIR_VERSION_MISMATCH、退出 2，bundle hash 不符返回 INVALID_BUNDLE、退出 1。普通预检失败不替换文件、不创建备份。完整安装的 repair 无改动，结果使用同一 Result 协议，command 为 repair。
 
 `.agent-notes/install.json` 记录具体版本、bundle hash、目标和每个受管文件/块的 hash。升级替换这些资产，移除旧清单中的废弃资产；保留 Notes、archive seal、项目配置、未知邻接文件和入口块外原文。相同版本完整时无需改动，损坏时允许修复。
 
-手改受管文件在覆盖前将原文与 diff 备份到 `.agent-notes/local/backups/`，输出具体位置；备份失败则中止。未知同名文件阻止覆盖，清单不能授权越界路径。兼容的工具回退使用相同流程，只改变运行资产，不回退用户文档。
+升级和修复在覆盖手改受管文件前将原文与 diff 备份到 `.agent-notes/local/backups/`，输出具体位置；备份失败则中止。未知同名文件阻止覆盖，清单不能授权越界路径。工具文件的替换保留项目文档。
 
-安装、升级与内容写入共用事务锁和 journal。目标 bundle 先在隔离目录验证当前文档契约，再替换资产，最后更新安装清单，完成前复核运行结果及保留的字节。恢复见[事务和恢复](writing.md#事务和恢复)。
+安装、升级、修复与内容写入共用事务锁和 journal。目标 bundle 先在隔离目录验证当前文档契约，再替换资产，最后更新安装清单，完成前复核运行结果及保留的字节。恢复见[事务和恢复](writing.md#事务和恢复)。
 
 ## 查询
 

@@ -58,6 +58,7 @@ describe('cLI argument boundary', () => {
     ['init', '--target', 'agents', '--target=claude', '--notes-dir=docs/decisions', '--language=en', '--no-interactive'],
     ['init'],
     ['upgrade', '--recover'],
+    ['repair', '--dry-run'],
     ['status'],
     ['create', '--input=-', '--dry-run'],
     ['update', 'id', '--input', '001'],
@@ -95,6 +96,10 @@ describe('cLI argument boundary', () => {
     ['context', '--bogus'],
     ['context', '--target', 'agents'],
     ['status', '--dry-run'],
+    ['repair', '--target', 'agents'],
+    ['repair', '--language', 'en'],
+    ['repair', '--no-interactive'],
+    ['repair', '--dry-run', '--recover'],
     ['show'],
     ['show', 'one', 'two'],
     ['create'],
@@ -140,6 +145,24 @@ describe('cLI argument boundary', () => {
     expect(parseArguments([]).help).toContain('Commands:')
     expect(output).not.toHaveBeenCalled()
     expect(run(['show', '--help']).result).toBe('ok')
+  })
+
+  it('limits runtime help and rejects package commands before initialization or recovery', () => {
+    const help = parseArguments(['--json', '--help'], 'runtime').help!
+    expect(help).toContain('repair')
+    expect(help).toContain('status')
+    expect(help).not.toContain('init')
+    expect(help).not.toContain('upgrade')
+    expect(parseArguments(['--help'], 'package').help).toContain('upgrade')
+    for (const command of ['init', 'upgrade']) {
+      for (const flags of [[], ['--help'], ['--recover']]) {
+        expect(parseArguments(['--root=/missing', command, ...flags, '--json'], 'runtime')).toMatchObject({
+          command,
+          json: true,
+          error: { code: 'PACKAGE_COMMAND_REQUIRED', exitCode: 2, message: expect.stringContaining(`npx --yes @hackycy/agent-notes@latest ${command}`) },
+        })
+      }
+    }
   })
 
   it('refuses a modified locked runtime before delegation', () => {

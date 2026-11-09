@@ -88,7 +88,7 @@ export function run(args: string[], cwd = process.cwd(), stdin?: string): Result
 export function execute(input: Options, cwd = process.cwd(), stdin?: string): Result {
   const output: Result = { command: input.command, result: 'ok', scope: {}, data: {}, diagnostics: [], review: [] }
   try {
-    if (input.command === 'init' || input.command === 'upgrade' || input.command === 'status')
+    if (input.command === 'init' || input.command === 'upgrade' || input.command === 'repair' || input.command === 'status')
       return manage({ ...input, command: input.command }, cwd)
     const root = findRoot(input.root, cwd)
     if (writeCommands.includes(input.command))

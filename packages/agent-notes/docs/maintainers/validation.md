@@ -10,7 +10,7 @@
 | TypeScript 或配置 | 上述检查，加 `pnpm exec tsc --noEmit` 与对应 Vitest 测试 |
 | 格式、关系、历史保护或状态操作 | 包级测试，保留正反样例及历史格式兼容覆盖 |
 | README、安装指南、assets 或安装布局 | 构建并打包，检查实际 tarball 的分发范围与已安装项目的文档引用 |
-| 分发、委派、升级或事务 | 包级测试，加仓库外 `test:bundle` 与 `test:install` |
+| 分发、委派、升级、修复或事务 | 包级测试，加仓库外 `test:bundle` 与 `test:install` |
 
 包级测试命令为 `pnpm --filter @hackycy/agent-notes test`；单文件测试可在末尾传入 `tests/<name>.test.ts`。根 `pnpm test` 扫描 workspace 包。
 
@@ -19,9 +19,9 @@
 - `reader.test.ts`、`commands.test.ts`：契约样例、范围发现、路径与 symlink 边界、工作树/index/commit 隔离、关系与冻结基线。
 - `workflow.test.ts`：草稿、expected_hash、身份保持、交付/拒绝、AST 引用修复、内容承接、条件清理与归档。
 - `transaction.test.ts`：写失败回滚、真实子进程 SIGKILL、锁竞争、输入/runtime 并发变化、恢复冲突保留外部编辑。
-- `distribution.test.ts`：单/双目标、静态导入复用、Git 忽略/属性、资产所有权、备份、重复安装、版本修复、升级与恢复。
+- `distribution.test.ts`：单/双目标、静态导入复用、Git 忽略/属性、资产所有权、备份、重复安装、版本切换、同版本修复与恢复。
 - `assets.test.ts`：产品资源的引用闭包、公开文档的 npm 可达性和维护文档链接。
-- `cli-input.test.ts`：全部命令参数、JSON 帮助与错误、初始化缺项/复用/冲突、取消零写入、恢复只读投影及真实 CLI 恢复入口。
+- `cli-input.test.ts`：全部命令参数、按运行来源区分的帮助与错误、初始化缺项/复用/冲突、取消零写入、恢复只读投影及真实 CLI 恢复入口。
 - `terminal.test.ts`：独立 PTY 进程覆盖默认问答、输入纠错、Esc/Ctrl+C、退出码 130、stdout 分离及无人值守开关。macOS/Linux 需 Python 3 标准库提供 PTY 驱动；Windows 跳过此组，不能据此宣称 Windows 终端已验证。
 
 改变行为时增加能观察到用户保证的回归场景，避免只重复实现。历史格式样例使用 [contract-examples.json](../../tests/contract-examples.json)，新增工具能力后仍须保持旧合法样例通过。完整替代与完整吸收、基线冻结与首次归档来源、结构通过与语义 review 都要分别覆盖。
@@ -37,7 +37,7 @@ pnpm --filter @hackycy/agent-notes test:bundle /absolute/extracted/package/dist/
 pnpm --filter @hackycy/agent-notes test:install /absolute/path/to/package.tgz
 ```
 
-`test:bundle` 可追加 Node 可执行文件路径，再追加另一版本的已解压 CLI 路径。它验证离线 runtime、stdin/JSON、生命周期、备份、冻结和 Git 换行转换；提供另一版本时验证升级与回退，并逐字节检查 Notes、配置及 seal 保留。使用隔离副本构造的另一版本只能证明版本切换机制，不能宣称跨真实历史发行版兼容。
+`test:bundle` 可追加 Node 可执行文件路径，再追加另一版本的已解压 CLI 路径。它验证离线 runtime、stdin/JSON、生命周期、备份、冻结和 Git 换行转换；提供另一版本时验证工具版本切换，并逐字节检查 Notes、配置及 seal 保留。版本切换验收使用两份基于当前实现、版本号不同的隔离包。
 
 `test:install` 通过 `npm install --offline --ignore-scripts` 安装实际 tarball，运行真正的 npm bin；检查 npm 文档和运行资源完整，维护材料未入包，安装指南未进入 runtime；覆盖 agents/claude 单目标、中英文模板、自定义 Notes 根、Git/普通目录、子目录调用与安装后的文档链接。两种 smoke 都清理自己的临时项目。
 
@@ -47,6 +47,6 @@ pnpm --filter @hackycy/agent-notes test:install /absolute/path/to/package.tgz
 
 按[内容归属](design.md#文档内容与分发)选择文档位置。维护入口与 `docs/maintainers/` 可引用源码和测试；产品资源的本地链接在 `assets/` 内闭合，README 和安装指南的链接在 npm 包内闭合。检查源码链接后，还要检查安装后的链接，因为宿主 skill 的共享资源和专用资料位于不同目录。
 
-改变资源布局时，验证旧完整包升级到新布局并回退；旧清单中的废弃资产被清理，手改内容先备份，未知邻接文件保留。Notes、项目配置与归档 seal 逐字节保持；已安装 runtime 仍能离线修复和重新安装。
+改变资源布局时，使用当前实现的不同版本夹具验证替换；旧清单中的废弃资产被清理，手改内容先备份，未知邻接文件保留。Notes、项目配置与归档 seal 逐字节保持；已安装 runtime 仍能通过 repair 离线恢复宿主 skill；源文件损坏时完整同版本 npm 包能修复。
 
 README 保持概览和参考性质；参数、契约、写入规则各有一个定义位置。清理文档时保留上游固定 commit，移除失效路径、重复 schema 和结束的讨论状态；不能以删文档掩盖真实契约差异。

@@ -20,9 +20,10 @@ import { assertNoTransaction, commitTransaction, recoverTransaction, verifyObser
 import { bundleHash, loadBundle, managerVersion } from './bundle'
 import { ancestors, planGitRules } from './git-rules'
 import { assetBytes, block, entryText, installPath, integrity, managedPath, readInstallation, replaceBlock, skillNames, versionPattern, wrapBlock } from './manifest'
+import { assertPackageCommand, repairCommand } from './source'
 
 export interface ManageOptions {
-  command: 'init' | 'upgrade' | 'status'
+  command: 'init' | 'upgrade' | 'repair' | 'status'
   root?: string
   targets: Target[]
   notesDir?: string
@@ -158,6 +159,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
   const output: Result = { command: options.command, result: 'ok', scope: {}, data: {}, diagnostics: [], review: [] }
   let scratch: string | undefined
   try {
+    assertPackageCommand(options.command)
     const [major, minor] = process.versions.node.split('.').map(Number)
     if (major < 22 || (major === 22 && minor < 12))
       throw new NotesError('NODE_VERSION', 'agent-notes requires Node >=22.12.0.', undefined, 2)
@@ -169,7 +171,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
     const source = repository.snapshot('worktree')
     const installation = readInstallation(source)
     if (!installation && options.command !== 'init')
-      throw new NotesError('NOT_INSTALLED', 'Initialize this project with an explicit --target first.', installPath, 2)
+      throw new NotesError('NOT_INSTALLED', 'Run npx --yes @hackycy/agent-notes@latest init to initialize this project first.', installPath, 2)
     if (installation && !source.read('.agent-notes/config.json'))
       throw new NotesError('CONFIG_CONFLICT', 'Installed configuration is missing; restore it explicitly.', '.agent-notes/config.json')
     const config = configFor(source, options)
@@ -179,22 +181,35 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
       output.data = { manager_version: managerVersion, runtime_version: installation!.version, bundle_sha256: installation!.bundle_sha256, targets: installation!.targets, notes_dir: config.notes_dir, assets: installation!.assets.length, integrity: problems.length ? 'damaged' : 'intact', problems }
       if (problems.length) {
         output.result = 'failed'
-        output.diagnostics = problems.map(item => ({ code: 'ASSET_INTEGRITY', path: item.path, message: `Managed asset ${item.state}; run upgrade to repair it.` }))
+        output.diagnostics = problems.map(item => ({ code: 'ASSET_INTEGRITY', path: item.path, message: `Installed tool file ${item.state}; run node .agent-notes/runtime/cli.mjs repair, or ${repairCommand(installation!.version)} if runtime source files are damaged.` }))
       }
       return output
     }
     const bundle = suppliedBundle ?? loadBundle()
     if (!versionPattern.test(bundle.version) || !bundle.files.has('cli.mjs') || skillNames.some(name => !bundle.skills.has(`${name}/SKILL.md`)))
       throw new NotesError('INVALID_BUNDLE', 'Bundle version, runtime or required skills are missing.', undefined, 2)
+    if (installation && options.command === 'repair') {
+      if (bundle.version !== installation.version)
+        throw new NotesError('REPAIR_VERSION_MISMATCH', `Repair keeps project version ${installation.version}. Run ${repairCommand(installation.version)}, or use upgrade to change versions.`, installPath, 2)
+      if (bundleHash(bundle) !== installation.bundle_sha256)
+        throw new NotesError('INVALID_BUNDLE', `Repair requires the installed bundle. Run ${repairCommand(installation.version)} using the complete npm package.`, installPath)
+    }
     if (installation && options.command === 'init') {
       if (bundle.version !== installation.version)
-        throw new NotesError('UPGRADE_REQUIRED', 'Use upgrade to change the installed tool version.', installPath, 2)
+        throw new NotesError('UPGRADE_REQUIRED', 'Run npx --yes @hackycy/agent-notes@latest upgrade to change the installed tool version.', installPath, 2)
       if (JSON.stringify([...options.targets].sort()) !== JSON.stringify([...installation.targets].sort()))
         throw new NotesError('TARGET_CONFLICT', 'Repeat init with the installed targets. Changing installation targets is not supported by v1.', installPath, 2)
       const problems = integrity(source, installation)
       if (problems.length)
-        throw new NotesError('UPGRADE_REQUIRED', 'Managed assets need repair; use upgrade.', problems[0].path)
+        throw new NotesError('REPAIR_REQUIRED', `Installed tool files need repair; run ${repairCommand(installation.version)}.`, problems[0].path)
       output.data = { version: bundle.version, targets: installation.targets, notes_dir: config.notes_dir, changes: [], recovered }
+      return output
+    }
+    if (installation && options.command === 'upgrade' && bundle.version === installation.version) {
+      const problems = integrity(source, installation)
+      if (problems.length)
+        throw new NotesError('REPAIR_REQUIRED', `Installed tool files need repair; run ${repairCommand(installation.version)}.`, problems[0].path)
+      output.data = { manager_version: bundle.version, previous_version: installation.version, runtime_version: installation.version, changes: [], recovered }
       return output
     }
     const targets = installation?.targets ?? options.targets

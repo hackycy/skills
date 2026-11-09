@@ -1,11 +1,12 @@
 import type { CAC } from 'cac'
 import { cac } from 'cac'
 import { z } from 'zod'
+import { assertPackageCommand, distributionSource } from '../distribution/source'
 import { NotesError } from '../notes/model'
 import { safePath } from '../notes/snapshot'
 import { writeCommands } from '../workflow/input'
 
-const commands = ['context', 'show', 'check', 'init', 'upgrade', 'status', 'create', 'update', 'transition', 'archive', 'prune'] as const
+const commands = ['context', 'show', 'check', 'init', 'upgrade', 'repair', 'status', 'create', 'update', 'transition', 'archive', 'prune'] as const
 const nonempty = z.string().refine(value => Boolean(value.trim()), 'Supply a nonempty value.')
 export const notesDirectory = nonempty.refine(value => safePath(value) && !/[\s*?[\]#!]/.test(value)
   && !/(?:^|\/)(?:\.git|node_modules)(?:\/|$)/i.test(value)
@@ -55,7 +56,7 @@ export interface ParsedArguments {
   error?: unknown
 }
 
-function declarations(): CAC {
+function declarations(kind: 'package' | 'runtime'): CAC {
   const cli = cac('agent-notes')
     .option('--root <project>', 'Project root')
     .option('--json', 'Output one Result object')
@@ -63,12 +64,16 @@ function declarations(): CAC {
   // Capture help through cac's callback; never let it print into JSON output.
   cli.showHelpOnExit = false
   cli.globalCommand.ignoreOptionDefaultValue()
-  const init = cli.command('init', 'Install runtime and static skill entries')
-    .option('--target <agents|claude>', 'Installation target (repeat for both)')
-    .option('--notes-dir <path>', 'Notes directory (default: .agents/notes)')
-    .option('--language <zh-CN|en>', 'Template language (default: zh-CN)')
-    .option('--no-interactive', 'Disable initialization questions')
-  const upgrade = cli.command('upgrade', 'Replace or repair installed assets')
+  const installation: CAC['commands'] = []
+  if (kind === 'package') {
+    const init = cli.command('init', 'Install runtime and static skill entries')
+      .option('--target <agents|claude>', 'Installation target (repeat for both)')
+      .option('--notes-dir <path>', 'Notes directory (default: .agents/notes)')
+      .option('--language <zh-CN|en>', 'Template language (default: zh-CN)')
+      .option('--no-interactive', 'Disable initialization questions')
+    installation.push(init, cli.command('upgrade', 'Apply this npm package version to the project'))
+  }
+  const repair = cli.command('repair', 'Restore installed tool files without changing version')
   cli.command('status', 'Inspect installation and asset integrity')
   cli.command('context', 'Find relevant Note pointers')
     .option('--paths <paths...>', 'Concrete project-relative paths (repeatable)')
@@ -85,7 +90,7 @@ function declarations(): CAC {
   writes.find(command => command.name === 'transition')!.option('--to <implemented|rejected>', 'Target status')
   for (const command of writes.filter(command => ['archive', 'prune'].includes(command.name)))
     command.option('--base <commit>', 'Trusted history baseline')
-  for (const command of [init, upgrade, ...writes]) {
+  for (const command of [...installation, repair, ...writes]) {
     command.option('--dry-run', 'Preview without writes')
       .option('--recover', 'Recover an interrupted transaction before executing')
   }
@@ -150,10 +155,10 @@ function helpText(cli: ReturnType<typeof declarations>): string {
   return result
 }
 
-export function parseArguments(args: string[]): ParsedArguments {
-  const cli = declarations()
+export function parseArguments(args: string[], kind = distributionSource().kind): ParsedArguments {
+  const cli = declarations(kind)
   // Parse output context independently so even malformed arguments retain JSON mode.
-  const context = declarations()
+  const context = declarations(kind)
   try {
     context.parse(['node', 'agent-notes', ...args], { run: false })
   }
@@ -161,6 +166,7 @@ export function parseArguments(args: string[]): ParsedArguments {
   const switches = args.slice(0, !args.includes('--') ? args.length : args.indexOf('--'))
   const parsed: ParsedArguments = { command: context.matchedCommandName ?? String(context.args[0] ?? ''), json: switches.includes('--json') }
   try {
+    assertPackageCommand(parsed.command, kind)
     cli.parse(['node', 'agent-notes', ...normalize(args, cli)], { run: false })
     const command = cli.matchedCommand
     const active = command ?? cli.globalCommand
@@ -201,7 +207,7 @@ export function options(args: string[]): Options {
   return parsed.input
 }
 
-/** Older locked runtimes understand this canonical command-first, separated-value syntax. */
+/** Serialize validated options for delegation without consuming write input. */
 export function runtimeArguments(input: Options): string[] {
   const args: string[] = [input.command]
   if (input.id !== undefined)
