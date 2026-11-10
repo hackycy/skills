@@ -1,0 +1,22 @@
+{
+  "observed_on": "2026-11-10",
+  "platform": "macOS-26.5.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "source_commit": "f74deccc5991e0452b3cb83feba51fe1c6bb1c1c",
+  "node": "v24.16.0",
+  "pnpm": "12.14.0",
+  "artifacts": [
+    {
+      "file": "hackycy-agent-notes-0.3.0.tgz",
+      "sha1": "1608f8c2470dd41fe6bcee4494e1317ef7aface2",
+      "sha256": "1ade7e4e25d9155001743d5a057188561c5c41b6f7e3685677a880155d3b0463",
+      "bytes": 323521
+    },
+    {
+      "file": "impeccable-4.8.2.tgz",
+      "sha1": "c65412ce8b27e460297108efb22b2aa607afd510",
+      "sha256": "ab8a8d7b994f746bdfb460f29b28fe2fbdcb72e2b6efee9912506a50b9926226",
+      "bytes": 16270
+    }
+  ]
+}

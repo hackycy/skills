@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "id": "bootstrap-unbuilt",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@hackycy/agent-notes",
+        "test"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes",
+      "exit": 1,
+      "stdout": "baseline-tests.stdout",
+      "stderr": "baseline-tests.stderr",
+      "stdoutSha256": "e73446b4fb06be7308ef9126c20b5995020ab4eb034287597ecf6f678b626004",
+      "stderrSha256": "8522621fdf246cad268524ffe978891d3fd3bd170c6d1150cd424067644939e1",
+      "environment": {
+        "node": "v24.16.0",
+        "pnpm": "12.14.0",
+        "platform": "Darwin arm64"
+      },
+      "note": "Shell capture; no full environment dump; first run lacked dist, final full suite includes 5 synthetic cases."
+    },
+    {
+      "id": "synthetic-full-tests",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@hackycy/agent-notes",
+        "test"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes",
+      "exit": 0,
+      "stdout": "synthetic-full-tests.stdout",
+      "stderr": "synthetic-full-tests.stderr",
+      "stdoutSha256": "d07c8c63c91e79280a9fbfe38899696faed610fe85d992e42e58b252f65b2019",
+      "stderrSha256": "cb7efe2ed065b3202856f854f1645179984b659249d4ea99dde8467ed4a4b173",
+      "environment": {
+        "node": "v24.16.0",
+        "pnpm": "12.14.0",
+        "platform": "Darwin arm64"
+      },
+      "note": "Shell capture; no full environment dump; first run lacked dist, final full suite includes 5 synthetic cases."
+    }
+  ]
+}

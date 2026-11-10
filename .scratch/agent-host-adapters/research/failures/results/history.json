@@ -1,0 +1,63 @@
+[
+  {
+    "argv": [
+      "git",
+      "show",
+      "--format=fuller",
+      "--stat",
+      "f75ee2a201cefd39c3bd54cf0ac1f141d82119e2"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/upstreams/impeccable",
+    "status": 0,
+    "stdout": "commit f75ee2a201cefd39c3bd54cf0ac1f141d82119e2\nAuthor:     Abdul Wahab <32850166+abdulwahabone@users.noreply.github.com>\nAuthorDate: Tue Oct 27 00:08:00 2026 +0800\nCommit:     GitHub <noreply@github.com>\nCommitDate: Tue Oct 27 00:08:00 2026 +0800\n\n    Fix: detect Replit Agent and label its .agents install (#1019) (#1186)\n    \n    * Fix: detect Replit Agent and label its .agents install (#1019)\n    \n    A project .replit file is now a project-scope harness hint for .agents,\n    the way ~/.codex is for Codex, and each detection carries the harness\n    that produced it, so the detected list, the detected-only prompt and the\n    picker name Replit Agent instead of Codex CLI. Adds the replit alias.\n    \n    Prepared with AI assistance (Claude Code).\n    \n    Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n    \n    * Pin the Replit install prompts in the oracle (#1019)\n    \n    A project with .replit and an empty .agents dir, driven through the\n    line prompts with a missing local bundle: the detection table and the\n    detected-only prompt name Replit Agent and nothing is written.\n    \n    Prepared with AI assistance (Claude Code).\n    \n    Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n    \n    ---------\n    \n    Co-authored-by: Claude Fable 5.1 <noreply@anthropic.com>\n\n README.md                                          |   2 +-\n crates/skills/src/commands.rs                      |  52 +++---\n crates/skills/src/providers.rs                     | 198 +++++++++++++++------\n crates/skills/tests/install_detection_tests.rs     |  73 +++++++-\n docs/CLI-CONTRACT.md                               |   4 +-\n docs/HARNESSES.md                                  |   2 +\n tests/oracle/cases/skills.mjs                      |  24 ++-\n .../golden/skills-install-replit-project.json      | Bin 0 -> 353 bytes\n tests/oracle/workspaces/skills-replit/.replit      |   1 +\n 9 files changed, 266 insertions(+), 90 deletions(-)\n",
+    "stderr": "",
+    "paths": [
+      "README.md",
+      "crates/skills/src/commands.rs",
+      "crates/skills/src/providers.rs",
+      "crates/skills/tests/install_detection_tests.rs",
+      "docs/CLI-CONTRACT.md",
+      "docs/HARNESSES.md",
+      "tests/oracle/cases/skills.mjs",
+      "tests/oracle/golden/skills-install-replit-project.json",
+      "tests/oracle/workspaces/skills-replit/.replit"
+    ],
+    "count": 9
+  },
+  {
+    "argv": [
+      "git",
+      "show",
+      "--format=fuller",
+      "--stat",
+      "7ddc958a40ecd58a622eecc1302c69a14a83ec72"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/upstreams/impeccable",
+    "status": 0,
+    "stdout": "commit 7ddc958a40ecd58a622eecc1302c69a14a83ec72\nAuthor:     Abdul Wahab <32850166+abdulwahabone@users.noreply.github.com>\nAuthorDate: Mon Oct 26 18:39:32 2026 +0800\nCommit:     GitHub <noreply@github.com>\nCommitDate: Mon Oct 26 18:39:32 2026 +0800\n\n    Add Devin provider support (#638) (#1183)\n    \n    Emit .devin/skills for Devin (web, CLI, Desktop), teach the CLI the devin and windsurf provider names, the shared global dir and the ~/.codeium/windsurf legacy hint, and fold the env-relocated detection hints into one Hint::ConfigDir variant. Docs and provider tests follow.\n    \n    AI assistance disclosure: prepared with Claude Code under maintainer direction.\n    \n    Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n\n .gitattributes                                 |  1 +\n .github/workflows/sync-generated-output.yml    |  1 +\n AGENTS.md                                      |  2 +-\n README.md                                      | 13 +++-\n crates/context/src/pin.rs                      |  4 +-\n crates/context/src/provider.rs                 |  1 +\n crates/skills/src/bundle.rs                    |  2 +-\n crates/skills/src/providers.rs                 | 89 +++++++++++++++++++++-----\n crates/skills/tests/install_detection_tests.rs | 34 ++++++++++\n docs/CLI-CONTRACT.md                           |  4 +-\n docs/HARNESSES.md                              |  4 ++\n scripts/build.js                               |  1 +\n scripts/lib/transformers/index.js              |  1 +\n scripts/lib/transformers/providers.js          | 14 ++++\n scripts/lib/utils.js                           |  7 ++\n tests/build.test.js                            |  5 +-\n tests/hook-build.test.mjs                      |  1 +\n tests/lib/provider-blocks.test.js              |  7 ++\n tests/lib/transformers/providers.test.js       | 18 ++++++\n tests/workflow-security.test.js                |  1 +\n 20 files changed, 185 insertions(+), 25 deletions(-)\n",
+    "stderr": "",
+    "paths": [
+      ".gitattributes",
+      ".github/workflows/sync-generated-output.yml",
+      "AGENTS.md",
+      "README.md",
+      "crates/context/src/pin.rs",
+      "crates/context/src/provider.rs",
+      "crates/skills/src/bundle.rs",
+      "crates/skills/src/providers.rs",
+      "crates/skills/tests/install_detection_tests.rs",
+      "docs/CLI-CONTRACT.md",
+      "docs/HARNESSES.md",
+      "scripts/build.js",
+      "scripts/lib/transformers/index.js",
+      "scripts/lib/transformers/providers.js",
+      "scripts/lib/utils.js",
+      "tests/build.test.js",
+      "tests/hook-build.test.mjs",
+      "tests/lib/provider-blocks.test.js",
+      "tests/lib/transformers/providers.test.js",
+      "tests/workflow-security.test.js"
+    ],
+    "count": 20
+  }
+]

@@ -1,0 +1,386 @@
+[
+  {
+    "id": "notes-init-offline",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 22,
+    "stdout": "{\"command\":\"init\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.3.0\",\"previous_version\":null,\"runtime_version\":\"0.3.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":false,\"modified_assets\":[],\"changes\":[{\"path\":\".agents/notes/runtime/cli.mjs\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"331153e8ba255037f5b999838bfc9ae3f401d051e31cd09422a659b2a52caa63\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-archive-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa\"},{\"path\":\".agents/notes/runtime/assets/formats/d",
+    "stderr": ""
+  },
+  {
+    "id": "notes-context-offline",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"context\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes\",\"snapshot\":\"worktree\",\"base\":null,\"head\":null},\"data\":{\"notes\":[]},\"diagnostics\":[],\"review\":[{\"code\":\"SCOPE_REQUIRED\",\"message\":\"Only global pointers and their dependencies are returned. Provide --paths or --topic for the task scope.\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-check-offline",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"check\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes\",\"snapshot\":\"worktree\",\"base\":null,\"head\":null},\"data\":{\"notes_checked\":0,\"structural_check\":\"passed\"},\"diagnostics\":[],\"review\":[{\"code\":\"NO_HISTORY_BASELINE\",\"message\":\"Current structure only: no historical baseline is available; previous freezes and transitions cannot be verified.\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-unknown-target",
+    "status": 2,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"init\",\"result\":\"invalid-input\",\"scope\":{},\"data\":{},\"diagnostics\":[{\"code\":\"INVALID_INPUT\",\"message\":\"target: Invalid input\"}],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-repair-edited-skill",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 5,
+    "stdout": "{\"command\":\"repair\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.3.0\",\"previous_version\":\"0.3.0\",\"runtime_version\":\"0.3.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":false,\"modified_assets\":[\".agents/skills/agent-note/SKILL.md\"],\"changes\":[{\"path\":\".agents/skills/agent-note/SKILL.md\",\"action\":\"update\",\"before_hash\":\"871ccf980fe466b40a8d7815f5588dd2dc9b44e25f6c6633e0844a763a9f6e39\",\"after_hash\":\"4871015af533ce8d739a210eca4bf69f32e4d885b06d532c28ea411f2e9aaff7\"}],\"backup\":\".agents/notes/local/backups/839114ab-61bf-4c18-8641-d06fd863d866\"},\"diagnostics\":[],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-corrupt-source-local-repair",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"repair\",\"result\":\"failed\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes\",\"snapshot\":\"worktree\"},\"data\":{},\"diagnostics\":[{\"code\":\"INVALID_BUNDLE\",\"message\":\"Installed source files are modified or unknown. Run npx --yes @hackycy/agent-notes@0.3.0 repair using the complete npm package.\",\"path\":\".agents/notes/runtime/assets/skills/agent-note/SKILL.md\"}],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-corrupt-source-package-repair",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 5,
+    "stdout": "{\"command\":\"repair\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.3.0\",\"previous_version\":\"0.3.0\",\"runtime_version\":\"0.3.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":false,\"modified_assets\":[\".agents/notes/runtime/assets/skills/agent-note/SKILL.md\"],\"changes\":[{\"path\":\".agents/notes/runtime/assets/skills/agent-note/SKILL.md\",\"action\":\"update\",\"before_hash\":\"96732d332e037031c9ff2415c79b10b108a5cd877e4caf02d8a74377defe52c5\",\"after_hash\":\"2c1339d98f541554adeaafadb2ecb0b1cb6bb8265cb03c11938fbfa333fbbd96\"}],\"backup\":\".agents/notes/local/backups/375f34ee-e1f7-49b5-89fe-d8f581e8e982\"},\"diagnostics\":[],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-permission-rollback",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"init\",\"result\":\"failed\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-permission\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.3.0\",\"previous_version\":null,\"runtime_version\":\"0.3.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":false,\"modified_assets\":[],\"changes\":[{\"path\":\".agents/notes/runtime/cli.mjs\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"331153e8ba255037f5b999838bfc9ae3f401d051e31cd09422a659b2a52caa63\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-archive-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa\"},{\"path\":\".agents/notes/runtime/a",
+    "stderr": ""
+  },
+  {
+    "id": "notes-old-init",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 22,
+    "stdout": "{\"command\":\"init\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-upgrade\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.2.0\",\"previous_version\":null,\"runtime_version\":\"0.2.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":false,\"modified_assets\":[],\"changes\":[{\"path\":\".agent-notes/runtime/cli.mjs\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"ac2762a1928353ed82a2b47f7bd532c1d24cb0e228607e1c9c20d5e4162711a4\"},{\"path\":\".agent-notes/runtime/assets/formats/agent-note-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb\"},{\"path\":\".agent-notes/runtime/assets/formats/agent-note-archive-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa\"},{\"path\":\".agent-notes/runtime/assets/forma",
+    "stderr": ""
+  },
+  {
+    "id": "notes-upgrade-020-to-030",
+    "status": 2,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"upgrade\",\"result\":\"invalid-input\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-upgrade\",\"snapshot\":\"worktree\"},\"data\":{},\"diagnostics\":[{\"code\":\"INVALID_CONFIG\",\"message\":\"Expected v1 config with a safe notes_dir and language zh-CN or en.\",\"path\":\".agent-notes/config.json\"}],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-old-context-after-refused-upgrade",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"context\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-upgrade\",\"snapshot\":\"worktree\",\"base\":null,\"head\":null},\"data\":{\"notes\":[]},\"diagnostics\":[],\"review\":[{\"code\":\"SCOPE_REQUIRED\",\"message\":\"Only global pointers and their dependencies are returned. Provide --paths or --topic for the task scope.\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-upgrade-020-recover",
+    "status": 2,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"upgrade\",\"result\":\"invalid-input\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-upgrade\",\"snapshot\":\"worktree\"},\"data\":{},\"diagnostics\":[{\"code\":\"INVALID_CONFIG\",\"message\":\"Expected v1 config with a safe notes_dir and language zh-CN or en.\",\"path\":\".agent-notes/config.json\"}],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-recovery-init",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 22,
+    "stdout": "{\"command\":\"init\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-recovery\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.3.0\",\"previous_version\":null,\"runtime_version\":\"0.3.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":false,\"modified_assets\":[],\"changes\":[{\"path\":\".agents/notes/runtime/cli.mjs\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"331153e8ba255037f5b999838bfc9ae3f401d051e31cd09422a659b2a52caa63\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-archive-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa\"},{\"path\":\".agents/notes/runtime/assets/",
+    "stderr": ""
+  },
+  {
+    "id": "notes-repair-killed",
+    "status": null,
+    "signal": "SIGKILL",
+    "filesChanged": 7,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "id": "notes-repair-interrupted-context",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"context\",\"result\":\"failed\",\"scope\":{},\"data\":{},\"diagnostics\":[{\"code\":\"RECOVERY_REQUIRED\",\"message\":\"An interrupted transaction exists. Run a write command with --recover to roll back before retrying; never discard its journal.\",\"path\":\".agents/notes/local/write-lock\"}],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-recovery-conflict",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"repair\",\"result\":\"failed\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-recovery\",\"snapshot\":\"worktree\"},\"data\":{},\"diagnostics\":[{\"code\":\"RECOVERY_CONFLICT\",\"message\":\"File changed outside this transaction. Preserve the edit and reconcile it with the journal before retrying --recover.\",\"path\":\".agents/skills/agent-note/SKILL.md\"}],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-recovery-after-reconcile",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 6,
+    "stdout": "{\"command\":\"repair\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-recovery\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.3.0\",\"previous_version\":\"0.3.0\",\"runtime_version\":\"0.3.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":true,\"modified_assets\":[\".agents/skills/agent-note/SKILL.md\"],\"changes\":[{\"path\":\".agents/skills/agent-note/SKILL.md\",\"action\":\"update\",\"before_hash\":\"fb56b1353ebcdc746028d1fec8b2b7127ee290d4756bf7d73cbd8f6aca46df9f\",\"after_hash\":\"4871015af533ce8d739a210eca4bf69f32e4d885b06d532c28ea411f2e9aaff7\"}],\"backup\":\".agents/notes/local/backups/a1d8e090-8284-4ec4-a048-c3f57530e32d\"},\"diagnostics\":[],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "notes-concurrent-init",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 22,
+    "stdout": "{\"command\":\"init\",\"result\":\"ok\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-concurrent\",\"snapshot\":\"worktree\"},\"data\":{\"manager_version\":\"0.3.0\",\"previous_version\":null,\"runtime_version\":\"0.3.0\",\"targets\":[\"agents\",\"claude\"],\"notes_dir\":\".agents/notes\",\"recovered\":false,\"modified_assets\":[],\"changes\":[{\"path\":\".agents/notes/runtime/cli.mjs\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"331153e8ba255037f5b999838bfc9ae3f401d051e31cd09422a659b2a52caa63\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb\"},{\"path\":\".agents/notes/runtime/assets/formats/agent-note-archive-1.schema.json\",\"action\":\"create\",\"before_hash\":null,\"after_hash\":\"4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa\"},{\"path\":\".agents/notes/runtime/asset",
+    "stderr": ""
+  },
+  {
+    "id": "notes-concurrent-contender",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "{\"command\":\"repair\",\"result\":\"failed\",\"scope\":{\"root\":\"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/notes-concurrent\",\"snapshot\":\"worktree\"},\"data\":{},\"diagnostics\":[{\"code\":\"WRITE_BUSY\",\"message\":\"A writer owns the project lock (PID 54945, host qigong-it-1deMac-mini.local).\",\"path\":\".agents/notes/local/write-lock\"}],\"review\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "id": "impeccable-init-offline-local-bundle",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-installed-launcher-offline",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "impeccable: could not download engine 0.1.21 from http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64; check network access, the release URL, and curl or wget availability.\nEngine 0.1.21 setup needs network access and write permission to /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable/bin/0.1.21.\nRun this launcher (/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable/.agents/skills/impeccable/scripts/impeccable) with engine-probe in a terminal that has those permissions, then retry the original command.\nAlternatively, set IMPECCABLE_HOME to a writable cache location, or IMPECCABLE_BIN to a preinstalled engine binary.\n"
+  },
+  {
+    "id": "impeccable-installed-launcher-override",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "impeccable-engine 0.1.21\n",
+    "stderr": ""
+  },
+  {
+    "id": "impeccable-repeat-offline-missing-bundle",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "Impeccable skills are already installed (found in .claude/).\nCould not check for skill updates: Local bundle not found: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/missing.zip\nExisting skills were left unchanged.\nRun with --force to reinstall.\n\n",
+    "stderr": ""
+  },
+  {
+    "id": "impeccable-unknown-provider",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "Unknown provider(s): not-a-host\nPass providers explicitly, e.g. --providers=claude,cursor\n"
+  },
+  {
+    "id": "impeccable-permission-partial",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 63,
+    "stdout": "\nDownloading impeccable skills...\n",
+    "stderr": "Install failed: EACCES: permission denied, mkdir '/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-partial/.claude/skills/impeccable'\n"
+  },
+  {
+    "id": "impeccable-partial-rerun",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 62,
+    "stdout": "Impeccable skills are already installed (found in .agents/).\nInstalled impeccable into: .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-partial/.claude/agents\nDone!\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-concurrent-a",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\n",
+    "stderr": "Install failed: ENOENT: no such file or directory, open '/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-concurrent/.agents/skills/impeccable/scripts/engine-checksums.txt'\n"
+  },
+  {
+    "id": "impeccable-concurrent-b",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-concurrent/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-race-1-b",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-race-1/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-race-1-a",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-race-1/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-race-2-b",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-race-2/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-race-2-a",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-race-2/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-race-3-a",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-race-3/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-race-3-b",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 125,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-race-3/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-process-killed",
+    "status": null,
+    "signal": "SIGKILL",
+    "filesChanged": 4,
+    "stdout": "\nDownloading impeccable skills...\n",
+    "stderr": ""
+  },
+  {
+    "id": "impeccable-killed-force-rerun",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 121,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable-killed/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": "Could not download the impeccable engine v0.1.21 for darwin-arm64 (http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64): http://127.0.0.1:9/engine-v0.1.21/impeccable-darwin-arm64: Connection Failed: Connect error: Operation not permitted (os error 1). The launcher fetches it on first run.\n"
+  },
+  {
+    "id": "impeccable-empty-cache-offline",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "impeccable: fetch failed\nimpeccable: no binary for darwin-arm64. Install @impeccable/cli-darwin-arm64@0.1.21, set IMPECCABLE_BIN, or download impeccable-darwin-arm64 v0.1.21 from http://127.0.0.1:9 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable/bin/0.1.21/impeccable.\n"
+  },
+  {
+    "id": "impeccable-valid-cache-offline",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "Usage: impeccable <command> [options]\n\nCommands:\n  detect [file-or-dir-or-url...]   Scan for UI anti-patterns and design quality issues\n  ignores                          Manage detector ignore rules, files, and values\n  help                             List all available skills and commands\n  install                          Install impeccable skills into your project or global harness\n  link                             Symlink skills from a local checkout or submodule\n  update                           Update skills to the latest version\n  check                            Check if skill updates are available\n  telemetry off|on|status          Turn the roll API's anonymous usage data off or on, or show it\n\nOptions:\n  --help       Show this help message\n  --version    Show version number\n\nCompatibility:\n  impeccable skills <command>       Legacy namespace; still supported.\n",
+    "stderr": ""
+  },
+  {
+    "id": "impeccable-corrupt-cache-offline",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "impeccable: cannot verify the cached engine /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable/bin/0.1.21/impeccable against /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/extracted/impeccable/package/skill/scripts/engine-checksums.txt; downloading engine 0.1.21 again\nimpeccable: fetch failed\nimpeccable: no binary for darwin-arm64. Install @impeccable/cli-darwin-arm64@0.1.21, set IMPECCABLE_BIN, or download impeccable-darwin-arm64 v0.1.21 from http://127.0.0.1:9 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable/bin/0.1.21/impeccable.\n"
+  },
+  {
+    "id": "impeccable-corrupt-bundle",
+    "status": 1,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "\nDownloading impeccable skills...\n",
+    "stderr": "Download failed: invalid Zip archive: Could not find EOCD\n"
+  },
+  {
+    "id": "impeccable-verified-download",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "impeccable-engine 0.1.21\n",
+    "stderr": "impeccable: cannot verify the cached engine /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable/bin/0.1.21/impeccable against /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/extracted/impeccable/package/skill/scripts/engine-checksums.txt; downloading engine 0.1.21 again\n"
+  },
+  {
+    "id": "impeccable-install-with-verified-engine",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 2,
+    "stdout": "\nDownloading impeccable skills...\nInstalled impeccable into: .agents, .claude (project)\nInstalled impeccable engine v0.1.21 (darwin-arm64) into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable/.agents/skills/impeccable/scripts/bin/darwin-arm64/impeccable\nInstalled impeccable engine v0.1.21 (darwin-arm64) into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable/.claude/skills/impeccable/scripts/bin/darwin-arm64/impeccable\nInstalled Claude Code agents into: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable/.claude/agents\n\nDone! Now type /impeccable init in your AI coding agent's chat (not in this terminal) to set up design context.\n\n",
+    "stderr": ""
+  },
+  {
+    "id": "impeccable-selfcontained-launcher-offline",
+    "status": 0,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "impeccable-engine 0.1.21\n",
+    "stderr": ""
+  },
+  {
+    "id": "impeccable-download-checksum-mismatch",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "impeccable: checksum mismatch downloading http://127.0.0.1:55174/engine-v0.1.21/impeccable-darwin-arm64\nimpeccable: no binary for darwin-arm64. Install @impeccable/cli-darwin-arm64@0.1.21, set IMPECCABLE_BIN, or download impeccable-darwin-arm64 v0.1.21 from http://127.0.0.1:55174 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable/bin/0.1.21/impeccable.\n"
+  },
+  {
+    "id": "branch-shim-linux-arm64",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "STUDY_REQUEST http://127.0.0.1:9/engine-v0.1.21/impeccable-linux-arm64\nimpeccable: no binary for linux-arm64. Install @impeccable/cli-linux-arm64@0.1.21, set IMPECCABLE_BIN, or download impeccable-linux-arm64 v0.1.21 from http://127.0.0.1:9 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/branch-linux-arm64/bin/0.1.21/impeccable.\n"
+  },
+  {
+    "id": "branch-shim-win32-x64",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "STUDY_REQUEST http://127.0.0.1:9/engine-v0.1.21/impeccable-windows-x64.exe\nimpeccable: no binary for windows-x64. Install @impeccable/cli-windows-x64@0.1.21, set IMPECCABLE_BIN, or download impeccable-windows-x64 v0.1.21 from http://127.0.0.1:9 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/branch-win32-x64/bin/0.1.21/impeccable.exe.\n"
+  },
+  {
+    "id": "branch-shim-win32-arm64",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "impeccable: no checksum for engine 0.1.21 (impeccable-windows-arm64.exe) in /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/extracted/impeccable/package/skill/scripts/engine-checksums.txt; refusing the unverified download\nimpeccable: no binary for windows-arm64. Install @impeccable/cli-windows-arm64@0.1.21, set IMPECCABLE_BIN, or download impeccable-windows-arm64 v0.1.21 from http://127.0.0.1:9 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/branch-win32-arm64/bin/0.1.21/impeccable.exe.\n"
+  },
+  {
+    "id": "branch-shim-freebsd-x64",
+    "status": 127,
+    "signal": null,
+    "filesChanged": 0,
+    "stdout": "",
+    "stderr": "impeccable: no checksum for engine 0.1.21 (impeccable-freebsd-x64) in /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/extracted/impeccable/package/skill/scripts/engine-checksums.txt; refusing the unverified download\nimpeccable: no binary for freebsd-x64. Install @impeccable/cli-freebsd-x64@0.1.21, set IMPECCABLE_BIN, or download impeccable-freebsd-x64 v0.1.21 from http://127.0.0.1:9 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/branch-freebsd-x64/bin/0.1.21/impeccable.\n"
+  }
+]

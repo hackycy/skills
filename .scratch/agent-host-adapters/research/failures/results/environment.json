@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-10T04:00:24.608Z",
+  "node": "v24.16.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "os": "25.5.0",
+  "runRoot": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc",
+  "artifacts": {
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/releases/impeccable-darwin-arm64": {
+      "sha256": "086fd22e54c445a0e792f66d2f168e35ec93f7c59054e1fde539d0d95b01ce41",
+      "size": 18499072
+    },
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/releases/universal-4.8.2.zip": {
+      "sha256": "2d91255946127a5862cea0811c269b0943984840de76b90d32e4c2c5293c103a",
+      "size": 18249867
+    },
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/releases/universal-4.8.2.zip.sig.json": {
+      "sha256": "618d51e9b73c44c1a41d9ec951b0ad85d3d343d64b5dfb1152fda91b1786a625",
+      "size": 348
+    },
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/baseline/impeccable-4.8.2.tgz": {
+      "sha256": "ab8a8d7b994f746bdfb460f29b28fe2fbdcb72e2b6efee9912506a50b9926226",
+      "size": 16270
+    },
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/baseline/hackycy-agent-notes-0.3.0.tgz": {
+      "sha256": "1ade7e4e25d9155001743d5a057188561c5c41b6f7e3685677a880155d3b0463",
+      "size": 323521
+    },
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/baseline/hackycy-agent-notes-0.2.0.tgz": {
+      "sha256": "3ca33a0321ffaeed8cae9d3ba38421312b5ee2fc5ca30c90dfc64a6b71c4b9e5",
+      "size": 320798
+    }
+  },
+  "bundleSignatureVerified": true,
+  "keySource": "035c8f319edd019936525a062fe99e83ca8d12c6/scripts/bundle-signing-keys.json",
+  "env": {
+    "PATH": "/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/go/bin:/opt/homebrew/bin:/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Users/qigong-it-1/.codex/tmp/arg0-macos/codex-arg0DWXkTS:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/Users/qigong-it-1/Library/pnpm/bin:/Users/qigong-it-1/.cargo/bin:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS",
+    "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home",
+    "TMPDIR": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/tmp",
+    "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.cache",
+    "CI": "1",
+    "IMPECCABLE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable",
+    "IMPECCABLE_DOWNLOAD_BASE": "http://127.0.0.1:9"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "at_utc": "2026-11-10T03:59:45.739546+00:00",
+  "platform": "macOS-26.5.1-arm64-arm-64bit",
+  "executables": [
+    {
+      "name": "claude",
+      "path": "/Users/qigong-it-1/.local/bin/claude",
+      "realpath": "/Users/qigong-it-1/.local/share/claude/versions/2.1.319",
+      "bytes": 321995200,
+      "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd"
+    },
+    {
+      "name": "codex",
+      "path": "/opt/homebrew/bin/codex",
+      "realpath": "/opt/homebrew/Caskroom/codex/0.156.1/bin/codex",
+      "bytes": 238138912,
+      "sha256": "0196e89fe5a7598f816ee54232c3d7c26d75e502ab5cfe2c9240e81d90f7255a"
+    },
+    {
+      "name": "opencode",
+      "path": "/Users/qigong-it-1/.opencode/bin/opencode",
+      "realpath": "/Users/qigong-it-1/.opencode/bin/opencode",
+      "bytes": 144107234,
+      "sha256": "2f24593f1b8e578d0b7ed7ca399440d4b6c125330eece20a69ad8d380190d669"
+    },
+    {
+      "name": "copilot",
+      "path": "/opt/homebrew/bin/copilot",
+      "realpath": "/opt/homebrew/Caskroom/copilot-cli/1.0.19/copilot",
+      "bytes": 137591296,
+      "sha256": "fe5673639aaa18ea338f3820eb44879345bf030b7c84e892beacbffc8a88e878"
+    },
+    {
+      "name": "cursor",
+      "available": false
+    },
+    {
+      "name": "gemini",
+      "available": false
+    }
+  ]
+}

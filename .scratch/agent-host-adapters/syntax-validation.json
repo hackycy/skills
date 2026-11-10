@@ -1,0 +1,78 @@
+[
+  {
+    "file": ".scratch/agent-host-adapters/research/hosts/discover.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/hosts/fetch.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/hosts/probe.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/hosts/summarize.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/notes/prepare-synthetic.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/synthesis/audit-provider-tables.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/synthesis/reproduce-baseline.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/verify-research.py",
+    "check": "python AST",
+    "exit": 0
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/failures/fault.cjs",
+    "check": "node --check",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/failures/platform.cjs",
+    "check": "node --check",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/failures/prepare.mjs",
+    "check": "node --check",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/failures/run.mjs",
+    "check": "node --check",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/notes/recovery-child.mjs",
+    "check": "node --check",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": ".scratch/agent-host-adapters/research/notes/run.mjs",
+    "check": "node --check",
+    "exit": 0,
+    "stderr": ""
+  }
+]

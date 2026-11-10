@@ -1,0 +1,124 @@
+{
+  "source_commit": "f74deccc5991e0452b3cb83feba51fe1c6bb1c1c",
+  "artifact_sha256": "1ade7e4e25d9155001743d5a057188561c5c41b6f7e3685677a880155d3b0463",
+  "asset_comparisons": [
+    {
+      "path": "assets/formats/agent-note-1.schema.json",
+      "source_sha256": "1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb",
+      "tar_sha256": "1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb",
+      "equal": true
+    },
+    {
+      "path": "assets/formats/agent-note-archive-1.schema.json",
+      "source_sha256": "4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa",
+      "tar_sha256": "4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa",
+      "equal": true
+    },
+    {
+      "path": "assets/references/cli.md",
+      "source_sha256": "9cb63a9d6ce69ca7a421696a57e942e85c7f99829767af4873fc8b5914722a18",
+      "tar_sha256": "9cb63a9d6ce69ca7a421696a57e942e85c7f99829767af4873fc8b5914722a18",
+      "equal": true
+    },
+    {
+      "path": "assets/formats/document.md",
+      "source_sha256": "e8c0c761bcf981a71e6341afcc8d2128fde2816c9be5717180b3e9805e2d34e5",
+      "tar_sha256": "e8c0c761bcf981a71e6341afcc8d2128fde2816c9be5717180b3e9805e2d34e5",
+      "equal": true
+    },
+    {
+      "path": "assets/templates/implemented.en.md",
+      "source_sha256": "46dc12cf237b1c5b21c367da00d524c53e0d3a6e17da317b5d6e6711dd627a7d",
+      "tar_sha256": "46dc12cf237b1c5b21c367da00d524c53e0d3a6e17da317b5d6e6711dd627a7d",
+      "equal": true
+    },
+    {
+      "path": "assets/templates/implemented.zh-CN.md",
+      "source_sha256": "e27f4b8c37121c0c58ad1e7b2eaf27b0d24b8405e2838572465d1b43e4d1a1ed",
+      "tar_sha256": "e27f4b8c37121c0c58ad1e7b2eaf27b0d24b8405e2838572465d1b43e4d1a1ed",
+      "equal": true
+    },
+    {
+      "path": "assets/templates/proposed.en.md",
+      "source_sha256": "b3051da0e49142b25c570799ee81afbea8644ec9d91faf9303be13b566f46361",
+      "tar_sha256": "b3051da0e49142b25c570799ee81afbea8644ec9d91faf9303be13b566f46361",
+      "equal": true
+    },
+    {
+      "path": "assets/templates/proposed.zh-CN.md",
+      "source_sha256": "bb6250710e98af713bb26e4daa4172385f25dfa65695de6b08f21d8785cbb04c",
+      "tar_sha256": "bb6250710e98af713bb26e4daa4172385f25dfa65695de6b08f21d8785cbb04c",
+      "equal": true
+    },
+    {
+      "path": "assets/skills/agent-note-maintenance/SKILL.md",
+      "source_sha256": "d63c34315917b6cab9c019f7c63ae1892168342c5539bdb4498a1fc6df9f7c1a",
+      "tar_sha256": "d63c34315917b6cab9c019f7c63ae1892168342c5539bdb4498a1fc6df9f7c1a",
+      "equal": true
+    },
+    {
+      "path": "assets/skills/agent-note/SKILL.md",
+      "source_sha256": "2c1339d98f541554adeaafadb2ecb0b1cb6bb8265cb03c11938fbfa333fbbd96",
+      "tar_sha256": "2c1339d98f541554adeaafadb2ecb0b1cb6bb8265cb03c11938fbfa333fbbd96",
+      "equal": true
+    },
+    {
+      "path": "assets/references/writing.md",
+      "source_sha256": "120cf72428c5e13e415e66376b2ba6bfc6e0a8cb7aaddfbfa748bb37b70c3cae",
+      "tar_sha256": "120cf72428c5e13e415e66376b2ba6bfc6e0a8cb7aaddfbfa748bb37b70c3cae",
+      "equal": true
+    }
+  ],
+  "manifest": {
+    "name": "@hackycy/agent-notes",
+    "type": "module",
+    "version": "0.3.0",
+    "description": "Portable engineering decision notes with explicit lifecycle governance",
+    "license": "MIT",
+    "publishConfig": {
+      "access": "public",
+      "registry": "https://registry.npmjs.org",
+      "tag": "latest"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/hackycy/skills.git",
+      "directory": "packages/agent-notes"
+    },
+    "bin": {
+      "agent-notes": "./dist/cli.mjs"
+    },
+    "files": [
+      "assets",
+      "dist",
+      "docs/installation.md"
+    ],
+    "engines": {
+      "node": ">=22.12.0"
+    },
+    "scripts": {
+      "build": "tsdown",
+      "prepack": "pnpm run build",
+      "start": "tsx src/cli/main.ts",
+      "test": "vitest run",
+      "test:bundle": "tsx tests/bundle-smoke.ts",
+      "test:install": "tsx tests/install-smoke.ts",
+      "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+      "@clack/prompts": "catalog:",
+      "@types/mdast": "catalog:",
+      "ajv": "catalog:",
+      "ajv-formats": "catalog:",
+      "cac": "catalog:",
+      "github-slugger": "catalog:",
+      "mdast-util-to-string": "catalog:",
+      "remark-gfm": "catalog:",
+      "remark-parse": "catalog:",
+      "unified": "catalog:",
+      "yaml": "catalog:testing",
+      "zod": "catalog:"
+    }
+  },
+  "all_assets_equal": true
+}

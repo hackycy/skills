@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "--dir",
+    "packages/agent-notes/tests",
+    "distribution.test.ts",
+    "transaction.test.ts"
+  ],
+  "cwd": "/Users/qigong-it-1/Workspace/skills",
+  "status": null,
+  "timed_out_seconds": 60,
+  "stdout": "b'\\n RUN  v4.1.5 /Users/qigong-it-1/Workspace/skills\\n\\n'",
+  "stderr": "None"
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "argv": [
+      "node",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.scratch/agent-host-adapters/research/failures/prepare.mjs",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills",
+    "status": 0,
+    "stdout": "[\n  {\n    \"url\": \"https://registry.npmjs.org/impeccable/-/impeccable-4.8.2.tgz\",\n    \"target\": \"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/baseline/impeccable-4.8.2.tgz\",\n    \"status\": 200,\n    \"sha256\": \"ab8a8d7b994f746bdfb460f29b28fe2fbdcb72e2b6efee9912506a50b9926226\"\n  },\n  {\n    \"url\": \"https://registry.npmjs.org/@hackycy/agent-notes/-/agent-notes-0.3.0.tgz\",\n    \"target\": \"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/baseline/hackycy-agent-notes-0.3.0.tgz\",\n    \"status\": 200,\n    \"sha256\": \"1ade7e4e25d9155001743d5a057188561c5c41b6f7e3685677a880155d3b0463\"\n  },\n  {\n    \"url\": \"https://registry.npmjs.org/@hackycy/agent-notes/-/agent-notes-0.2.0.tgz\",\n    \"target\": \"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/baseline/hackycy-agent-notes-0.2.0.tgz\",\n    \"status\": 200,\n    \"sha256\": \"3ca33a0321ffaeed8cae9d3ba38421312b5ee2fc5ca30c90dfc64a6b71c4b9e5\"\n  },\n  {\n    \"url\": \"https://github.com/pbakaus/impeccable/releases/download/engine-v0.1.21/impeccable-darwin-arm64\",\n    \"target\": \"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/releases/impeccable-darwin-arm64\",\n    \"status\": 200,\n    \"sha256\": \"086fd22e54c445a0e792f66d2f168e35ec93f7c59054e1fde539d0d95b01ce41\"\n  },\n  {\n    \"url\": \"https://github.com/pbakaus/impeccable/releases/download/skill-v4.8.2/universal.zip\",\n    \"target\": \"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/releases/universal-4.8.2.zip\",\n    \"status\": 200,\n    \"sha256\": \"2d91255946127a5862cea0811c269b0943984840de76b90d32e4c2c5293c103a\"\n  },\n  {\n    \"url\": \"https://github.com/pbakaus/impeccable/releases/download/skill-v4.8.2/universal.zip.sig.json\",\n    \"target\": \"/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/releases/universal-4.8.2.zip.sig.json\",\n    \"status\": 200,\n    \"sha256\": \"618d51e9b73c44c1a41d9ec951b0ad85d3d343d64b5dfb1152fda91b1786a625\"\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "node",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.scratch/agent-host-adapters/research/failures/run.mjs",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills",
+    "status": 0,
+    "stdout": "notes-init-offline 0 22\nnotes-context-offline 0 0\nnotes-check-offline 0 0\nnotes-unknown-target 2 0\nnotes-repair-edited-skill 0 5\nnotes-corrupt-source-local-repair 1 0\nnotes-corrupt-source-package-repair 0 5\nnotes-permission-rollback 1 0\nnotes-old-init 0 22\nnotes-upgrade-020-to-030 2 0\nnotes-old-context-after-refused-upgrade 0 0\nnotes-upgrade-020-recover 2 0\nnotes-recovery-init 0 22\nnotes-repair-killed SIGKILL 7\nnotes-repair-interrupted-context 1 0\nnotes-recovery-conflict 1 0\nnotes-recovery-after-reconcile 0 6\nnotes-concurrent-init 0 22\nnotes-concurrent-contender 1 0\nimpeccable-init-offline-local-bundle 0 125\nimpeccable-installed-launcher-offline 127 0\nimpeccable-installed-launcher-override 0 0\nimpeccable-repeat-offline-missing-bundle 0 0\nimpeccable-unknown-provider 1 0\nimpeccable-permission-partial 1 63\nimpeccable-partial-rerun 0 62\nimpeccable-concurrent-a 1 125\nimpeccable-concurrent-b 0 125\nimpeccable-race-1-b 0 125\nimpeccable-race-1-a 0 125\nimpeccable-race-2-b 0 125\nimpeccable-race-2-a 0 125\nimpeccable-race-3-a 0 125\nimpeccable-race-3-b 0 125\nimpeccable-process-killed SIGKILL 4\nimpeccable-killed-force-rerun 0 121\nimpeccable-empty-cache-offline 127 0\nimpeccable-valid-cache-offline 0 0\nimpeccable-corrupt-cache-offline 127 0\nimpeccable-corrupt-bundle 1 0\nimpeccable-verified-download 0 0\nimpeccable-install-with-verified-engine 0 2\nimpeccable-selfcontained-launcher-offline 0 0\nimpeccable-download-checksum-mismatch 127 0\nbranch-shim-linux-arm64 127 0\nbranch-shim-win32-x64 127 0\nbranch-shim-win32-arm64 127 0\nbranch-shim-freebsd-x64 127 0\nraw fixture root: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc\n",
+    "stderr": ""
+  }
+]

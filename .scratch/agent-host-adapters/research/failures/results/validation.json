@@ -1,0 +1,67 @@
+[
+  {
+    "argv": [
+      "node",
+      "--check",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.scratch/agent-host-adapters/research/failures/run.mjs"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures",
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "node",
+      "--check",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.scratch/agent-host-adapters/research/failures/prepare.mjs"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures",
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "node",
+      "--check",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.scratch/agent-host-adapters/research/failures/fault.cjs"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures",
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "node",
+      "--check",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.scratch/agent-host-adapters/research/failures/platform.cjs"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures",
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "pnpm",
+      "lint"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures",
+    "status": 0,
+    "stdout": "",
+    "stderr": "Scope: all 2 workspace projects\n\u2713 Lockfile passes supply-chain policies (verified 4d ago)\nLockfile is up to date, resolution step is skipped\nPackages are cloned from the content-addressable store to the virtual store.\n  Content-addressable store is at: /Users/qigong-it-1/Library/pnpm/store/v11\n  Virtual store is at:             node_modules/.pnpm\nPackages: +444\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\nProgress: resolved 444, reused 444, downloaded 0, added 444, done\n.../node_modules/simple-git-hooks postinstall$ node ./postinstall.js\n.../node_modules/simple-git-hooks postinstall: [ERROR] Was not able to set git hooks. Reason: Error: ENOTDIR: not a directory, mkdir '/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.git/hooks'\n.../node_modules/simple-git-hooks postinstall: Done\n. prepare$ simple-git-hooks\n. prepare: [ERROR], Was not able to set git hooks. Error: Error: ENOTDIR: not a directory, mkdir '/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.git/hooks'\n. prepare: Done\n\ndevDependencies:\n+ @antfu/eslint-config 6.7.3\n+ @antfu/ni 27.0.1\n+ @antfu/utils 9.3.0\n+ @clack/prompts 1.8.1\n+ @types/node 24.12.2\n+ bumpp 10.4.1\n+ eslint 9.39.4\n+ lint-staged 16.4.0\n+ publint 0.3.18\n+ simple-git-hooks 2.13.1\n+ tinyexec 1.1.1\n+ tsdown 0.16.8\n+ tsx 4.21.0\n+ turbo 2.9.18\n+ typescript 5.9.3\n+ vite 7.3.2\n+ vitest 4.1.5\n+ vitest-package-exports 0.1.1\n\nDone in 751ms using pnpm v12.14.0\n$ eslint --cache .\n"
+  },
+  {
+    "argv": [
+      "node",
+      "--check",
+      "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/failures/.scratch/agent-host-adapters/research/failures/run.mjs"
+    ],
+    "cwd": "/Users/qigong-it-1/Workspace/skills",
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "id": "impeccable-empty-cache-offline",
+  "started": "2026-11-10T04:00:56.921Z",
+  "argv": [
+    "/usr/bin/sandbox-exec",
+    "-p",
+    "(version 1)(allow default)(deny network*)",
+    "/Users/qigong-it-1/Library/pnpm/store/v11/links/@/node/24.16.0/cd3758d92cd77785ba8e8ba047fb3f3fb8617bdf37abef9d97c0563dca124fa0/node_modules/node/bin/node",
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/extracted/impeccable/package/cli/bin/cli.js",
+    "--help"
+  ],
+  "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/cache-probe",
+  "env": {
+    "PATH": "/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/go/bin:/opt/homebrew/bin:/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Users/qigong-it-1/.codex/tmp/arg0-macos/codex-arg0DWXkTS:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/Users/qigong-it-1/Library/pnpm/bin:/Users/qigong-it-1/.cargo/bin:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS",
+    "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home",
+    "TMPDIR": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/tmp",
+    "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.cache",
+    "CI": "1",
+    "IMPECCABLE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable",
+    "IMPECCABLE_DOWNLOAD_BASE": "http://127.0.0.1:9"
+  },
+  "status": 127,
+  "signal": null,
+  "killedAfterObservedPath": false,
+  "stdout": "",
+  "stderr": "impeccable: fetch failed\nimpeccable: no binary for darwin-arm64. Install @impeccable/cli-darwin-arm64@0.1.21, set IMPECCABLE_BIN, or download impeccable-darwin-arm64 v0.1.21 from http://127.0.0.1:9 into /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable/bin/0.1.21/impeccable.\n",
+  "before": {},
+  "after": {},
+  "diff": [],
+  "homeBefore": {},
+  "homeAfter": {},
+  "homeDiff": []
+}

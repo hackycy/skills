@@ -1,0 +1,118 @@
+{
+  "notes-upgrade/.agent-notes/config.json": {
+    "format": "agent-notes-config/1",
+    "notes_dir": ".agents/notes",
+    "language": "zh-CN"
+  },
+  "notes-upgrade/.agent-notes/install.json": {
+    "format": "agent-notes-install/1",
+    "version": "0.2.0",
+    "bundle_sha256": "0ec7f5bb249133ab3b1c99ae103ba052aac6e8566f52d2e441fae35267479bf5",
+    "targets": [
+      "agents",
+      "claude"
+    ],
+    "assets": [
+      {
+        "path": ".agent-notes/runtime/assets/formats/agent-note-1.schema.json",
+        "kind": "file",
+        "sha256": "1b47618bfcb405592597d768ab908bcaf2940b298c0e0f1b9928ace1552d93bb"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/formats/agent-note-archive-1.schema.json",
+        "kind": "file",
+        "sha256": "4b61c8ce25391e1accd24174650fedae6bb46e1f2868ef910cc01052389800fa"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/formats/document.md",
+        "kind": "file",
+        "sha256": "e8c0c761bcf981a71e6341afcc8d2128fde2816c9be5717180b3e9805e2d34e5"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/references/cli.md",
+        "kind": "file",
+        "sha256": "2122348cab6ac693a3d338a451c4fd8a63ae3bfe853779f5610fd3605597c17c"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/references/writing.md",
+        "kind": "file",
+        "sha256": "9edf5822b7717f126ae4e80da4a56dfdb46857a10804f2f3e082071a389457ed"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/skills/agent-note-maintenance/SKILL.md",
+        "kind": "file",
+        "sha256": "da7cd63c1c96a6327f8f94653a69cdf906e97251a42062ac073ba1d0a178e268"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/skills/agent-note/SKILL.md",
+        "kind": "file",
+        "sha256": "6d262e06a8e40a74116b4c9fcfa404bfd6dcea89eb040337f254ac56d9880096"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/templates/implemented.en.md",
+        "kind": "file",
+        "sha256": "46dc12cf237b1c5b21c367da00d524c53e0d3a6e17da317b5d6e6711dd627a7d"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/templates/implemented.zh-CN.md",
+        "kind": "file",
+        "sha256": "e27f4b8c37121c0c58ad1e7b2eaf27b0d24b8405e2838572465d1b43e4d1a1ed"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/templates/proposed.en.md",
+        "kind": "file",
+        "sha256": "b3051da0e49142b25c570799ee81afbea8644ec9d91faf9303be13b566f46361"
+      },
+      {
+        "path": ".agent-notes/runtime/assets/templates/proposed.zh-CN.md",
+        "kind": "file",
+        "sha256": "bb6250710e98af713bb26e4daa4172385f25dfa65695de6b08f21d8785cbb04c"
+      },
+      {
+        "path": ".agent-notes/runtime/cli.mjs",
+        "kind": "file",
+        "sha256": "ac2762a1928353ed82a2b47f7bd532c1d24cb0e228607e1c9c20d5e4162711a4"
+      },
+      {
+        "path": ".agents/skills/agent-note-maintenance/SKILL.md",
+        "kind": "file",
+        "sha256": "746a810489bcb921360bec78a021c98a6cf1e16296d1e5dbb5858c6b2d8975bf"
+      },
+      {
+        "path": ".agents/skills/agent-note/SKILL.md",
+        "kind": "file",
+        "sha256": "a9b8a0d64272e2ce8f56c4d9ef79d85641620d4e49228aaacdf042cc8fb1942b"
+      },
+      {
+        "path": ".claude/CLAUDE.md",
+        "kind": "block",
+        "sha256": "7426149ac118d245b2f652629e6a51d0efaebbb985ab46c0816e5aa08d03cf1e"
+      },
+      {
+        "path": ".claude/skills/agent-note-maintenance/SKILL.md",
+        "kind": "file",
+        "sha256": "746a810489bcb921360bec78a021c98a6cf1e16296d1e5dbb5858c6b2d8975bf"
+      },
+      {
+        "path": ".claude/skills/agent-note/SKILL.md",
+        "kind": "file",
+        "sha256": "a9b8a0d64272e2ce8f56c4d9ef79d85641620d4e49228aaacdf042cc8fb1942b"
+      },
+      {
+        "path": ".gitattributes",
+        "kind": "block",
+        "sha256": "d857b77a3832e7b9642bbcc2acb6dd442f870a55762cf1eb4fd631f463239825"
+      },
+      {
+        "path": ".gitignore",
+        "kind": "block",
+        "sha256": "2872fdf005babb60e4cf0a9e248b3579f0318e5b9551dbca5ff43ca87fa361a3"
+      },
+      {
+        "path": "AGENTS.md",
+        "kind": "block",
+        "sha256": "af1ffa330f6162d46c9565e95e2990bc8d7ac167b51e5c720e668e389de29357"
+      }
+    ]
+  }
+}

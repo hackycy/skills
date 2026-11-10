@@ -1,0 +1,57 @@
+import type { Bundle } from '../src/distribution/bundle'
+import type { Target } from '../src/distribution/manifest'
+import { Buffer } from 'node:buffer'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { afterEach, expect, it } from 'vitest'
+import { options } from '../src/cli/arguments'
+import { hasProjectRoute } from '../src/distribution/layout'
+import { manage } from '../src/distribution/manage'
+import { checkLinks } from '../src/notes/markdown'
+import { Repository } from '../src/notes/snapshot'
+import { distributionPath } from '../src/workflow/transaction'
+import { git, project, write } from './fixtures'
+
+const roots: string[] = []
+const bundle: Bundle = { version: '0.3.1-study.0', files: new Map([['cli.mjs', Buffer.from('console.log(JSON.stringify({command:"context",result:"ok",data:{notes:[]},diagnostics:[]}))')], ['assets/references/writing.md', Buffer.from('# Writing\n')]]), skills: new Map(['agent-note', 'agent-note-maintenance'].map(name => [name + '/SKILL.md', Buffer.from('[Writing](../../references/writing.md)\n')])) }
+function root(): string {
+  const path = project()
+  rmSync(join(path, '.agents/notes'), { recursive: true })
+  roots.push(path)
+  return path
+}
+afterEach(() => roots.splice(0).forEach(path => rmSync(path, { recursive: true, force: true })))
+it.each([['study'], ['agents', 'claude', 'study']] as Target[][])('installs synthetic target set %j with closed references', (...targets) => {
+  const path = root()
+  const result = manage({ command: 'init', root: path, targets, notesDir: 'docs/decisions', dryRun: false, recover: false }, path, bundle)
+  expect(result.result, JSON.stringify(result)).toBe('ok')
+  const manifest = JSON.parse(readFileSync(join(path, 'docs/decisions/install.json'), 'utf8'))
+  expect(manifest.format).toBe('agent-notes-install/1')
+  expect(Object.keys(manifest).sort()).toEqual(['assets', 'bundle_sha256', 'format', 'targets', 'version'])
+  expect(manifest.targets).toEqual(targets)
+  expect(hasProjectRoute(path)).toBe(true)
+  expect(existsSync(join(path, '.study/skills/agent-note/SKILL.md'))).toBe(true)
+  const snapshot = new Repository(path).snapshot('worktree')
+  snapshot.includeDirectory('docs/decisions/runtime')
+  snapshot.includeDirectory('.study/skills')
+  expect(checkLinks(snapshot, snapshot.paths().filter(p => p.endsWith('.md')))).toEqual([])
+})
+it('retains future synthetic skill files through a broad Git ignore', () => {
+  const path = root()
+  write(path, '.gitignore', '.study/\n')
+  expect(manage({ command: 'init', root: path, targets: ['study'], dryRun: false, recover: false }, path, bundle).result).toBe('ok')
+  expect(git(path, 'check-ignore', '--no-index', '--non-matching', '-v', '.study/skills/agent-note/references/future.md')).toContain('!/.study/skills/agent-note/**')
+})
+it('keeps arguments and independent recovery ownership constrained', () => {
+  expect(options(['init', '--target', 'study']).targets).toEqual(['study'])
+  expect(() => options(['init', '--target', 'unknown'])).toThrow()
+  expect(distributionPath('NOTES-STUDY.md')).toBe(true)
+  expect(distributionPath('.study/skills/agent-note/references/extra.md')).toBe(true)
+  expect(distributionPath('.study/settings.json')).toBe(false)
+  expect(distributionPath('README.md')).toBe(false)
+})
+it('protects the synthetic skill root from overlapping Notes layouts', () => {
+  const path = root()
+  const result = manage({ command: 'init', root: path, targets: ['study'], notesDir: '.study/skills/nested', dryRun: false, recover: false }, path, bundle)
+  expect(result.diagnostics[0].code).toBe('CONFIG_CONFLICT')
+})

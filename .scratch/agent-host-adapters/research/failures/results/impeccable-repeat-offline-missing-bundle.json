@@ -1,0 +1,1292 @@
+{
+  "id": "impeccable-repeat-offline-missing-bundle",
+  "started": "2026-11-10T04:00:53.029Z",
+  "argv": [
+    "/usr/bin/sandbox-exec",
+    "-p",
+    "(version 1)(allow default)(deny network*)",
+    "/Users/qigong-it-1/Library/pnpm/store/v11/links/@/node/24.16.0/cd3758d92cd77785ba8e8ba047fb3f3fb8617bdf37abef9d97c0563dca124fa0/node_modules/node/bin/node",
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/extracted/impeccable/package/cli/bin/cli.js",
+    "skills",
+    "install",
+    "--providers=codex,claude",
+    "--project",
+    "--no-hooks",
+    "--yes"
+  ],
+  "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/impeccable",
+  "env": {
+    "PATH": "/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/go/bin:/opt/homebrew/bin:/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Users/qigong-it-1/.codex/tmp/arg0-macos/codex-arg0DWXkTS:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/Users/qigong-it-1/Library/pnpm/bin:/Users/qigong-it-1/.cargo/bin:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS",
+    "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home",
+    "TMPDIR": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/tmp",
+    "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.cache",
+    "CI": "1",
+    "IMPECCABLE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable",
+    "IMPECCABLE_DOWNLOAD_BASE": "http://127.0.0.1:9",
+    "IMPECCABLE_BIN": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/releases/impeccable-darwin-arm64",
+    "IMPECCABLE_BUNDLE_PATH": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/missing.zip"
+  },
+  "status": 0,
+  "signal": null,
+  "killedAfterObservedPath": false,
+  "stdout": "Impeccable skills are already installed (found in .claude/).\nCould not check for skill updates: Local bundle not found: /Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/missing.zip\nExisting skills were left unchanged.\nRun with --force to reinstall.\n\n",
+  "stderr": "",
+  "before": {
+    ".agents/skills/impeccable/SKILL.md": {
+      "size": 11762,
+      "sha256": "c6921e830b7a565ebbe9aabe11516d34092062cd7fa2b442f030134857bf86a8",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_asset_producer.toml": {
+      "size": 8429,
+      "sha256": "4dbdb0cfdc2466961da6b22d200f3ec7bf8bb47c27448a2e6e3c03cdbf589831",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_documenter.toml": {
+      "size": 3562,
+      "sha256": "e7778229d8f31433fc11e29dd2caac8e85281e27ea5c9410474703bb0185100f",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_finish_reviewer.toml": {
+      "size": 15731,
+      "sha256": "f52cdfbaeea0623c31c25442cab373e93f10e96c65838cd8b672cd345f610d7e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_manual_edit_applier.toml": {
+      "size": 7472,
+      "sha256": "4b01f4eb8a49fb00bc88248735c3b5442beb1791ec71d98e6d203f268a24010b",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/openai.yaml": {
+      "size": 236,
+      "sha256": "ce9967ad70f99cf04456f3347c266723c2fbbb600267d10a822b7cd20562c321",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/adapt.md": {
+      "size": 11313,
+      "sha256": "9807cdc112b8bcbdeff9cd2516cda4d07129f1d47f29df4d57645344f34950c1",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/adapt.native.md": {
+      "size": 3910,
+      "sha256": "2455a2613e1fa29b986521c73cbad9424ccda70ef6cbe505779dbca5e16272a2",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/android.md": {
+      "size": 4203,
+      "sha256": "43780abcf10ac12a569d98001ae38af2b337727a0f7ce66268246ac1d54b5d34",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/animate.md": {
+      "size": 5236,
+      "sha256": "d658c48ffbe0031e8e3b318996cad6ceafe29e40aa50d5bb25e4bf1d6839dc7c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/audit.md": {
+      "size": 9584,
+      "sha256": "5ba9e3a090fc4c4d212c8cbfa5a48f7454ceb10fa81a284b4a7b4e8351ece2f1",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/audit.native.md": {
+      "size": 8326,
+      "sha256": "2898eff507738f9102107809e671df3e69f889dee30073030fe96fb2483d8ea3",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/bolder.md": {
+      "size": 3566,
+      "sha256": "05b78fb0595e4d5afbf5f17470c84e89cf82f205fea3a6e9b6d8d779b7c4aab1",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/clarify.md": {
+      "size": 4590,
+      "sha256": "173dd66abe65633910dcb04a51f40d6ff2a793f87088f022a02fc4cad24dd133",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/colorize.md": {
+      "size": 4537,
+      "sha256": "bc5f71f1129d0f2c310d913d07c8dc609a1d25644121bd78c308f42d52a0b9e9",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/component-review.md": {
+      "size": 8017,
+      "sha256": "10489e5265e49a4ef2737cd0e674c149ed41e1f703efe922e53ea3c91e833427",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/craft-floor.md": {
+      "size": 5532,
+      "sha256": "808a50e0e6c74617a07b0eaf7fd80f58d8e48a13f48e47c658c7534b1724e5c2",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/craft.md": {
+      "size": 555,
+      "sha256": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/critique.md": {
+      "size": 48958,
+      "sha256": "c210c9506877c6c8d88880a337fddd95d4315daf70ed6bc631ee6520481f1a0c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/asset-producer.md": {
+      "size": 8630,
+      "sha256": "cf726ce0c7dd1005078fbf560745d4114afe363319648cc9de42d1536370d117",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/documenter.md": {
+      "size": 3733,
+      "sha256": "17b6328d809c86622789dcbe1bb1b12ec8937118ef6aa4b37bfd9130d79a205c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/finish-reviewer.md": {
+      "size": 15880,
+      "sha256": "04ba3571cd0f405dffb6b51d892add0e4f19fd7e2bc4815320f2bd2ab5bd2a8a",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/manual-edit-applier.md": {
+      "size": 7685,
+      "sha256": "357b19acc7ef688c337a4f020633a49db23c84620b13636f9ff20d3ab934df1a",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/delight.md": {
+      "size": 3716,
+      "sha256": "098a891028ce59c212b747d3c70468dd750aff7053a703d1336045ed31e0da7c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/distill.md": {
+      "size": 5598,
+      "sha256": "8b9283510e38f0d190652f300ea0793acfb5a514b38b991fdc0a289bade83391",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/doctor.md": {
+      "size": 5617,
+      "sha256": "33aff200de6f76a74b333d7ae4f7d2f4fc2a0da4c1a57264567d88eb8f33b52b",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/document.md": {
+      "size": 27526,
+      "sha256": "7e7e97388cac7b5af7afa5b6fec19a6576c89ce6a998c973cb007b8e5494a8c9",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/extract.md": {
+      "size": 3406,
+      "sha256": "5477ae97189e5c1236cee71a25a5ae50014429a5a2e6da28355c8021a6cdeddd",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/generate.md": {
+      "size": 13221,
+      "sha256": "11385badfb532196cec249e73bac2b7f58ada033ed8c4b02b9f0d64ddb46f0dc",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/harden.md": {
+      "size": 10748,
+      "sha256": "4167eb7fc456cdfe09ff0ac2dbcb5e59cee57e590137aab6cc8ec08aafb6d775",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/hooks.md": {
+      "size": 17337,
+      "sha256": "22f99dc8f891dcc620fb6dc670eab09b84585c1810bf7a3c2063a6e6f7f42152",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/init.md": {
+      "size": 12229,
+      "sha256": "c2826a6369f86a325e84edb324021753fa8331b86f22a23c884b0b36b7a15488",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/ios.md": {
+      "size": 3812,
+      "sha256": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/layout.md": {
+      "size": 5161,
+      "sha256": "0bc7d7971b3edf2acd0580e847458dc6d84129d90715b452799ace3bed815c7c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/live-setup.md": {
+      "size": 8186,
+      "sha256": "2b5b2fbf5f658f34ea1997fb1aeebe01604d05187f75c6a4f1f55a5bc78520a4",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/live.md": {
+      "size": 37579,
+      "sha256": "b8ff9aaf183187e52eb10a24b1036b4725ff51eb11abd97a360d5678e32561dc",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/mode-operate.md": {
+      "size": 4716,
+      "sha256": "7a52dd7a94ee75f6ae89542c86a1b6e1d306812b16e0d9dbf12d4acad44d148b",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/mode-persuade.md": {
+      "size": 3638,
+      "sha256": "21e78c8a77badb3f83290cd4577ed3b24bd4dd3b57136d7da75733d4f3ee9ac0",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/mode-read.md": {
+      "size": 4396,
+      "sha256": "a569989e6a3d6453b4c45e9474e162a15cc54e11732ac6baa7990a6e7cccc0b5",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/new-work.md": {
+      "size": 63005,
+      "sha256": "4d9410bf9dfdb0890769a2f45e634be809392ac293abd91ee9553e8eabb18fe5",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/onboard.md": {
+      "size": 7688,
+      "sha256": "a2b8fd01ea12139b39b3285393f805bb8c326e11b2234dbff4c26c17b4e9c280",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/operate.md": {
+      "size": 4145,
+      "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/optimize.md": {
+      "size": 7577,
+      "sha256": "092c85e5a644e6e528aaff0f341ee1ed57e012c195162fef0a5fc97605f9bb73",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/overdrive.md": {
+      "size": 9079,
+      "sha256": "0a0d4ae6eea720c6d6e1c073fc77192d7c2100f78a44d9a8d262ddf22270cf4d",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/polish.md": {
+      "size": 6646,
+      "sha256": "81666fc7f783b4e3514db6554e713dc0479bd9cdedb06e93d15f8b579aae869a",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/quieter.md": {
+      "size": 5020,
+      "sha256": "9e03b55c6bbdd4acba28cfa9c3b74ba1a4448cdbd35a7200990ab460c6eecaa0",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/region-map.md": {
+      "size": 3361,
+      "sha256": "778cedc9199b407d3e23fa1041e38d548b00b1101a33517aa2a2eb299f9d0edc",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/routing.md": {
+      "size": 3336,
+      "sha256": "77ae09542fbc10aa4e8b119d6fd19359908a47c13c30068d6a150bfdb50e3e10",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/shape.md": {
+      "size": 3547,
+      "sha256": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/typeset.md": {
+      "size": 6263,
+      "sha256": "c26c5b4524f3ccb650ed0680c10c25fd18083f8ebfd00a54c4d983c4747aab70",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/visualize.md": {
+      "size": 13956,
+      "sha256": "0c431d0dafbcac7ae8bde70ffa622f9ee542c44ec12e14b48bb44b269bef67eb",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/VERSION": {
+      "size": 7,
+      "sha256": "b436859fb641d04afbc4796b5df155639d6685280c4a0e8fe8791363d977f222",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/command-metadata.json": {
+      "size": 8318,
+      "sha256": "c6dcbeed7f13152205ca022c8f24d08683770835083f0a7325261c1c2d5f215c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/data/font-index-failures.json": {
+      "size": 2437,
+      "sha256": "835f19a0a3812f3652dd6979a2ce5597f654fd01f26e1b420b92d5f42b997ce4",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/data/font-index.json": {
+      "size": 1100013,
+      "sha256": "47edbdfaf27073c47033d1ac7dfee881be49e2dcbda7671d1157300481dde6da",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/engine-checksums.txt": {
+      "size": 787,
+      "sha256": "bb625a48a3946ca84904ce6ae13957374165eec078bc6565a4717e290114919e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/impeccable": {
+      "size": 11320,
+      "sha256": "137173707b882616104b9d621b53bea37f135de09461add3301b9fcb3d7de461",
+      "mode": "755"
+    },
+    ".agents/skills/impeccable/scripts/impeccable.cmd": {
+      "size": 12503,
+      "sha256": "73c2e4d7613c38e35654df0444d559c97f1d09a9d373f4e72b3d7b21b6e1060c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser-dom.js": {
+      "size": 12283,
+      "sha256": "4b379aff87ce0f485008a2b6a0dc711d00a869f5cf0ec2459279d6364fbf0c9e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser-ignores.js": {
+      "size": 10423,
+      "sha256": "ba8905ab865fde5162e34fc17eb80eba26cc990b319b14a6eed6ca89fd491897",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser-session.js": {
+      "size": 5838,
+      "sha256": "e042339a54d4521fc47555b602013ed5b51410ec9d7d8878d99a526f5f237f68",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser.js": {
+      "size": 564400,
+      "sha256": "144335146f4f5a3a06be4b5daab24cac82653510c0007ad3786dbd3ef1a02f6e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/modern-screenshot.umd.js": {
+      "size": 29290,
+      "sha256": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-asset-producer.md": {
+      "size": 8250,
+      "sha256": "854a2da0f67cbe627908aa450115e83985b7d20cf2cc345adf173f228c6130b8",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-documenter.md": {
+      "size": 3503,
+      "sha256": "3896289ef1b75f30f9c46c4d956a6967f185f67c0eb6edbba9b4b298e6c6c14e",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-finish-reviewer.md": {
+      "size": 15664,
+      "sha256": "867f2c14d305b218ba2e9b45dff099b64e46d35b06b9cd0412143cc0b4e5310e",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-manual-edit-applier.md": {
+      "size": 7423,
+      "sha256": "eb74817edb8e99e2b965c7efce538b1a09d9d4d6f608dec6c21ebb665e8cd92d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/SKILL.md": {
+      "size": 11608,
+      "sha256": "637b7b727122a273912454e6c7c2d7775186eb0c3c379c2a7c13bec595c61619",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/adapt.md": {
+      "size": 11313,
+      "sha256": "5826bb4bca75d7b891bed17ff03bd3b685dff0e4f26d387fa6190d4ba3f065e4",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/adapt.native.md": {
+      "size": 3910,
+      "sha256": "acbeecbcbf6558d438ed4aec6b85027d72587bf181b8ae12d4dfbe8dce62e9a5",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/android.md": {
+      "size": 4203,
+      "sha256": "43780abcf10ac12a569d98001ae38af2b337727a0f7ce66268246ac1d54b5d34",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/animate.md": {
+      "size": 5236,
+      "sha256": "94b4ce6299fea93d9f256b2d25705961a76bc5ea940c56db4145686ebc99df1b",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/audit.md": {
+      "size": 9584,
+      "sha256": "a24d86f22f23ac594c87dfffce68b03cb475efbae48a84652ad9023d96295df5",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/audit.native.md": {
+      "size": 8326,
+      "sha256": "33a4ac3906140cfd73f65cd35026867e261adf411da0fc6da95770d9b6edeb81",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/bolder.md": {
+      "size": 3497,
+      "sha256": "bd217b7bc011c2346ce94902071ecd940aa017e8f563539e31c1ad38ce256401",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/clarify.md": {
+      "size": 4590,
+      "sha256": "6c382f8283756e8a693d832b750f7e4cbff1ca5bdcc3825b2b4ef4da9f21876a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/colorize.md": {
+      "size": 4537,
+      "sha256": "d1fbd55074abb2251bdaa03749d34acc42c38e46e47549f18f5848df57d43c42",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/component-review.md": {
+      "size": 8017,
+      "sha256": "6996198844d6459392b816e7bfb7d256f07b6884614e88069ffab5544b4886df",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/craft-floor.md": {
+      "size": 4516,
+      "sha256": "ba01bbab98671095b76c2170324abdcceb55fd39fd281bc46daddc2b3c2b0753",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/craft.md": {
+      "size": 555,
+      "sha256": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/critique.md": {
+      "size": 45636,
+      "sha256": "7f67463a6417e6df65d4b77a8ac9c79e53324877bca4a96d1fc0985a2a454b7d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/asset-producer.md": {
+      "size": 8478,
+      "sha256": "153936d4487fd9bf495f50b96c0c4fee258144583192d7f040310fc08384a02d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/documenter.md": {
+      "size": 3733,
+      "sha256": "17b6328d809c86622789dcbe1bb1b12ec8937118ef6aa4b37bfd9130d79a205c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/finish-reviewer.md": {
+      "size": 15880,
+      "sha256": "04ba3571cd0f405dffb6b51d892add0e4f19fd7e2bc4815320f2bd2ab5bd2a8a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/manual-edit-applier.md": {
+      "size": 7685,
+      "sha256": "357b19acc7ef688c337a4f020633a49db23c84620b13636f9ff20d3ab934df1a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/delight.md": {
+      "size": 3716,
+      "sha256": "56500b1f9d2fcec8324d7f448d813048b5831a46d3feeb1055bd3eb17ec3660f",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/distill.md": {
+      "size": 5529,
+      "sha256": "09785674279df0a5df6623e5bb986f5445810e4f40ce4407d30f5c175dde279e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/doctor.md": {
+      "size": 5617,
+      "sha256": "5b89d4b4c2acd125bc6a4f4839b2312b8b95ea94160960e987163c714dd98f54",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/document.md": {
+      "size": 27457,
+      "sha256": "677004e61b08d2e04d3578e394fdd991cfa33c0111a7d85b5b66c80326c615fc",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/extract.md": {
+      "size": 3337,
+      "sha256": "29044a3df6598786b2f9023af89aa6683b9745b7cd9a0c89386da2d0e50e0166",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/generate.md": {
+      "size": 13152,
+      "sha256": "b174077972447e829db722dacbf6d6bb643184832b42686f17492348bab9bfe8",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/harden.md": {
+      "size": 10748,
+      "sha256": "98244db22d907a134cac0c94ffb829ba480ba61cfac67ae155ac2f46444da7c9",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/hooks.md": {
+      "size": 17337,
+      "sha256": "f96777015bbe74a31a4c285526dd73f5fd65c167effe339fc9ac10a11be9ebca",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/init.md": {
+      "size": 12160,
+      "sha256": "72dfec68faf7fc58097d18961e7e1650af099b257a3b241bea813b00beae37a0",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/ios.md": {
+      "size": 3812,
+      "sha256": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/layout.md": {
+      "size": 5161,
+      "sha256": "64802d14087fc96b38ef3881fef8098b36068d07f3b942031637b18eef3dd2af",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/live-setup.md": {
+      "size": 8186,
+      "sha256": "6e7e3b7c4cf331cdb43f4546c164acd6c45a267ce3289dcfa87e13202d98c747",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/live.md": {
+      "size": 37334,
+      "sha256": "2b4d66078f61003e89937074935f2d1bbee788e41d203d5c16ca2c3a08874c7d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/mode-operate.md": {
+      "size": 4716,
+      "sha256": "7a52dd7a94ee75f6ae89542c86a1b6e1d306812b16e0d9dbf12d4acad44d148b",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/mode-persuade.md": {
+      "size": 3638,
+      "sha256": "21e78c8a77badb3f83290cd4577ed3b24bd4dd3b57136d7da75733d4f3ee9ac0",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/mode-read.md": {
+      "size": 4396,
+      "sha256": "a569989e6a3d6453b4c45e9474e162a15cc54e11732ac6baa7990a6e7cccc0b5",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/new-work.md": {
+      "size": 63569,
+      "sha256": "77828f66a28b43c21c9510b7db8e15d1def2b8e6c90af38fa8d9080bd21ffdbf",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/onboard.md": {
+      "size": 7688,
+      "sha256": "eb713f3d6686bac6431dd874f7b02358b4cf08e879e11bf747d75660dedd685a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/operate.md": {
+      "size": 4145,
+      "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/optimize.md": {
+      "size": 7577,
+      "sha256": "7ecc07226fa99b198eba37ea57f3c3e2465a80cc65093f0098dc888f7ee27273",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/overdrive.md": {
+      "size": 9010,
+      "sha256": "83c7786c640b0e6ea61e2b2ff0f93193ba1f68e907b32f2bd56f32bb7a60018f",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/polish.md": {
+      "size": 6646,
+      "sha256": "b8d49a3cab3428d9f351502e9c2c5802cef187e0d2af626ef3e1cd1837fd06bf",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/quieter.md": {
+      "size": 4951,
+      "sha256": "b0018ae21f320aabfe3ca9d9f8e0c2c5a5bf74c6eb4e572e3d408c38cd19f5ec",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/region-map.md": {
+      "size": 3361,
+      "sha256": "4ea8e05d0f88d24f182ad554da84317f90b9730e29fad262143ddf423a1f8645",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/routing.md": {
+      "size": 3336,
+      "sha256": "56285b28b0ffe471761c2ad062d3f933ed2346ca1b617f1323a30fed99a1a852",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/shape.md": {
+      "size": 3547,
+      "sha256": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/typeset.md": {
+      "size": 6263,
+      "sha256": "c9943e06ca311258d8aa5a5c65f5beb7a46c57c5e9a2075d2a246bf1337f00bb",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/visualize.md": {
+      "size": 13956,
+      "sha256": "a2be08335e1e5f0dab5ae445e24c0d0d5699752e9656bd5f9b8065af9b347a03",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/VERSION": {
+      "size": 7,
+      "sha256": "b436859fb641d04afbc4796b5df155639d6685280c4a0e8fe8791363d977f222",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/command-metadata.json": {
+      "size": 8318,
+      "sha256": "c6dcbeed7f13152205ca022c8f24d08683770835083f0a7325261c1c2d5f215c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/data/font-index-failures.json": {
+      "size": 2437,
+      "sha256": "835f19a0a3812f3652dd6979a2ce5597f654fd01f26e1b420b92d5f42b997ce4",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/data/font-index.json": {
+      "size": 1100013,
+      "sha256": "47edbdfaf27073c47033d1ac7dfee881be49e2dcbda7671d1157300481dde6da",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/engine-checksums.txt": {
+      "size": 787,
+      "sha256": "bb625a48a3946ca84904ce6ae13957374165eec078bc6565a4717e290114919e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/impeccable": {
+      "size": 11320,
+      "sha256": "137173707b882616104b9d621b53bea37f135de09461add3301b9fcb3d7de461",
+      "mode": "755"
+    },
+    ".claude/skills/impeccable/scripts/impeccable.cmd": {
+      "size": 12503,
+      "sha256": "73c2e4d7613c38e35654df0444d559c97f1d09a9d373f4e72b3d7b21b6e1060c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser-dom.js": {
+      "size": 12283,
+      "sha256": "4b379aff87ce0f485008a2b6a0dc711d00a869f5cf0ec2459279d6364fbf0c9e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser-ignores.js": {
+      "size": 10423,
+      "sha256": "ba8905ab865fde5162e34fc17eb80eba26cc990b319b14a6eed6ca89fd491897",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser-session.js": {
+      "size": 5838,
+      "sha256": "e042339a54d4521fc47555b602013ed5b51410ec9d7d8878d99a526f5f237f68",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser.js": {
+      "size": 564400,
+      "sha256": "144335146f4f5a3a06be4b5daab24cac82653510c0007ad3786dbd3ef1a02f6e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/modern-screenshot.umd.js": {
+      "size": 29290,
+      "sha256": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b",
+      "mode": "644"
+    }
+  },
+  "after": {
+    ".agents/skills/impeccable/SKILL.md": {
+      "size": 11762,
+      "sha256": "c6921e830b7a565ebbe9aabe11516d34092062cd7fa2b442f030134857bf86a8",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_asset_producer.toml": {
+      "size": 8429,
+      "sha256": "4dbdb0cfdc2466961da6b22d200f3ec7bf8bb47c27448a2e6e3c03cdbf589831",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_documenter.toml": {
+      "size": 3562,
+      "sha256": "e7778229d8f31433fc11e29dd2caac8e85281e27ea5c9410474703bb0185100f",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_finish_reviewer.toml": {
+      "size": 15731,
+      "sha256": "f52cdfbaeea0623c31c25442cab373e93f10e96c65838cd8b672cd345f610d7e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/impeccable_manual_edit_applier.toml": {
+      "size": 7472,
+      "sha256": "4b01f4eb8a49fb00bc88248735c3b5442beb1791ec71d98e6d203f268a24010b",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/agents/openai.yaml": {
+      "size": 236,
+      "sha256": "ce9967ad70f99cf04456f3347c266723c2fbbb600267d10a822b7cd20562c321",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/adapt.md": {
+      "size": 11313,
+      "sha256": "9807cdc112b8bcbdeff9cd2516cda4d07129f1d47f29df4d57645344f34950c1",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/adapt.native.md": {
+      "size": 3910,
+      "sha256": "2455a2613e1fa29b986521c73cbad9424ccda70ef6cbe505779dbca5e16272a2",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/android.md": {
+      "size": 4203,
+      "sha256": "43780abcf10ac12a569d98001ae38af2b337727a0f7ce66268246ac1d54b5d34",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/animate.md": {
+      "size": 5236,
+      "sha256": "d658c48ffbe0031e8e3b318996cad6ceafe29e40aa50d5bb25e4bf1d6839dc7c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/audit.md": {
+      "size": 9584,
+      "sha256": "5ba9e3a090fc4c4d212c8cbfa5a48f7454ceb10fa81a284b4a7b4e8351ece2f1",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/audit.native.md": {
+      "size": 8326,
+      "sha256": "2898eff507738f9102107809e671df3e69f889dee30073030fe96fb2483d8ea3",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/bolder.md": {
+      "size": 3566,
+      "sha256": "05b78fb0595e4d5afbf5f17470c84e89cf82f205fea3a6e9b6d8d779b7c4aab1",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/clarify.md": {
+      "size": 4590,
+      "sha256": "173dd66abe65633910dcb04a51f40d6ff2a793f87088f022a02fc4cad24dd133",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/colorize.md": {
+      "size": 4537,
+      "sha256": "bc5f71f1129d0f2c310d913d07c8dc609a1d25644121bd78c308f42d52a0b9e9",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/component-review.md": {
+      "size": 8017,
+      "sha256": "10489e5265e49a4ef2737cd0e674c149ed41e1f703efe922e53ea3c91e833427",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/craft-floor.md": {
+      "size": 5532,
+      "sha256": "808a50e0e6c74617a07b0eaf7fd80f58d8e48a13f48e47c658c7534b1724e5c2",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/craft.md": {
+      "size": 555,
+      "sha256": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/critique.md": {
+      "size": 48958,
+      "sha256": "c210c9506877c6c8d88880a337fddd95d4315daf70ed6bc631ee6520481f1a0c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/asset-producer.md": {
+      "size": 8630,
+      "sha256": "cf726ce0c7dd1005078fbf560745d4114afe363319648cc9de42d1536370d117",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/documenter.md": {
+      "size": 3733,
+      "sha256": "17b6328d809c86622789dcbe1bb1b12ec8937118ef6aa4b37bfd9130d79a205c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/finish-reviewer.md": {
+      "size": 15880,
+      "sha256": "04ba3571cd0f405dffb6b51d892add0e4f19fd7e2bc4815320f2bd2ab5bd2a8a",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/degraded/manual-edit-applier.md": {
+      "size": 7685,
+      "sha256": "357b19acc7ef688c337a4f020633a49db23c84620b13636f9ff20d3ab934df1a",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/delight.md": {
+      "size": 3716,
+      "sha256": "098a891028ce59c212b747d3c70468dd750aff7053a703d1336045ed31e0da7c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/distill.md": {
+      "size": 5598,
+      "sha256": "8b9283510e38f0d190652f300ea0793acfb5a514b38b991fdc0a289bade83391",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/doctor.md": {
+      "size": 5617,
+      "sha256": "33aff200de6f76a74b333d7ae4f7d2f4fc2a0da4c1a57264567d88eb8f33b52b",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/document.md": {
+      "size": 27526,
+      "sha256": "7e7e97388cac7b5af7afa5b6fec19a6576c89ce6a998c973cb007b8e5494a8c9",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/extract.md": {
+      "size": 3406,
+      "sha256": "5477ae97189e5c1236cee71a25a5ae50014429a5a2e6da28355c8021a6cdeddd",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/generate.md": {
+      "size": 13221,
+      "sha256": "11385badfb532196cec249e73bac2b7f58ada033ed8c4b02b9f0d64ddb46f0dc",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/harden.md": {
+      "size": 10748,
+      "sha256": "4167eb7fc456cdfe09ff0ac2dbcb5e59cee57e590137aab6cc8ec08aafb6d775",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/hooks.md": {
+      "size": 17337,
+      "sha256": "22f99dc8f891dcc620fb6dc670eab09b84585c1810bf7a3c2063a6e6f7f42152",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/init.md": {
+      "size": 12229,
+      "sha256": "c2826a6369f86a325e84edb324021753fa8331b86f22a23c884b0b36b7a15488",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/ios.md": {
+      "size": 3812,
+      "sha256": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/layout.md": {
+      "size": 5161,
+      "sha256": "0bc7d7971b3edf2acd0580e847458dc6d84129d90715b452799ace3bed815c7c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/live-setup.md": {
+      "size": 8186,
+      "sha256": "2b5b2fbf5f658f34ea1997fb1aeebe01604d05187f75c6a4f1f55a5bc78520a4",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/live.md": {
+      "size": 37579,
+      "sha256": "b8ff9aaf183187e52eb10a24b1036b4725ff51eb11abd97a360d5678e32561dc",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/mode-operate.md": {
+      "size": 4716,
+      "sha256": "7a52dd7a94ee75f6ae89542c86a1b6e1d306812b16e0d9dbf12d4acad44d148b",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/mode-persuade.md": {
+      "size": 3638,
+      "sha256": "21e78c8a77badb3f83290cd4577ed3b24bd4dd3b57136d7da75733d4f3ee9ac0",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/mode-read.md": {
+      "size": 4396,
+      "sha256": "a569989e6a3d6453b4c45e9474e162a15cc54e11732ac6baa7990a6e7cccc0b5",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/new-work.md": {
+      "size": 63005,
+      "sha256": "4d9410bf9dfdb0890769a2f45e634be809392ac293abd91ee9553e8eabb18fe5",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/onboard.md": {
+      "size": 7688,
+      "sha256": "a2b8fd01ea12139b39b3285393f805bb8c326e11b2234dbff4c26c17b4e9c280",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/operate.md": {
+      "size": 4145,
+      "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/optimize.md": {
+      "size": 7577,
+      "sha256": "092c85e5a644e6e528aaff0f341ee1ed57e012c195162fef0a5fc97605f9bb73",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/overdrive.md": {
+      "size": 9079,
+      "sha256": "0a0d4ae6eea720c6d6e1c073fc77192d7c2100f78a44d9a8d262ddf22270cf4d",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/polish.md": {
+      "size": 6646,
+      "sha256": "81666fc7f783b4e3514db6554e713dc0479bd9cdedb06e93d15f8b579aae869a",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/quieter.md": {
+      "size": 5020,
+      "sha256": "9e03b55c6bbdd4acba28cfa9c3b74ba1a4448cdbd35a7200990ab460c6eecaa0",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/region-map.md": {
+      "size": 3361,
+      "sha256": "778cedc9199b407d3e23fa1041e38d548b00b1101a33517aa2a2eb299f9d0edc",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/routing.md": {
+      "size": 3336,
+      "sha256": "77ae09542fbc10aa4e8b119d6fd19359908a47c13c30068d6a150bfdb50e3e10",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/shape.md": {
+      "size": 3547,
+      "sha256": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/typeset.md": {
+      "size": 6263,
+      "sha256": "c26c5b4524f3ccb650ed0680c10c25fd18083f8ebfd00a54c4d983c4747aab70",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/reference/visualize.md": {
+      "size": 13956,
+      "sha256": "0c431d0dafbcac7ae8bde70ffa622f9ee542c44ec12e14b48bb44b269bef67eb",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/VERSION": {
+      "size": 7,
+      "sha256": "b436859fb641d04afbc4796b5df155639d6685280c4a0e8fe8791363d977f222",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/command-metadata.json": {
+      "size": 8318,
+      "sha256": "c6dcbeed7f13152205ca022c8f24d08683770835083f0a7325261c1c2d5f215c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/data/font-index-failures.json": {
+      "size": 2437,
+      "sha256": "835f19a0a3812f3652dd6979a2ce5597f654fd01f26e1b420b92d5f42b997ce4",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/data/font-index.json": {
+      "size": 1100013,
+      "sha256": "47edbdfaf27073c47033d1ac7dfee881be49e2dcbda7671d1157300481dde6da",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/engine-checksums.txt": {
+      "size": 787,
+      "sha256": "bb625a48a3946ca84904ce6ae13957374165eec078bc6565a4717e290114919e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/impeccable": {
+      "size": 11320,
+      "sha256": "137173707b882616104b9d621b53bea37f135de09461add3301b9fcb3d7de461",
+      "mode": "755"
+    },
+    ".agents/skills/impeccable/scripts/impeccable.cmd": {
+      "size": 12503,
+      "sha256": "73c2e4d7613c38e35654df0444d559c97f1d09a9d373f4e72b3d7b21b6e1060c",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser-dom.js": {
+      "size": 12283,
+      "sha256": "4b379aff87ce0f485008a2b6a0dc711d00a869f5cf0ec2459279d6364fbf0c9e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser-ignores.js": {
+      "size": 10423,
+      "sha256": "ba8905ab865fde5162e34fc17eb80eba26cc990b319b14a6eed6ca89fd491897",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser-session.js": {
+      "size": 5838,
+      "sha256": "e042339a54d4521fc47555b602013ed5b51410ec9d7d8878d99a526f5f237f68",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/live-browser.js": {
+      "size": 564400,
+      "sha256": "144335146f4f5a3a06be4b5daab24cac82653510c0007ad3786dbd3ef1a02f6e",
+      "mode": "644"
+    },
+    ".agents/skills/impeccable/scripts/modern-screenshot.umd.js": {
+      "size": 29290,
+      "sha256": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-asset-producer.md": {
+      "size": 8250,
+      "sha256": "854a2da0f67cbe627908aa450115e83985b7d20cf2cc345adf173f228c6130b8",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-documenter.md": {
+      "size": 3503,
+      "sha256": "3896289ef1b75f30f9c46c4d956a6967f185f67c0eb6edbba9b4b298e6c6c14e",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-finish-reviewer.md": {
+      "size": 15664,
+      "sha256": "867f2c14d305b218ba2e9b45dff099b64e46d35b06b9cd0412143cc0b4e5310e",
+      "mode": "644"
+    },
+    ".claude/agents/impeccable-manual-edit-applier.md": {
+      "size": 7423,
+      "sha256": "eb74817edb8e99e2b965c7efce538b1a09d9d4d6f608dec6c21ebb665e8cd92d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/SKILL.md": {
+      "size": 11608,
+      "sha256": "637b7b727122a273912454e6c7c2d7775186eb0c3c379c2a7c13bec595c61619",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/adapt.md": {
+      "size": 11313,
+      "sha256": "5826bb4bca75d7b891bed17ff03bd3b685dff0e4f26d387fa6190d4ba3f065e4",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/adapt.native.md": {
+      "size": 3910,
+      "sha256": "acbeecbcbf6558d438ed4aec6b85027d72587bf181b8ae12d4dfbe8dce62e9a5",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/android.md": {
+      "size": 4203,
+      "sha256": "43780abcf10ac12a569d98001ae38af2b337727a0f7ce66268246ac1d54b5d34",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/animate.md": {
+      "size": 5236,
+      "sha256": "94b4ce6299fea93d9f256b2d25705961a76bc5ea940c56db4145686ebc99df1b",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/audit.md": {
+      "size": 9584,
+      "sha256": "a24d86f22f23ac594c87dfffce68b03cb475efbae48a84652ad9023d96295df5",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/audit.native.md": {
+      "size": 8326,
+      "sha256": "33a4ac3906140cfd73f65cd35026867e261adf411da0fc6da95770d9b6edeb81",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/bolder.md": {
+      "size": 3497,
+      "sha256": "bd217b7bc011c2346ce94902071ecd940aa017e8f563539e31c1ad38ce256401",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/clarify.md": {
+      "size": 4590,
+      "sha256": "6c382f8283756e8a693d832b750f7e4cbff1ca5bdcc3825b2b4ef4da9f21876a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/colorize.md": {
+      "size": 4537,
+      "sha256": "d1fbd55074abb2251bdaa03749d34acc42c38e46e47549f18f5848df57d43c42",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/component-review.md": {
+      "size": 8017,
+      "sha256": "6996198844d6459392b816e7bfb7d256f07b6884614e88069ffab5544b4886df",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/craft-floor.md": {
+      "size": 4516,
+      "sha256": "ba01bbab98671095b76c2170324abdcceb55fd39fd281bc46daddc2b3c2b0753",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/craft.md": {
+      "size": 555,
+      "sha256": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/critique.md": {
+      "size": 45636,
+      "sha256": "7f67463a6417e6df65d4b77a8ac9c79e53324877bca4a96d1fc0985a2a454b7d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/asset-producer.md": {
+      "size": 8478,
+      "sha256": "153936d4487fd9bf495f50b96c0c4fee258144583192d7f040310fc08384a02d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/documenter.md": {
+      "size": 3733,
+      "sha256": "17b6328d809c86622789dcbe1bb1b12ec8937118ef6aa4b37bfd9130d79a205c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/finish-reviewer.md": {
+      "size": 15880,
+      "sha256": "04ba3571cd0f405dffb6b51d892add0e4f19fd7e2bc4815320f2bd2ab5bd2a8a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/degraded/manual-edit-applier.md": {
+      "size": 7685,
+      "sha256": "357b19acc7ef688c337a4f020633a49db23c84620b13636f9ff20d3ab934df1a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/delight.md": {
+      "size": 3716,
+      "sha256": "56500b1f9d2fcec8324d7f448d813048b5831a46d3feeb1055bd3eb17ec3660f",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/distill.md": {
+      "size": 5529,
+      "sha256": "09785674279df0a5df6623e5bb986f5445810e4f40ce4407d30f5c175dde279e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/doctor.md": {
+      "size": 5617,
+      "sha256": "5b89d4b4c2acd125bc6a4f4839b2312b8b95ea94160960e987163c714dd98f54",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/document.md": {
+      "size": 27457,
+      "sha256": "677004e61b08d2e04d3578e394fdd991cfa33c0111a7d85b5b66c80326c615fc",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/extract.md": {
+      "size": 3337,
+      "sha256": "29044a3df6598786b2f9023af89aa6683b9745b7cd9a0c89386da2d0e50e0166",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/generate.md": {
+      "size": 13152,
+      "sha256": "b174077972447e829db722dacbf6d6bb643184832b42686f17492348bab9bfe8",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/harden.md": {
+      "size": 10748,
+      "sha256": "98244db22d907a134cac0c94ffb829ba480ba61cfac67ae155ac2f46444da7c9",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/hooks.md": {
+      "size": 17337,
+      "sha256": "f96777015bbe74a31a4c285526dd73f5fd65c167effe339fc9ac10a11be9ebca",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/init.md": {
+      "size": 12160,
+      "sha256": "72dfec68faf7fc58097d18961e7e1650af099b257a3b241bea813b00beae37a0",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/ios.md": {
+      "size": 3812,
+      "sha256": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/layout.md": {
+      "size": 5161,
+      "sha256": "64802d14087fc96b38ef3881fef8098b36068d07f3b942031637b18eef3dd2af",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/live-setup.md": {
+      "size": 8186,
+      "sha256": "6e7e3b7c4cf331cdb43f4546c164acd6c45a267ce3289dcfa87e13202d98c747",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/live.md": {
+      "size": 37334,
+      "sha256": "2b4d66078f61003e89937074935f2d1bbee788e41d203d5c16ca2c3a08874c7d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/mode-operate.md": {
+      "size": 4716,
+      "sha256": "7a52dd7a94ee75f6ae89542c86a1b6e1d306812b16e0d9dbf12d4acad44d148b",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/mode-persuade.md": {
+      "size": 3638,
+      "sha256": "21e78c8a77badb3f83290cd4577ed3b24bd4dd3b57136d7da75733d4f3ee9ac0",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/mode-read.md": {
+      "size": 4396,
+      "sha256": "a569989e6a3d6453b4c45e9474e162a15cc54e11732ac6baa7990a6e7cccc0b5",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/new-work.md": {
+      "size": 63569,
+      "sha256": "77828f66a28b43c21c9510b7db8e15d1def2b8e6c90af38fa8d9080bd21ffdbf",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/onboard.md": {
+      "size": 7688,
+      "sha256": "eb713f3d6686bac6431dd874f7b02358b4cf08e879e11bf747d75660dedd685a",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/operate.md": {
+      "size": 4145,
+      "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/optimize.md": {
+      "size": 7577,
+      "sha256": "7ecc07226fa99b198eba37ea57f3c3e2465a80cc65093f0098dc888f7ee27273",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/overdrive.md": {
+      "size": 9010,
+      "sha256": "83c7786c640b0e6ea61e2b2ff0f93193ba1f68e907b32f2bd56f32bb7a60018f",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/polish.md": {
+      "size": 6646,
+      "sha256": "b8d49a3cab3428d9f351502e9c2c5802cef187e0d2af626ef3e1cd1837fd06bf",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/quieter.md": {
+      "size": 4951,
+      "sha256": "b0018ae21f320aabfe3ca9d9f8e0c2c5a5bf74c6eb4e572e3d408c38cd19f5ec",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/region-map.md": {
+      "size": 3361,
+      "sha256": "4ea8e05d0f88d24f182ad554da84317f90b9730e29fad262143ddf423a1f8645",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/routing.md": {
+      "size": 3336,
+      "sha256": "56285b28b0ffe471761c2ad062d3f933ed2346ca1b617f1323a30fed99a1a852",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/shape.md": {
+      "size": 3547,
+      "sha256": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/typeset.md": {
+      "size": 6263,
+      "sha256": "c9943e06ca311258d8aa5a5c65f5beb7a46c57c5e9a2075d2a246bf1337f00bb",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/reference/visualize.md": {
+      "size": 13956,
+      "sha256": "a2be08335e1e5f0dab5ae445e24c0d0d5699752e9656bd5f9b8065af9b347a03",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/VERSION": {
+      "size": 7,
+      "sha256": "b436859fb641d04afbc4796b5df155639d6685280c4a0e8fe8791363d977f222",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/command-metadata.json": {
+      "size": 8318,
+      "sha256": "c6dcbeed7f13152205ca022c8f24d08683770835083f0a7325261c1c2d5f215c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/data/font-index-failures.json": {
+      "size": 2437,
+      "sha256": "835f19a0a3812f3652dd6979a2ce5597f654fd01f26e1b420b92d5f42b997ce4",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/data/font-index.json": {
+      "size": 1100013,
+      "sha256": "47edbdfaf27073c47033d1ac7dfee881be49e2dcbda7671d1157300481dde6da",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/engine-checksums.txt": {
+      "size": 787,
+      "sha256": "bb625a48a3946ca84904ce6ae13957374165eec078bc6565a4717e290114919e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/impeccable": {
+      "size": 11320,
+      "sha256": "137173707b882616104b9d621b53bea37f135de09461add3301b9fcb3d7de461",
+      "mode": "755"
+    },
+    ".claude/skills/impeccable/scripts/impeccable.cmd": {
+      "size": 12503,
+      "sha256": "73c2e4d7613c38e35654df0444d559c97f1d09a9d373f4e72b3d7b21b6e1060c",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser-dom.js": {
+      "size": 12283,
+      "sha256": "4b379aff87ce0f485008a2b6a0dc711d00a869f5cf0ec2459279d6364fbf0c9e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser-ignores.js": {
+      "size": 10423,
+      "sha256": "ba8905ab865fde5162e34fc17eb80eba26cc990b319b14a6eed6ca89fd491897",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser-session.js": {
+      "size": 5838,
+      "sha256": "e042339a54d4521fc47555b602013ed5b51410ec9d7d8878d99a526f5f237f68",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/live-browser.js": {
+      "size": 564400,
+      "sha256": "144335146f4f5a3a06be4b5daab24cac82653510c0007ad3786dbd3ef1a02f6e",
+      "mode": "644"
+    },
+    ".claude/skills/impeccable/scripts/modern-screenshot.umd.js": {
+      "size": 29290,
+      "sha256": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b",
+      "mode": "644"
+    }
+  },
+  "diff": [],
+  "homeBefore": {},
+  "homeAfter": {},
+  "homeDiff": []
+}

@@ -1,0 +1,97 @@
+{
+  "kind": "C: fixed-source structural observation; not an installation or host behavior proof",
+  "command": [
+    "git",
+    "-C",
+    "/Users/qigong-it-1/Workspace/skills/.cache/upstreams/impeccable",
+    "rev-parse",
+    "HEAD"
+  ],
+  "exit_code": 0,
+  "commit": "035c8f319edd019936525a062fe99e83ca8d12c6",
+  "sources": [
+    {
+      "path": "scripts/lib/transformers/providers.js",
+      "sha256": "7f515f9c9f55eeb5f5414cb998532bdeed77e93b20dffe1923022874dc8fce8e"
+    },
+    {
+      "path": "crates/skills/src/providers.rs",
+      "sha256": "323207f11eb81b4999fc3760f7eec2a5d765154d17551c11c3955e27d9dc888e"
+    },
+    {
+      "path": "crates/context/src/provider.rs",
+      "sha256": "fbe1ec2e64c957bdd1f4dfd762c478dc1aa7d801bf4e2d200107aa5dfca202a0"
+    }
+  ],
+  "transformer_keys": [
+    "cursor",
+    "claude-code",
+    "gemini",
+    "dsh",
+    "codex",
+    "agents",
+    "github",
+    "kiro",
+    "opencode",
+    "pi",
+    "omp",
+    "qoder",
+    "trae-cn",
+    "trae",
+    "rovo-dev",
+    "vibe",
+    "veto",
+    "grok",
+    "antigravity",
+    "hermes",
+    "devin"
+  ],
+  "installer_directories": [
+    ".claude",
+    ".cursor",
+    ".devin",
+    ".dsh",
+    ".gemini",
+    ".agents",
+    ".agent",
+    ".github",
+    ".grok",
+    ".hermes",
+    ".kiro",
+    ".opencode",
+    ".pi",
+    ".omp",
+    ".qoder",
+    ".trae",
+    ".trae-cn",
+    ".rovodev",
+    ".vibe"
+  ],
+  "context_directories": [
+    ".claude",
+    ".cursor",
+    ".devin",
+    ".dsh",
+    ".gemini",
+    ".codex",
+    ".agents",
+    ".github",
+    ".kiro",
+    ".opencode",
+    ".pi",
+    ".omp",
+    ".qoder",
+    ".trae",
+    ".trae-cn",
+    ".rovodev",
+    ".vibe",
+    ".grok",
+    ".agent",
+    ".hermes"
+  ],
+  "counts": {
+    "transformers": 21,
+    "installer_dirs": 19,
+    "context_dirs": 20
+  }
+}
