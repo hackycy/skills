@@ -18,12 +18,15 @@ try {
   }
   else {
     let input = parsed.input!
-    if (input.command === 'init')
-      input = interactiveInit(input) ? await promptInit(input, process.cwd()) : completeInit(input, process.cwd())
     const delegated = delegate(input, process.argv[1])
-    if (delegated !== undefined)
+    if (delegated !== undefined) {
       process.exitCode = delegated
-    else result = execute(input)
+    }
+    else {
+      if (['install', 'hosts set'].includes(input.command))
+        input = interactiveInit(input) ? await promptInit(input, process.cwd()) : completeInit(input, process.cwd())
+      result = execute(input)
+    }
   }
 }
 catch (error) {

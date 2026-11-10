@@ -4,78 +4,51 @@ import type { Snapshot } from '../notes/snapshot'
 import type { TransactionHooks } from '../workflow/transaction'
 import type { Bundle } from './bundle'
 import type { NotesLayout } from './layout'
-import type { Asset, Installation, Target } from './manifest'
+import type { Asset } from './manifest'
+import type { Operation } from './transition'
 import { Buffer } from 'node:buffer'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { closeSync, fsyncSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join } from 'node:path'
 import process from 'node:process'
 import { diagnostic, NotesError } from '../notes/model'
 import { readConfig, readIndex } from '../notes/reader'
-import { rewriteLinks } from '../notes/rewrite'
-import { findRoot, Repository, safePath, sha256 } from '../notes/snapshot'
+import { findRoot, Repository, sha256 } from '../notes/snapshot'
 import { currentDiagnostics } from '../notes/validation'
-import { assertNoTransaction, commitTransaction, recoverTransaction, verifyObservations } from '../workflow/transaction'
-import { bundleHash, loadBundle, localizeBundle, managerVersion } from './bundle'
-import { ancestors, planGitRules } from './git-rules'
+import { recoverTransaction, recoveryView } from '../workflow/recovery'
+import { assertNoTransaction, commitTransaction, preflightTransaction, verifyObservations } from '../workflow/transaction'
+import { installedBundle, loadBundle, managerVersion, parseSource } from './bundle'
+import { checkGitRules } from './git-rules'
 import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from './layout'
-import { assetBytes, block, entryText, integrity, managedPath, readInstallation, replaceBlock, skillNames, versionPattern, wrapBlock } from './manifest'
+import { integrity, readInstallation } from './manifest'
+import { project, validate } from './projection'
+import { assertPath, budget, limits, skillNames } from './protocol'
 import { assertPackageCommand, repairCommand } from './source'
+import { planFiles, transitionContext, validateJournal } from './transition'
 
 export interface ManageOptions {
-  command: 'init' | 'upgrade' | 'repair' | 'status'
+  command: Operation | 'status'
   root?: string
-  targets: Target[]
+  hosts: string[]
   notesDir?: string
   language?: 'zh-CN' | 'en'
   dryRun: boolean
   recover: boolean
 }
 
-export function installationRoot(explicit: string | undefined, cwd: string, init = false): string {
+export function installationRoot(explicit: string | undefined, cwd: string, install = false): string {
   try {
     return findRoot(explicit, cwd)
   }
   catch (error) {
-    if (!init || !(error instanceof NotesError) || error.code !== 'ROOT_NOT_FOUND')
+    if (!install || !(error instanceof NotesError) || error.code !== 'ROOT_NOT_FOUND')
       throw error
     const repository = new Repository(realpathSync(cwd))
     return repository.available ? realpathSync(execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim()) : realpathSync(cwd)
   }
 }
-
-function route(path: string, source: Snapshot, agents: boolean, layout: NotesLayout): string {
-  const runtime = relative(dirname(path), `${layout.runtimeAssets}/references/writing.md`).split('\\').join('/')
-  const inherited = path === '.claude/CLAUDE.md' && ((!source.read(path) && (agents || source.exists('AGENTS.md'))) || block(entryText(source.read(path), path), path)?.text.includes('@../AGENTS.md')) ? '@../AGENTS.md\n\n' : ''
-  return wrapBlock(path, `${inherited}## Engineering decision Notes\n\nBefore planning related changes or first editing code, run \`node ${layout.runtimeCli} context --paths <project-relative-paths> --topic <topic>\` from the project root. Include new, deleted and renamed paths; query again when scope or approach changes. Read only relevant returned Notes with \`show <id>\` or their paths.\n\nUse \`agent-note\` when durable rationale or discarded alternatives cannot live in code, tests or existing docs: suggest recording, then proceed on user acceptance or an explicit request; retain existing authorization. Ordinary Plan may finish with zero Notes. Ship required Notes with code in the same PR. Use \`agent-note-maintenance\` for lifecycle changes and cleanup; run \`check\` before delivery. [Command inputs and lifecycle rules](${runtime}) are available when writing or maintaining a Note.`)
-}
-
-function claudeRoute(path: string, source: Snapshot, agents: boolean, layout: NotesLayout): string | undefined {
-  if (!agents)
-    return route(path, source, false, layout)
-  const original = entryText(source.read(path), path)
-  const unmanaged = block(original, path) ? replaceBlock(original, path, '') : original
-  const importPath = path === 'CLAUDE.md' ? 'AGENTS.md' : '../AGENTS.md'
-  // Only literal, standalone local imports count. Prose mentions and code
-  // examples must not silently suppress a required route.
-  let fence: string | undefined
-  for (const line of unmanaged.split(/\r?\n/)) {
-    const delimiter = /^\s*(`{3,}|~{3,})/.exec(line)?.[1]
-    if (delimiter) {
-      if (!fence)
-        fence = delimiter
-      else if (delimiter[0] === fence[0] && delimiter.length >= fence.length)
-        fence = undefined
-    }
-    else if (!fence && /^ {0,3}@\S+\s*$/.test(line) && [`@${importPath}`, `@./${importPath}`].includes(line.trim())) {
-      return undefined
-    }
-  }
-  return wrapBlock(path, `@${importPath}`)
-}
-
 function configFor(source: Snapshot, options: ManageOptions, discovered?: NotesLayout): ProjectConfig {
   const layout = discovered ?? notesLayout(options.notesDir ?? defaultNotesRoot)
   const existing = source.read(layout.configPath)
@@ -87,12 +60,6 @@ function configFor(source: Snapshot, options: ManageOptions, discovered?: NotesL
   }
   const config: ProjectConfig = { format: 'agent-notes-config/1', notes_dir: layout.notesRoot, language: options.language ?? 'zh-CN' }
   return readConfig(source.overlay(new Map([[layout.configPath, Buffer.from(JSON.stringify(config))]])), layout)
-}
-
-function protectLayout(config: ProjectConfig): void {
-  const roots = ['.agents/skills', '.claude/skills', 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes']
-  if (roots.some(root => config.notes_dir.toLowerCase() === root.toLowerCase() || root.toLowerCase().startsWith(`${config.notes_dir.toLowerCase()}/`) || config.notes_dir.toLowerCase().startsWith(`${root.toLowerCase()}/`)))
-    throw new NotesError('CONFIG_CONFLICT', 'Notes must have their own directory, disjoint from installation assets and rule files.', config.notes_dir, 2)
 }
 
 function noteInventory(source: Snapshot, notesDir: string): string[] {
@@ -117,45 +84,54 @@ function writeScratch(root: string, path: string, bytes: Uint8Array): void {
   writeFileSync(join(root, path), bytes)
 }
 
-function backup(source: Snapshot, modified: Asset[], changes: Map<string, Buffer | null>, layout: NotesLayout): string | undefined {
-  const originals = modified.filter(asset => source.read(asset.path))
-  if (!originals.length)
+export function backupPlan(directory: string, endpoints: { path: string, before: Buffer, after: Buffer }[]): [string, Buffer][] {
+  const copies: [string, Buffer][] = []
+  let total = 0
+  for (const { path, before, after } of endpoints) {
+    budget('Original backup endpoint', before.length, limits.endpoint)
+    budget('Replacement backup endpoint', after.length, limits.endpoint)
+    const original = `${directory}/original/${path}`
+    const replacement = `${directory}/replacement/${path}`
+    const summary = Buffer.from(`${path}\nOriginal: ${before.length} bytes, sha256 ${sha256(before)}\nReplacement: ${after.length} bytes, sha256 ${sha256(after)}\nComplete copies: ${original} and ${replacement}\nThe managed asset differed from the locked projection. This is a bounded summary, not a unified diff.\n`)
+    budget('Backup summary', summary.length, limits.summary)
+    copies.push([original, before], [replacement, after], [`${directory}/summaries/${path}.txt`, summary])
+  }
+  for (const [path, bytes] of copies) {
+    assertPath(path)
+    total += bytes.length
+    budget('Necessary backups', total, limits.backup)
+  }
+  return copies
+}
+
+function backup(source: Snapshot, modified: Asset[], changes: Map<string, Buffer | null>, layout: NotesLayout, preview = false): string | undefined {
+  if (!modified.length)
     return undefined
   const directory = `${layout.localRoot}/backups/${randomUUID()}`
-  // Snapshot.exists checks every ancestor, including ignored local paths.
+  const copies = backupPlan(directory, modified.map(asset => ({ path: asset.path, before: source.read(asset.path, limits.endpoint)!, after: changes.get(asset.path) ?? Buffer.alloc(0) })))
+  if (preview)
+    return undefined
   if (source.exists(directory))
     throw new NotesError('BACKUP_FAILED', 'Backup destination already exists.', directory)
-  const full = join(source.repository.root, directory)
-  mkdirSync(full, { recursive: true, mode: 0o700 })
-  const patches: string[] = []
-  const save = (path: string, bytes: Uint8Array | string): void => {
-    const destination = join(full, path)
-    mkdirSync(dirname(destination), { recursive: true })
-    const descriptor = openSync(destination, 'wx', 0o600)
-    try {
-      writeFileSync(descriptor, bytes)
-      fsyncSync(descriptor)
-    }
-    finally { closeSync(descriptor) }
-  }
   try {
-    for (const asset of originals) {
-      const original = source.read(asset.path)!
-      const before = `original/${asset.path}`
-      const after = `replacement/${asset.path}`
-      save(before, original)
-      save(after, changes.get(asset.path) ?? Buffer.alloc(0))
-      const diff = spawnSync('git', ['diff', '--no-index', '--no-ext-diff', '--no-textconv', '--', before, after], { cwd: full, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 })
-      if (diff.status !== 0 && diff.status !== 1)
-        throw new Error(diff.error?.message ?? diff.stderr)
-      patches.push(diff.stdout)
-      if (!readFileSync(join(full, before)).equals(original))
-        throw new Error(`Backup bytes do not match ${asset.path}`)
+    for (const [path, bytes] of copies) {
+      const full = join(source.repository.root, path)
+      mkdirSync(dirname(full), { recursive: true, mode: 0o700 })
+      const fd = openSync(full, 'wx', 0o600)
+      try {
+        writeFileSync(fd, bytes)
+        fsyncSync(fd)
+      }
+      finally {
+        closeSync(fd)
+      }
+      if (!readFileSync(full).equals(bytes))
+        throw new Error('Backup verification failed.')
     }
-    save('changes.patch', patches.join('\n'))
-    save('README.txt', 'Managed assets saved before replacement. original/ contains exact files; changes.patch compares them to replacement/. This backup is inactive and can be retained or removed by the project owner.\n')
   }
-  catch (error) { throw new NotesError('BACKUP_FAILED', `Cannot save managed edits: ${String(error)}. No project assets were replaced.`, directory) }
+  catch (error) {
+    throw new NotesError('BACKUP_FAILED', `Necessary backup failed: ${String(error)}. Partial evidence may remain here; no managed assets were replaced.`, directory)
+  }
   return directory
 }
 
@@ -164,196 +140,133 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
   let scratch: string | undefined
   try {
     assertPackageCommand(options.command)
+    if (options.dryRun && options.recover)
+      throw new NotesError('INVALID_INPUT', '--dry-run excludes --recover.', undefined, 2)
+    if (options.command === 'hosts set' && !options.hosts.length)
+      throw new NotesError('INVALID_INPUT', 'hosts set requires a complete nonempty --host set.', undefined, 2)
     const [major, minor] = process.versions.node.split('.').map(Number)
     if (major < 22 || (major === 22 && minor < 12))
       throw new NotesError('NODE_VERSION', 'agent-notes requires Node >=22.12.0.', undefined, 2)
-    const root = installationRoot(options.root, cwd, options.command === 'init')
+    const root = installationRoot(options.root, cwd, options.command === 'install')
     output.scope = { root, snapshot: 'worktree' }
-    const recovered = options.recover ? recoverTransaction(root) : false
-    assertNoTransaction(root)
     const repository = new Repository(root)
-    const source = repository.snapshot('worktree')
-    const discoveredLayout = layoutFromSnapshot(source)
-    const config = configFor(source, options, discoveredLayout)
+    const view = options.recover ? recoveryView(repository.snapshot('worktree')) : undefined
+    if (!view)
+      assertNoTransaction(root)
+    const source = view?.source ?? repository.snapshot('worktree')
+    const config = configFor(source, options, layoutFromSnapshot(source))
     const layout = notesLayout(config.notes_dir)
     const installation = readInstallation(source, layout)
-    if (!installation && options.command !== 'init')
-      throw new NotesError('NOT_INSTALLED', 'Run npx --yes @hackycy/agent-notes@latest init to initialize this project first.', layout.installPath, 2)
+    if (!installation && options.command !== 'install')
+      throw new NotesError('NOT_INSTALLED', 'Run install from a complete npm package first.', layout.installPath, 2)
     if (installation && !source.read(layout.configPath))
       throw new NotesError('CONFIG_CONFLICT', 'Installed configuration is missing; restore it explicitly.', layout.configPath)
-    protectLayout(config)
-    if (options.command === 'status') {
-      const problems = integrity(source, installation!)
-      output.data = { manager_version: managerVersion, runtime_version: installation!.version, bundle_sha256: installation!.bundle_sha256, targets: installation!.targets, notes_dir: config.notes_dir, assets: installation!.assets.length, integrity: problems.length ? 'damaged' : 'intact', problems }
-      if (problems.length) {
-        output.result = 'failed'
-        output.diagnostics = problems.map(item => ({ code: 'ASSET_INTEGRITY', path: item.path, message: `Installed tool file ${item.state}; run node ${layout.runtimeCli} repair, or ${repairCommand(installation!.version)} if runtime source files are damaged.` }))
+    let selectedSource = options.command === 'status' || options.command === 'hosts set' ? undefined : suppliedBundle ?? loadBundle()
+    let before
+    if (installation) {
+      let oldSource
+      try {
+        oldSource = installedBundle(source, layout.runtimeRoot)
       }
-      return output
+      catch (error) {
+        if (options.command !== 'repair' || !selectedSource)
+          throw error
+        oldSource = selectedSource
+      }
+      before = validate({ kind: 'installation', source: oldSource, config, installation })
     }
-    const bundle = localizeBundle(suppliedBundle ?? loadBundle(), layout.notesRoot)
-    if (!versionPattern.test(bundle.version) || !bundle.files.has('cli.mjs') || skillNames.some(name => !bundle.skills.has(`${name}/SKILL.md`)))
-      throw new NotesError('INVALID_BUNDLE', 'Bundle version, runtime or required skills are missing.', undefined, 2)
-    if (installation && options.command === 'repair') {
-      if (bundle.version !== installation.version)
-        throw new NotesError('REPAIR_VERSION_MISMATCH', `Repair keeps project version ${installation.version}. Run ${repairCommand(installation.version)}, or use upgrade to change versions.`, layout.installPath, 2)
-      if (bundleHash(bundle) !== installation.bundle_sha256)
-        throw new NotesError('INVALID_BUNDLE', `Repair requires the installed bundle. Run ${repairCommand(installation.version)} using the complete npm package.`, layout.installPath)
-    }
-    if (installation && options.command === 'init') {
-      if (bundle.version !== installation.version)
-        throw new NotesError('UPGRADE_REQUIRED', 'Run npx --yes @hackycy/agent-notes@latest upgrade to change the installed tool version.', layout.installPath, 2)
-      if (JSON.stringify([...options.targets].sort()) !== JSON.stringify([...installation.targets].sort()))
-        throw new NotesError('TARGET_CONFLICT', 'Repeat init with the installed targets. Changing installation targets is not supported by v1.', layout.installPath, 2)
-      const problems = integrity(source, installation)
+    if (options.command === 'hosts set' && before)
+      selectedSource = before.source
+    const problems = installation ? integrity(source, installation) : []
+    if (options.command === 'status') {
+      output.data = { manager_version: managerVersion, runtime_version: installation!.version, bundle_sha256: installation!.bundle_sha256, integrations: installation!.integrations, notes_dir: config.notes_dir, assets: installation!.assets.length, integrity: problems.length ? 'damaged' : 'intact', problems }
       if (problems.length)
-        throw new NotesError('REPAIR_REQUIRED', `Installed tool files need repair; run ${repairCommand(installation.version)}.`, problems[0].path)
-      output.data = { version: bundle.version, targets: installation.targets, notes_dir: config.notes_dir, changes: [], recovered }
+        throw new NotesError('ASSET_INTEGRITY', `Tool assets need repair; use ${repairCommand(installation!.version)}.`, problems[0].path)
       return output
     }
-    if (installation && options.command === 'upgrade' && bundle.version === installation.version) {
-      const problems = integrity(source, installation)
-      if (problems.length)
-        throw new NotesError('REPAIR_REQUIRED', `Installed tool files need repair; run ${repairCommand(installation.version)}.`, problems[0].path)
-      output.data = { manager_version: bundle.version, previous_version: installation.version, runtime_version: installation.version, changes: [], recovered }
-      return output
+    const catalog = parseSource(selectedSource!.index)
+    const hosts = options.hosts.length ? options.hosts : installation?.integrations ?? catalog.integrations.filter(item => item.default).map(item => item.id)
+    const after = project({ source: selectedSource!, config, integrations: hosts })
+    validate({ kind: 'transition', before, after, operation: options.command })
+    if (problems.length && options.command !== 'repair')
+      throw new NotesError('REPAIR_REQUIRED', `Repair damaged assets first, including assets being removed. Run ${repairCommand(installation!.version)}.`, problems[0].path)
+    if (!installation && source.exists(layout.runtimeRoot))
+      throw new NotesError('INVALID_INSTALLATION', 'Runtime exists without a valid receipt. Restore ownership or recover a valid journal.', layout.installPath)
+    const ownedRoots = new Set(before?.skillRoots)
+    for (const path of after.skillRoots) {
+      if (!ownedRoots.has(path) && source.exists(path))
+        throw new NotesError('UNOWNED_ASSET', 'A same-name unknown skill directory cannot be adopted, even with identical bytes.', path)
     }
-    const targets = installation?.targets ?? options.targets
-    const notes = noteInventory(source, config.notes_dir)
-    for (const path of notes)
-      source.read(path)
     if (!installation) {
-      if (notes.length || source.exists(layout.runtimeRoot))
-        throw new NotesError('UNOWNED_ASSET', 'Existing Notes or runtime have no install manifest; init does not adopt them.', notes[0] ?? layout.runtimeRoot)
-      for (const target of targets) {
+      for (const item of catalog.integrations) {
         for (const name of skillNames) {
-          if (source.exists(`.${target}/skills/${name}`))
-            throw new NotesError('UNOWNED_ASSET', 'A same-name skill already exists without installation ownership.', `.${target}/skills/${name}`)
+          const path = `${item.skillRoot}/${name}`
+          if (source.exists(path))
+            throw new NotesError('UNOWNED_ASSET', 'Skill installation traces exist without a valid receipt.', path)
         }
       }
     }
-    const changes = new Map<string, Buffer | null>()
-    const desired = new Map<string, { kind: Asset['kind'], bytes: Buffer }>()
-    const entries = new Set<string>()
-    const add = (path: string, kind: Asset['kind'], bytes: Buffer): void => {
-      if (!managedPath(path, kind, targets, layout) || desired.has(path))
-        throw new NotesError('INVALID_BUNDLE', 'Bundle contains an invalid or duplicate asset path.', path)
-      desired.set(path, { kind, bytes })
+    for (const asset of after.assets) {
+      source.read(asset.path, limits.endpoint)
+      const folded = asset.path.normalize('NFC').toLowerCase()
+      const collision = source.paths().find(path => path !== asset.path && path.normalize('NFC').toLowerCase() === folded)
+      if (collision)
+        throw new NotesError('PROJECTION_CONFLICT', 'Existing case/normalization collision.', collision)
     }
-    for (const [path, bytes] of bundle.files) {
-      if (!safePath(path))
-        throw new NotesError('INVALID_BUNDLE', 'Unsafe bundle path.', path)
-      add(`${layout.runtimeRoot}/${path}`, 'file', bytes)
-    }
-    for (const target of targets) {
-      const destinations = new Map<string, { path: string }>()
-      for (const path of bundle.files.keys()) {
-        for (const source of [...ancestors(path), path])
-          destinations.set(source, { path: `${layout.runtimeRoot}/${source}` })
-      }
-      for (const path of bundle.skills.keys()) {
-        for (const source of [...ancestors(path), path])
-          destinations.set(`assets/skills/${source}`, { path: `.${target}/skills/${source}` })
-      }
-      for (const [path, bytes] of bundle.skills) {
-        const destination = `.${target}/skills/${path}`
-        const content = /\.md$/i.test(path) ? Buffer.from(rewriteLinks(bytes.toString('utf8'), `assets/skills/${path}`, destination, destinations)) : bytes
-        add(destination, 'file', content)
-      }
-      const ownedEntry = installation?.assets.find(asset => asset.kind === 'block' && (target === 'agents' ? asset.path === 'AGENTS.md' : ['CLAUDE.md', '.claude/CLAUDE.md'].includes(asset.path)))?.path
-      const entry = ownedEntry ?? (target === 'agents' ? 'AGENTS.md' : source.exists('CLAUDE.md') ? 'CLAUDE.md' : '.claude/CLAUDE.md')
-      entries.add(entry)
-      const text = target === 'claude' ? claudeRoute(entry, source, targets.includes('agents'), layout) : route(entry, source, true, layout)
-      if (text !== undefined)
-        add(entry, 'block', Buffer.from(text))
-    }
-    const priorBlocks = new Set(installation?.assets.filter(asset => asset.kind === 'block').map(asset => asset.path))
-    for (const [path, text] of planGitRules(source, config.notes_dir, [...new Set([...desired.keys(), ...entries])], priorBlocks, [...desired].filter(([, asset]) => asset.kind === 'file').map(([path]) => path)))
-      add(path, 'block', Buffer.from(text))
-    const oldAssets = new Map(installation?.assets.map(asset => [asset.path, asset]))
-    const nextAssets: Asset[] = []
-    for (const [path, asset] of desired) {
-      const previous = oldAssets.get(path)
-      const before = source.read(path)
-      if (previous && previous.kind !== asset.kind)
-        throw new NotesError('INVALID_INSTALLATION', 'Asset ownership kind changed.', path)
-      if (!previous && (asset.kind === 'file' ? before : before && block(entryText(before, path), path)))
-        throw new NotesError('UNOWNED_ASSET', 'A new managed asset would overwrite an unknown file or block.', path)
-      const currentBlock = asset.kind === 'block' ? block(entryText(before, path), path) : undefined
-      const after = asset.kind === 'block'
-        ? currentBlock?.text.replace(/\r\n/g, '\n') === entryText(asset.bytes, path)
-          ? before!
-          : Buffer.from(replaceBlock(entryText(before, path), path, entryText(asset.bytes, path)))
-        : asset.bytes
-      if (!before?.equals(after))
-        changes.set(path, after)
-      nextAssets.push({ path, kind: asset.kind, sha256: sha256(asset.bytes) })
-    }
-    for (const asset of installation?.assets ?? []) {
-      if (desired.has(asset.path))
-        continue
-      const bytes = source.read(asset.path)
-      if (!bytes)
-        continue
-      if (asset.kind === 'block') {
-        const current = block(entryText(bytes, asset.path), asset.path)
-        if (current)
-          changes.set(asset.path, Buffer.from(replaceBlock(entryText(bytes, asset.path), asset.path, '')))
-      }
-      else { changes.set(asset.path, null) }
-    }
-    if (!source.read(layout.configPath))
-      changes.set(layout.configPath, Buffer.from(`${JSON.stringify(config, null, 2)}\n`))
-    const next: Installation = { format: 'agent-notes-install/1', version: bundle.version, bundle_sha256: bundleHash(bundle), targets, assets: nextAssets.sort((a, b) => a.path.localeCompare(b.path)) }
-    const manifest = Buffer.from(`${JSON.stringify(next, null, 2)}\n`)
-    if (!source.read(layout.installPath)?.equals(manifest))
-      changes.set(layout.installPath, manifest) // The install manifest always switches last.
-    const index = readIndex(source.overlay(changes))
-    const diagnostics = currentDiagnostics(index)
+    const changes = planFiles(before, after, config, path => source.read(path, limits.endpoint))
+    const notes = noteInventory(source, config.notes_dir)
+    for (const path of notes) source.read(path)
+    const diagnostics = currentDiagnostics(readIndex(source.overlay(changes)))
     if (diagnostics.length) {
-      output.diagnostics.push(...diagnostics)
+      output.diagnostics = diagnostics
       output.result = diagnostics.some(item => item.code === 'UNSUPPORTED_FORMAT') ? 'invalid-input' : 'failed'
       return output
     }
-    const modified = (installation?.assets ?? []).filter((asset) => {
-      const bytes = assetBytes(source, asset)
-      return changes.has(asset.path) && bytes !== undefined && sha256(bytes) !== asset.sha256
-    })
-    output.data = { manager_version: bundle.version, previous_version: installation?.version ?? null, runtime_version: bundle.version, targets, notes_dir: config.notes_dir, recovered, modified_assets: modified.map(asset => asset.path), changes: [...changes].map(([path, bytes]) => ({ path, action: !bytes ? 'delete' : source.read(path) ? 'update' : 'create', before_hash: source.read(path) ? sha256(source.read(path)!) : null, after_hash: bytes ? sha256(bytes) : null })) }
-    if (!changes.size)
+    const verifyGit = checkGitRules(source, after, before?.assets.map(asset => asset.path))
+    const modified = (installation?.assets ?? []).filter(asset => problems.some(problem => problem.path === asset.path && problem.state === 'modified') && changes.has(asset.path))
+    const cleanup = (before?.cleanupCandidates ?? []).filter(path => !after.cleanupCandidates.includes(path))
+    const context = transitionContext(options.command, config, before, after, changes, path => source.read(path, limits.endpoint))
+    output.data = { manager_version: after.identity.version, previous_version: installation?.version ?? null, runtime_version: after.identity.version, integrations: after.integrations, notes_dir: config.notes_dir, recovered: false, modified_assets: modified.map(asset => asset.path), changes: [...changes].map(([path, bytes]) => ({ path, action: bytes === null ? 'delete' : source.read(path) ? 'update' : 'create', before_hash: source.read(path) ? sha256(source.read(path)!) : null, after_hash: bytes ? sha256(bytes) : null })), cleanup }
+    if (options.recover) {
+      // All input, source, ownership and target semantics pass before recovery writes.
+      view!.verify()
+      const recovered = recoverTransaction(root)
+      const result = manage({ ...options, root, recover: false }, cwd, suppliedBundle, hooks)
+      result.data.recovered = recovered
+      return result
+    }
+    if (!changes.size) {
+      verifyGit()
       return output
+    }
     scratch = mkdtempSync(join(tmpdir(), 'agent-notes-install-'))
     const candidate = join(scratch, 'candidate.mjs')
-    writeFileSync(candidate, bundle.files.get('cli.mjs')!)
+    writeFileSync(candidate, after.source.files.get('cli.mjs')!)
     const smokeRoot = join(scratch, 'project')
     writeScratch(smokeRoot, layout.configPath, changes.get(layout.configPath) ?? source.read(layout.configPath)!)
-    for (const path of notes)
-      writeScratch(smokeRoot, path, source.read(path)!)
+    for (const path of notes) writeScratch(smokeRoot, path, source.read(path)!)
     smoke(candidate, smokeRoot)
+    preflightTransaction(source, changes, { context, cleanup, creationCandidates: after.creationCandidates, validate: validateJournal })
+    backup(source, modified, changes, layout, true)
     if (options.dryRun)
       return output
     commitTransaction(source, changes, (applied) => {
+      verifyGit()
       const fresh = repository.snapshot('worktree')
       if (JSON.stringify(noteInventory(fresh, config.notes_dir)) !== JSON.stringify(notes))
-        throw new NotesError('CONCURRENT_CHANGE', 'Note inventory changed during installation; retry with the current project.')
+        throw new NotesError('CONCURRENT_CHANGE', 'Note inventory changed during management.')
       verifyObservations(source, fresh, applied ? changes : undefined)
       if (applied) {
         smoke(join(root, layout.runtimeCli), smokeRoot)
-        const completed = repository.snapshot('worktree')
-        if (JSON.stringify(noteInventory(completed, config.notes_dir)) !== JSON.stringify(notes))
-          throw new NotesError('CONCURRENT_CHANGE', 'Note inventory changed during runtime validation; retry.')
-        verifyObservations(source, completed, changes)
+        verifyObservations(source, repository.snapshot('worktree'), changes)
       }
-    }, {
-      ...hooks,
-      beforeCommit: () => {
-        hooks.beforeCommit?.()
-        verifyObservations(source, repository.snapshot('worktree'))
-        const saved = backup(source, modified, changes, layout)
-        if (saved)
-          output.data.backup = saved
-      },
-    }, 'distribution')
+    }, { ...hooks, beforeCommit: () => {
+      hooks.beforeCommit?.()
+      verifyObservations(source, repository.snapshot('worktree'))
+      const saved = backup(source, modified, changes, layout)
+      if (saved)
+        output.data.backup = saved
+    } }, { context, cleanup, creationCandidates: after.creationCandidates, validate: validateJournal })
   }
   catch (error) {
     output.diagnostics.push(diagnostic(error))

@@ -1,28 +1,32 @@
-import { Buffer } from 'node:buffer'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
+import { readBundle } from '../src/distribution/bundle'
 import { manage } from '../src/distribution/manage'
+import { testBundle } from './distribution-fixtures'
 
 const root = process.argv[2]
-const operation = process.argv[3] === 'init' ? 'init' : process.argv[3] === 'repair' ? 'repair' : 'upgrade'
-const version = operation === 'repair' ? '0.1.0' : '0.2.0'
+const operation = process.argv[3] as 'install' | 'repair' | 'tool update' | 'hosts set'
 const notesDir = process.argv[5] || '.agents/notes'
-manage({ command: operation, root, targets: ['agents'], notesDir, dryRun: false, recover: false }, root, {
-  version,
-  files: new Map([['cli.mjs', Buffer.from('console.log(JSON.stringify({command:"context",result:"ok",data:{notes:[]},diagnostics:[]}))\n')], ['rules.md', Buffer.from(operation === 'repair' ? `Rules ${version}\n` : 'Interrupted upgrade rules\n')]]),
-  skills: new Map(['agent-note', 'agent-note-maintenance'].map(name => [`${name}/SKILL.md`, Buffer.from(`Skill ${name} ${version}\n`)])),
-}, { afterStep(index) {
+const packageRoot = process.argv[6]
+const source = packageRoot ? readBundle(path => readFileSync(join(packageRoot, path)), 'dist/source-index.json', path => path === 'cli.mjs' ? 'dist/cli.mjs' : path) : operation === 'repair' || operation === 'hosts set' ? testBundle() : testBundle('0.2.0', { 'assets/new-resource.md': '# Version resource\n' })
+const result = manage({ command: operation, root, hosts: operation === 'hosts set' ? (process.argv[7]?.split(',') ?? ['claude-code']) : [], notesDir, dryRun: false, recover: false }, root, source, { afterStep(index) {
   const step = process.argv[4]
+  if (step === 'committed')
+    return
   if (step) {
     const journal = JSON.parse(readFileSync(join(root, notesDir, 'local/write-lock/journal.json'), 'utf8'))
     const path = journal.entries[index].path
     const next = journal.entries[index + 1]?.path
-    if (!(step === 'before-config' && next === `${notesDir}/config.json`)
-      && !(step === 'after-config' && path === `${notesDir}/config.json`)
-      && !(step === 'after-install' && path === `${notesDir}/install.json`)) {
+    if (!(step === 'before-config' && next === `${notesDir}/config.json`) && !(step === 'after-config' && path === `${notesDir}/config.json`) && !(step === 'after-install' && path === `${notesDir}/install.json`))
       return
-    }
   }
   process.kill(process.pid, 'SIGKILL')
+}, afterCommit() {
+  if (process.argv[4] === 'committed')
+    process.kill(process.pid, 'SIGKILL')
 } })
+if (result.result !== 'ok') {
+  process.stderr.write(JSON.stringify(result))
+  process.exitCode = 1
+}

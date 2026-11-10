@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process'
+import process from 'node:process'
 import { defineConfig } from 'tsdown'
 
 export default defineConfig({
@@ -8,4 +10,7 @@ export default defineConfig({
   noExternal: [/.*/],
   dts: false,
   clean: true,
+  onSuccess: () => {
+    execFileSync(process.execPath, ['--import', import.meta.resolve('tsx'), 'scripts/source-index.ts'], { stdio: 'inherit' })
+  },
 })

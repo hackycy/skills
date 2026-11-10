@@ -1,6 +1,7 @@
-import { lstatSync, readdirSync, readFileSync } from 'node:fs'
+import { lstatSync, readdirSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { NotesError } from '../notes/model'
+import { boundedRead, limits } from './protocol'
 
 export const defaultNotesRoot = '.agents/notes'
 
@@ -19,7 +20,7 @@ interface LayoutSnapshot {
   kind?: string
   repository?: { root: string }
   paths: () => string[]
-  read: (path: string) => Uint8Array | undefined
+  read: (path: string, maximum?: number) => Uint8Array | undefined
 }
 
 export function notesLayout(notesRoot = defaultNotesRoot): NotesLayout {
@@ -44,7 +45,9 @@ function object(bytes: Uint8Array | undefined): Record<string, unknown> | undefi
     const value: unknown = bytes && JSON.parse(new TextDecoder().decode(bytes))
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined
   }
-  catch { return undefined }
+  catch {
+    return undefined
+  }
 }
 
 function isNotesFile(bytes: Uint8Array | undefined): boolean {
@@ -74,13 +77,13 @@ export function layoutFromSnapshot(snapshot: LayoutSnapshot): NotesLayout | unde
   const candidates = new Set<string>()
   const defaults = notesLayout()
   for (const path of [defaults.configPath, defaults.installPath]) {
-    if (snapshot.read(path))
+    if (snapshot.read(path, limits.installation))
       candidates.add(defaultNotesRoot)
   }
   for (const path of paths) {
-    if ((path.endsWith('/config.json') || path.endsWith('/install.json')) && isNotesFile(snapshot.read(path)))
+    if ((path.endsWith('/config.json') || path.endsWith('/install.json')) && isNotesFile(snapshot.read(path, limits.installation)))
       candidates.add(dirname(path))
-    if (path.endsWith('/config.json') && snapshot.read(path) && snapshot.read(`${dirname(path)}/install.json`) && snapshot.read(`${dirname(path)}/runtime/cli.mjs`))
+    if (path.endsWith('/config.json') && snapshot.read(path, limits.installation) && snapshot.read(`${dirname(path)}/install.json`, limits.installation) && snapshot.read(`${dirname(path)}/runtime/cli.mjs`, limits.sourceFile))
       candidates.add(dirname(path))
   }
   const found = choose(candidates)
@@ -95,7 +98,7 @@ function fileObject(directory: string, name: string): Record<string, unknown> | 
     const full = join(directory, name)
     if (!lstatSync(full).isFile())
       return undefined
-    return object(readFileSync(full))
+    return object(boundedRead(full, limits.installation))
   }
   catch (error) {
     if (!missing(error))
@@ -176,19 +179,4 @@ export function projectFromRuntime(executable: string): { root: string, layout: 
       return { root, layout: notesLayout(candidate) }
   }
   return undefined
-}
-
-/** A plain project has an installed route even when its tool files need repair. */
-export function hasProjectRoute(root: string): boolean {
-  for (const path of ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md']) {
-    try {
-      if (lstatSync(join(root, path)).isFile() && readFileSync(join(root, path), 'utf8').includes('<!-- agent-notes:begin -->'))
-        return true
-    }
-    catch (error) {
-      if (!missing(error))
-        throw error
-    }
-  }
-  return false
 }

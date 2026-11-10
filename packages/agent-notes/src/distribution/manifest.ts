@@ -1,22 +1,19 @@
 import type { Snapshot } from '../notes/snapshot'
 import type { NotesLayout } from './layout'
 import { NotesError } from '../notes/model'
-import { parseJson } from '../notes/reader'
-import { safePath, sha256 } from '../notes/snapshot'
+import { sha256 } from '../notes/snapshot'
 import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from './layout'
+import { assertPath, budget, byteOrder, hashPattern, json, keys, limits, versionPattern } from './protocol'
 
-export type Target = 'agents' | 'claude'
 export interface Asset { path: string, kind: 'file' | 'block', sha256: string }
 export interface Installation {
-  format: 'agent-notes-install/1'
+  format: 'agent-notes-install/2'
   version: string
   bundle_sha256: string
-  targets: Target[]
+  integrations: string[]
   assets: Asset[]
 }
-export const blockPaths = ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes']
-export const skillNames = ['agent-note', 'agent-note-maintenance'] as const
-export const versionPattern = /^\d+\.\d+\.\d+(?:-[\da-z.-]+)?(?:\+[\da-z.-]+)?$/i
+export { skillNames, versionPattern } from './protocol'
 
 export function entryText(bytes: Uint8Array | undefined, path: string): string {
   if (!bytes)
@@ -24,43 +21,41 @@ export function entryText(bytes: Uint8Array | undefined, path: string): string {
   try {
     return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes)
   }
-  catch { throw new NotesError('INVALID_ENCODING', 'Entry files must be UTF-8; refusing a lossy rewrite.', path) }
+  catch {
+    throw new NotesError('INVALID_ENCODING', 'Entry files must be UTF-8; refusing a lossy rewrite.', path)
+  }
 }
 
-export function managedPath(path: string, kind: Asset['kind'], targets: Target[], layout = notesLayout()): boolean {
-  if (!safePath(path) || path.split('/').some(part => part.toLowerCase() === '.git'))
-    return false
-  if (kind === 'block')
-    return ['.gitignore', '.gitattributes', ...(targets.includes('agents') ? ['AGENTS.md'] : []), ...(targets.includes('claude') ? ['CLAUDE.md', '.claude/CLAUDE.md'] : [])].includes(path)
-  return path.startsWith(`${layout.runtimeRoot}/`) || targets.some(target => skillNames.some(name => path.startsWith(`.${target}/skills/${name}/`)))
+export function parseInstallation(bytes: Uint8Array): Installation {
+  const value = json(bytes, limits.installation, 'INVALID_INSTALLATION') as Installation
+  if (value?.format !== 'agent-notes-install/2')
+    throw new NotesError('UNSUPPORTED_FORMAT', 'Expected agent-notes-install/2; old installations are not migrated.', undefined, 2)
+  keys(value, ['format', 'version', 'bundle_sha256', 'integrations', 'assets'], 'INVALID_INSTALLATION')
+  if (typeof value.version !== 'string' || !versionPattern.test(value.version) || typeof value.bundle_sha256 !== 'string' || !hashPattern.test(value.bundle_sha256) || !Array.isArray(value.integrations) || !value.integrations.length || !Array.isArray(value.assets) || !value.assets.length)
+    throw new NotesError('INVALID_INSTALLATION', 'Invalid identity or inventory.', undefined, 2)
+  budget('Installation integrations', value.integrations.length, limits.integrations)
+  budget('Asset receipts', value.assets.length, limits.assets)
+  let previous = ''
+  for (const id of value.integrations) {
+    if (typeof id !== 'string' || byteOrder(previous, id) >= 0)
+      throw new NotesError('INVALID_INSTALLATION', 'Integrations must be unique and sorted.', undefined, 2)
+    previous = id
+  }
+  previous = ''
+  for (const asset of value.assets) {
+    keys(asset, ['path', 'kind', 'sha256'], 'INVALID_INSTALLATION')
+    assertPath(asset.path)
+    if (!['file', 'block'].includes(asset.kind) || typeof asset.sha256 !== 'string' || !hashPattern.test(asset.sha256) || byteOrder(previous, asset.path) >= 0)
+      throw new NotesError('INVALID_INSTALLATION', 'Invalid or duplicate receipt.', asset.path, 2)
+    previous = asset.path
+  }
+  return value
 }
 
 export function readInstallation(source: Snapshot, suppliedLayout?: NotesLayout): Installation | undefined {
   const layout = suppliedLayout ?? layoutFromSnapshot(source) ?? notesLayout(defaultNotesRoot)
-  const installPath = layout.installPath
-  const bytes = source.read(installPath)
-  if (!bytes)
-    return undefined
-  const value = parseJson(bytes, installPath) as Installation
-  if (value?.format !== 'agent-notes-install/1')
-    throw new NotesError('UNSUPPORTED_FORMAT', 'Expected agent-notes-install/1; this tool cannot manage this installation.', installPath, 2)
-  if (!versionPattern.test(value.version) || !/^[\da-f]{64}$/.test(value.bundle_sha256) || Object.keys(value).some(key => !['format', 'version', 'bundle_sha256', 'targets', 'assets'].includes(key))
-    || !Array.isArray(value.targets) || !value.targets.length || value.targets.some(target => !['agents', 'claude'].includes(target))
-    || new Set(value.targets).size !== value.targets.length || !Array.isArray(value.assets) || !value.assets.length) {
-    throw new NotesError('INVALID_INSTALLATION', 'Invalid version, targets or asset inventory.', installPath, 2)
-  }
-  const seen = new Set<string>()
-  for (const asset of value.assets) {
-    if (!asset || typeof asset.path !== 'string' || !['file', 'block'].includes(asset.kind)
-      || !managedPath(asset.path, asset.kind, value.targets, layout) || !/^[\da-f]{64}$/.test(asset.sha256)
-      || Object.keys(asset).some(key => !['path', 'kind', 'sha256'].includes(key)) || seen.has(asset.path)) {
-      throw new NotesError('INVALID_INSTALLATION', 'Asset inventory contains an invalid, duplicate or unowned path.', asset?.path, 2)
-    }
-    seen.add(asset.path)
-  }
-  if (!value.assets.some(asset => asset.path === layout.runtimeCli && asset.kind === 'file'))
-    throw new NotesError('INVALID_INSTALLATION', 'Runtime is missing from the asset inventory.', installPath, 2)
-  return value
+  const bytes = source.read(layout.installPath, limits.installation)
+  return bytes ? parseInstallation(bytes) : undefined
 }
 
 export function markers(path: string): [string, string] {
@@ -95,7 +90,7 @@ export function replaceBlock(text: string, path: string, replacement: string): s
 }
 
 export function assetBytes(source: Snapshot, asset: Pick<Asset, 'path' | 'kind'>): Uint8Array | undefined {
-  const bytes = source.read(asset.path)
+  const bytes = source.read(asset.path, limits.endpoint)
   if (!bytes || asset.kind === 'file')
     return bytes
   const current = block(entryText(bytes, asset.path), asset.path)

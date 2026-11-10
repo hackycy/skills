@@ -80,15 +80,17 @@ export function run(args: string[], cwd = process.cwd(), stdin?: string): Result
     return { command: parsed.command, result: 'ok', scope: {}, data: { help: parsed.help }, diagnostics: [], review: [] }
   try {
     const input = parsed.input!
-    return execute(input.command === 'init' ? completeInit(input, cwd) : input, cwd, stdin)
+    return execute(input.command === 'install' ? completeInit(input, cwd) : input, cwd, stdin)
   }
-  catch (error) { return failure(parsed.command, error) }
+  catch (error) {
+    return failure(parsed.command, error)
+  }
 }
 
 export function execute(input: Options, cwd = process.cwd(), stdin?: string): Result {
   const output: Result = { command: input.command, result: 'ok', scope: {}, data: {}, diagnostics: [], review: [] }
   try {
-    if (input.command === 'init' || input.command === 'upgrade' || input.command === 'repair' || input.command === 'status')
+    if (input.command === 'install' || input.command === 'tool update' || input.command === 'hosts set' || input.command === 'repair' || input.command === 'status')
       return manage({ ...input, command: input.command }, cwd)
     const root = findRoot(input.root, cwd)
     if (writeCommands.includes(input.command))

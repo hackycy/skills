@@ -1,57 +1,61 @@
 # CLI 契约
 
-npm 包的可执行命令为 `agent-notes`，提供全部命令；项目入口 `node .agents/notes/runtime/cli.mjs` 提供日常命令、`status` 和 `repair`。`init`、`upgrade` 通过 npm 包执行，项目帮助不展示这两个命令；本地误用返回 `PACKAGE_COMMAND_REQUIRED`、退出 2，并提供 npm 命令，在问答或恢复前停止。所有命令支持 `--root <path>` 和 `--json`。未提供 root 时定位项目内唯一的 Notes 根；多个根返回 `ROOT_CONFLICT`，未找到返回 `ROOT_NOT_FOUND`。新安装使用 Git 根或当前目录。
+npm 包的可执行命令为 `agent-notes`；项目入口为 `node .agents/notes/runtime/cli.mjs`。`install` 与 `tool update` 由调用者选定的完整 npm 包执行；日常命令和 `hosts set` 由项目锁定 runtime 执行，npm 入口会委派。runtime 还提供 `status`、`repair`。误用来源在问答和恢复前返回 `PACKAGE_COMMAND_REQUIRED`。工具命令 `tool update` 与 Note 的 `update <id>` 独立，不提供旧命令或参数别名。
 
-通用参数可放在命令前后；带值选项接受 `--name value` 与 `--name=value`。`--help` / `-h` 显示总帮助，`<command> --help` 显示命令帮助。target/topic 可重复，paths 支持 `--paths a b --paths c`；单值选项、布尔开关与同一 target 不可重复。未知、错位、缺值或非法参数返回 `invalid-input`。
+所有命令接受 `--root <path>`、`--json` 和 `--help`。root 省略时发现唯一 Notes 根，多根报 `ROOT_CONFLICT`，缺失报 `ROOT_NOT_FOUND`；首装使用 Git 根或当前目录。带值参数接受空格或等号；host/topic 可重复，paths 支持 `--paths a b --paths c`。单值、布尔开关和同一 host 不可重复，未知/错位/缺值参数退出 2。
 
 ## 命令与参数
 
 | 命令 | 主要参数 | 输入与结果 |
 | --- | --- | --- |
-| `init` | 可重复 `--target agents\|claude`；`--notes-dir`、`--language`、`--no-interactive` | 安装共享 runtime 和静态入口；未指定项按下文补齐 |
-| `status` | 通用参数 | 管理器/项目 runtime 版本、目标、文档根及资产完整性 |
-| `upgrade` | `--dry-run`、`--recover` | 通过 npm 包将项目工具切换到本次调用的版本 |
-| `repair` | `--dry-run`、`--recover` | 使用当前版本及相同 bundle 恢复工具文件 |
-| `context` | `--paths <paths...>`、可重复 `--topic`、`--include-archived` | 返回匹配 Note 的指针，不输出正文 |
-| `show <id>` | 通用参数 | 返回当前路径、原文字节 SHA-256 和正文 |
-| `check` | `--base <ref>`、`--head <ref>`、`--staged`、`--maintenance` | 检查指定快照、历史差异及维护候选 |
+| `install` | 重复 `--host <id>`，`--notes-dir`、`--language`、`--no-interactive` | 首装或完整同身份安装的幂等检查 |
+| `hosts set` | 重复 `--host <id>`，`--no-interactive` | 替换完整非空接入集合，保留锁定版本、bundle 和配置 |
+| `tool update` | `--dry-run`、`--recover` | 使用明确选择的 npm 包切换工具版本，保留集合 |
+| `repair` | `--dry-run`、`--recover` | 同版本、同 bundle 修复受管资产 |
+| `status` | 通用参数 | 只读检查身份、接入集合、源与资产完整性 |
+| `context` | `--paths <paths...>`、重复 `--topic`、`--include-archived` | 返回匹配 Note 的指针 |
+| `show <id>` | 通用参数 | 返回路径、原文 SHA-256 和正文 |
+| `check` | `--base`、`--head`、`--staged`、`--maintenance` | 检查指定快照、历史与维护候选 |
 | `create` | `--input <json-file\|->` | 从完整草稿创建 proposed 或 implemented |
 | `update <id>` | 同上 | 维护同一决定；rejected 只接受限定元数据 |
-| `transition <id>` | 同上，加 `--to implemented\|rejected` | proposed 交付或拒绝，保持身份并移动/修复引用 |
-| `archive <id>` | 同上，可选 `--base <ref>` | 封存 implemented；需要可解析的 Git 基线 |
-| `prune <id>` | 同上，可选 `--base <ref>` | 条件清理未归档记录；需要可解析的 Git 基线 |
+| `transition <id>` | 同上，加 `--to implemented\|rejected` | 交付或拒绝 proposed，保持身份并修复引用 |
+| `archive <id>` | 同上，可选 `--base` | 封存 implemented，要求可信 Git 基线 |
+| `prune <id>` | 同上，可选 `--base` | 条件清理未归档记录，要求可信 Git 基线 |
 
-五个内容写命令及 init/upgrade/repair 支持 `--dry-run` 与 `--recover`，两者互斥。预览只显示变更与诊断，不落盘、不创建备份、不分配永久身份；执行时重新预检。`--recover` 先恢复中断事务，再按当前输入执行。输入、expected_hash、草稿链接解释和恢复冲突见[写入参考](writing.md)。
-
-路径相对项目根解析，不随调用子目录改变。仅 init 可交互收集缺项；内容写命令仍要求完整操作材料。CLI 不保存聊天记录或授权令牌。所有文件访问检查项目边界与 symlink，未知格式和读取错误不会作为空结果跳过。
+四个安装写命令与五个内容写命令接受互斥的 `--dry-run`、`--recover`。预览不写项目、锁、备份或 journal，不执行恢复；status 也不恢复。中断现场阻止普通写入；显式恢复先校验并恢复旧事务，再重新规划请求。输入校验、问答及取消先于恢复写入；执行时重新检查现场。内容写入材料见[写入参考](writing.md)。
 
 ## 初始化与配置
 
-当 stdin 与 stderr 均为终端、未处于 CI、未传 `--json` 或 `--no-interactive` 时，init 只询问缺少的安装目标、Notes 目录与模板语言。目标默认选中 agents，目录默认 `.agents/notes`，语言默认 `zh-CN`；至少选择一个目标。项目根自动定位并展示，填完直接执行，不另加确认。显式非法参数先报错；交互中的非法目录可原地修正。`--dry-run` 使用相同问答并仅预览。
+| 接入值 | skill 根 | 选择身份 |
+| --- | --- | --- |
+| generic | .agents/skills | 独立通用接入，首次默认 |
+| codex | .agents/skills | Codex 本地 CLI 的静态候选接入 |
+| claude-code | .claude/skills | Claude Code 本地 CLI 的静态候选接入 |
 
-补齐顺序为显式参数、已有安装清单与配置、交互回答或默认值。重复 init 省略参数时复用已安装值，不重复提问；显式配置或目标冲突报错。只有配置、没有清单时保留配置，目标仍需指定或选择。版本变化使用 npm 包的 upgrade，同版本工具文件损坏使用 repair。
+generic 与 codex 是两个独立选择，共享同源同路径资产；Claude 副本共用同一个 runtime。CLI 始终保留全部 AGENTS/CLAUDE 文件原文，不生成、导入、选择、修改或清理这些文件。静态安装成功不证明宿主实际发现、正文加载或自然触发；具体支持证据以安装指南为准。
 
-无人值守调用不启动提示；新安装缺少 target 时退出 2，且不写入项目。目录与语言使用默认值。问答与取消消息写到 stderr，最终结果写到 stdout；Esc / Ctrl+C 取消退出 130，不产生 Result，也不写入项目或执行恢复。init --recover 在问答前只读检查恢复后的配置与清单，取消保留中断现场；收集完输入后复查现场，再进入实际恢复与安装。
+stdin 与 stderr 均为终端、非 CI 且无 `--json`/`--no-interactive` 时，install 询问缺少的接入、Notes 根与语言。默认 generic、`.agents/notes`、`zh-CN`。无人值守采用同样默认，已安装时复用现集合及配置。重复 install 的显式集合变化要求 hosts set；版本变化要求 tool update，受管损坏要求 repair。同版本不同 bundle 一律拒绝。
 
-`--notes-dir` 指定整个 Agent Notes 根目录，默认 `.agents/notes`。Note 文档、runtime、配置、安装清单和本地状态统一位于该根目录：
+hosts set 的重复 --host 是完整目标集合；终端缺参预选现集合，无人值守缺参报错，空集合始终拒绝。输入完成后直接执行。Esc/Ctrl+C 退出 130，提示走 stderr，结果走 stdout；取消不写项目。--recover 问答使用只读恢复投影，收齐后复查现场再恢复。
+
+Notes 根只在首次 install 选择，之后保持不变，包括只选择 Claude 的项目。默认布局为：
 
 ```text
 .agents/notes/
-├── config.json
-├── install.json
-├── runtime/
-│   ├── cli.mjs
-│   └── assets/
-├── local/
-├── proposed/
-├── implemented/
-├── rejected/
-└── archived/
+  config.json
+  install.json
+  runtime/
+    cli.mjs
+    source-index.json
+    assets/
+  local/
+  proposed/
+  implemented/
+  rejected/
+  archived/
 ```
 
-生命周期目录在写入对应 Note 时创建。`--notes-dir docs/decisions` 会将上述全部内容放入 `docs/decisions`，命令入口为 `node docs/decisions/runtime/cli.mjs`。生成的入口、skill 命令和参考文档使用实际根目录。宿主 skill 仍安装到 `.agents/skills` 或 `.claude/skills`。
-
-配置位于 `<notes_dir>/config.json`，其 `notes_dir` 与文件所在根目录一致：
+生命周期目录按需创建。自定义 `--notes-dir docs/decisions` 后，入口为 `node docs/decisions/runtime/cli.mjs`，skill 中的命令和链接使用实际根。配置为：
 
 ```json
 {
@@ -61,29 +65,21 @@ npm 包的可执行命令为 `agent-notes`，提供全部命令；项目入口 `
 }
 ```
 
-`notes_dir` 必须是项目内不含空白或 Git 通配符的字面目录，与宿主 skill 和入口文件互不重叠；`runtime/` 和 `local/` 是根目录内的工具子目录，扫描 Note 时排除。`language` 为 `zh-CN` 或 `en`，只选择模板，不改变既有文档的合法性。配置缺失时初始化，已有配置按原字节保留。init 不创建示例 Note，重复运行不覆盖项目内容；工具版本变化使用 upgrade，安装目标保持原选择。
+目录须为规范项目相对字面路径，与 skill、控制文件互斥；禁止 symlink、Git 元数据、node_modules、空白及 Git 通配符。语言只选择模板，不改变已有 Note 合法性。已有配置、Notes、归档与 seal 保留原字节，已有项目内容不授予工具文件所有权。
 
-agents 目标在根 AGENTS 中写受管块，claude 目标使用已有 CLAUDE 入口或创建 `.claude/CLAUDE.md`，两个目标共用 `.agents/notes/runtime/` 和一个文档根。双目标通过 Claude 导入 AGENTS 共用路由；已有独立行的直接导入会被复用，围栏或缩进代码中的示例不算导入。新建 Claude 入口时保留已有 AGENTS 规则的可达性。
-
-两个 skill 从相同内容源安装到目标的 skills 目录，随附的专用参考与其他文件一起安装，Markdown 链接按目标位置重算。共享参考、格式和模板位于 `.agents/notes/runtime/assets/`；该目录中的 skill 源副本用于离线重新安装与修复。已有无关的规则与 skill 可共存；没有安装清单却存在同名 skill、不明 runtime、非空 Notes 根或无主受管块时报告冲突，不隐式接管。
-
-runtime、skill、配置、安装清单和 Notes 随 Git 分发；`.agents/notes/local/` 中的草稿、锁、journal 和备份忽略。安装为需要跟踪的文件生成精确忽略例外，不暴露其他本地 skills。
-
-Notes、完整受管文件、配置与安装清单使用 `text eol=lf`，避免 Git 转换破坏原字节 hash。入口受管块比较允许 CRLF 归一，保存时保留块外字节与项目换行风格；既有 Git 属性冲突在写入前失败。
+两份 skill 为 agent-note 与 agent-note-maintenance。共享参考、格式、模板保存在 runtime/assets，专用资料随 skill 投影，链接按目的位置重算，不使用 symlink。受管文件、配置、清单与 Notes 随 Git 分发，local 草稿、锁和备份忽略。Git executable 是安装写命令的必要依赖；普通目录不自动 git init。Git 块由精确投影确定，真实 Git 验证外部规则兼容性；冲突需人工调整。
 
 ## 版本与升级
 
-init/upgrade 通过 npm 包执行，使用本次调用的完整工具包；版本选择与下载由调用者及包管理器完成。upgrade 的包版本与项目不同才替换工具文件；版本相同且安装完整时无改动，损坏则返回 REPAIR_REQUIRED、退出 1，提示 repair。重复 init 同版本损坏也返回 REPAIR_REQUIRED。日常命令委派给项目锁定 runtime，离线执行，不查询或下载其他版本。status 区分本次调用版本与项目 runtime 版本，并在安装损坏时提供修复命令。
+包版本由调用者/包管理器选择，tool update 不查询最新或自动下载，允许较低版本；未知接入/协议在写前失败。既有 Note 文档不迁移、不重新封存。版本相同且 bundle 相同、资产完整时幂等；任何普通管理命令遇到缺失或手改都要求 repair，包括正准备删除的资产。
 
-repair 要求已有安装，保持项目版本及 bundle hash 不变。项目 runtime 从完整内置源文件重新生成宿主 skill 等工具文件；例如误删的 `.agents/skills/agent-note/SKILL.md` 可从 runtime 中的原始 skill 恢复。加载前核验源文件清单和原始字节 hash，缺失、修改或未知源文件返回 INVALID_BUNDLE、退出 1，并提示 `npx --yes @hackycy/agent-notes@X.Y.Z repair`，版本来自项目清单。runtime 源目录之外的未知邻接文件保留。
+runtime/source-index.json 精确列举源文件；未知邻接文件不扩张身份或所有权。已物化源只用于同一 Notes 根，资源只物化一次。source/1 索引与全部所需源经校验后才能生成资产；源损坏使用匹配的完整 npm 包 repair，不执行未知脚本取得授权。
 
-完整 npm 包也能 repair，包括恢复损坏的 runtime；包版本不符返回 REPAIR_VERSION_MISMATCH、退出 2，bundle hash 不符返回 INVALID_BUNDLE、退出 1。普通预检失败不替换文件、不创建备份。完整安装的 repair 无改动，结果使用同一 Result 协议，command 为 repair。
+install.json 使用 agent-notes-install/2，记录 version、bundle_sha256、integrations 和完整 path/kind/hash 收据；不得漏项、多项、重复或混入项目内容。只读取当前协议；旧清单/journal 拒绝，不视为空安装、不自动迁移。缺失或损坏清单不能靠扫描接管，需恢复有效所有权或验证 journal。
 
-`.agents/notes/install.json` 记录具体版本、bundle hash、目标和每个受管文件/块的 hash。升级替换这些资产，移除旧清单中的废弃资产；保留 Notes、archive seal、项目配置、未知邻接文件和入口块外原文。相同版本完整时无需改动，损坏时允许修复。
+repair 仅同版本同 bundle。可读手改在覆盖前保存完整原文、完整替换及有界差异摘要；摘要不等于 unified diff。必要备份失败不覆盖，部分 local 证据可能保留。不可读、symlink、类型异常和坏规则标记停止；缺失资产直接重建。规则块按 CRLF 归一比较，块外字节保持。未知同名 skill 目录即使内容相同也冲突；移除仅删精确文件并尝试 rmdir 空专属目录，未知内容及公共容器保留。残留未知目录会阻止再次接入。
 
-升级和修复在覆盖手改受管文件前将原文与 diff 备份到 `.agents/notes/local/backups/`，输出具体位置；备份失败则中止。未知同名文件阻止覆盖，清单不能授权越界路径。工具文件的替换保留项目文档。
-
-安装、升级、修复与内容写入共用事务锁和 journal。目标 bundle 先在隔离目录验证当前文档契约，再替换资产，最后更新安装清单，完成前复核运行结果及保留的字节。恢复见[事务和恢复](writing.md#事务和恢复)。
+分发与内容写入共用锁和 journal。distribution journal 验证双端 source/1、install/2 和完整转换，prepared 只回 before，committed 仅验证 after 后收尾；第三种字节、未知动作或源不足时保留现场。容量超限报告对象/实际量/上限，不截断；单端点最大 16 MiB，journal 逻辑载荷 64 MiB、编码 96 MiB，本次必要备份 64 MiB，完整相对路径最多 1024 UTF-8 字节。恢复细节见[事务和恢复](writing.md#事务和恢复)。
 
 ## 查询
 

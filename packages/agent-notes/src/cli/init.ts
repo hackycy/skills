@@ -1,21 +1,22 @@
-import type { Target } from '../distribution/manifest'
 import type { Options } from './arguments'
 import process from 'node:process'
 import { cancel, intro, isCancel, isCI, multiselect, select, text } from '@clack/prompts'
+import { integrationChoices } from '../distribution/integrations'
 import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from '../distribution/layout'
 import { installationRoot } from '../distribution/manage'
 import { readInstallation } from '../distribution/manifest'
 import { NotesError } from '../notes/model'
 import { readConfig } from '../notes/reader'
 import { Repository } from '../notes/snapshot'
-import { assertNoTransaction, recoveryView } from '../workflow/transaction'
+import { recoveryView } from '../workflow/recovery'
+import { assertNoTransaction } from '../workflow/transaction'
 import { notesDirectory } from './arguments'
 
 export class InitCancelled extends Error {}
 
 export interface InitPrompts {
   start: (root: string) => void
-  targets: () => Promise<Target[] | symbol>
+  hosts: (initial: string[]) => Promise<string[] | symbol>
   directory: () => Promise<string | symbol>
   language: () => Promise<'zh-CN' | 'en' | symbol>
 }
@@ -23,7 +24,7 @@ export interface InitPrompts {
 const terminal = { input: process.stdin, output: process.stderr }
 const prompts: InitPrompts = {
   start: root => intro(`Agent Notes · ${root}`, terminal),
-  targets: () => multiselect<Target>({ ...terminal, message: 'Installation targets', options: [{ value: 'agents', label: 'Agents (.agents)' }, { value: 'claude', label: 'Claude (.claude)' }], initialValues: ['agents'], required: true }),
+  hosts: initial => multiselect<string>({ ...terminal, message: 'Project integrations', options: integrationChoices().map(item => ({ value: item.id, label: item.label })), initialValues: initial, required: true }),
   directory: () => text({ ...terminal, message: 'Notes directory', defaultValue: '.agents/notes', placeholder: '.agents/notes', validate: (value) => {
     const checked = notesDirectory.safeParse(value || '.agents/notes')
     return checked.success ? undefined : checked.error.issues[0].message
@@ -32,14 +33,14 @@ const prompts: InitPrompts = {
 }
 
 export function interactiveInit(input: Options, environment = { stdinTTY: process.stdin.isTTY, stderrTTY: process.stderr.isTTY, ci: isCI() || Boolean(process.env.CI && !['0', 'false'].includes(process.env.CI.toLowerCase())) }): boolean {
-  return input.command === 'init' && Boolean(environment.stdinTTY && environment.stderrTTY)
+  return ['install', 'hosts set'].includes(input.command) && Boolean(environment.stdinTTY && environment.stderrTTY)
     && !environment.ci && !input.json && input.interactive !== false
 }
 
 function initContext(input: Options, cwd: string): { input: Options, verify: () => void } {
   const root = installationRoot(input.root, cwd, true)
   // Complete recovery requests keep the manager's recover-before-read path.
-  if (input.targets.length && input.notesDir && input.language)
+  if (input.hosts.length && input.notesDir && input.language)
     return { input: { ...input, root }, verify: () => {} }
   if (!input.recover)
     assertNoTransaction(root)
@@ -52,17 +53,22 @@ function initContext(input: Options, cwd: string): { input: Options, verify: () 
   const config = readConfig(view.source, layout)
   if (hasConfig && ((input.notesDir && input.notesDir !== config.notes_dir) || (input.language && input.language !== config.language)))
     throw new NotesError('CONFIG_CONFLICT', 'Existing project configuration is preserved. Requested initialization options disagree with it.', layout.configPath, 2)
-  if (installation && input.targets.length && [...input.targets].sort().join() !== [...installation.targets].sort().join())
-    throw new NotesError('TARGET_CONFLICT', 'Changing installation targets is not supported by v1.', layout.installPath, 2)
+  if (input.command === 'install' && installation && input.hosts.length && [...input.hosts].sort().join() !== [...installation.integrations].sort().join())
+    throw new NotesError('HOSTS_SET_REQUIRED', 'Use hosts set to change the complete integration set.', layout.installPath, 2)
   return {
-    input: { ...input, root, targets: input.targets.length ? input.targets : installation?.targets ?? [], notesDir: input.notesDir ?? (hasConfig ? config.notes_dir : undefined), language: input.language ?? (hasConfig ? config.language : undefined) },
+    input: { ...input, root, hosts: input.hosts.length ? input.hosts : input.command === 'hosts set' ? [] : installation?.integrations ?? [], notesDir: input.notesDir ?? (hasConfig ? config.notes_dir : undefined), language: input.language ?? (hasConfig ? config.language : undefined) },
     verify: view.verify,
   }
 }
 
 function finish(input: Options): Options {
-  if (!input.targets.length)
-    throw new NotesError('INVALID_INPUT', 'New installations require --target agents and/or --target claude when interaction is disabled.', undefined, 2)
+  if (!input.hosts.length) {
+    if (input.command === 'hosts set')
+      throw new NotesError('INVALID_INPUT', 'hosts set requires a complete nonempty --host set.', undefined, 2)
+    input = { ...input, hosts: integrationChoices().filter(item => item.default).map(item => item.id) }
+  }
+  if (input.hosts.some(id => !integrationChoices().some(item => item.id === id)))
+    throw new NotesError('UNKNOWN_INTEGRATION', 'Unknown integration; use tool update before choosing a newer host.', undefined, 2)
   return { ...input, notesDir: input.notesDir ?? '.agents/notes', language: input.language ?? 'zh-CN' }
 }
 
@@ -83,13 +89,16 @@ async function collectInit(input: Options, cwd: string, adapter: InitPrompts): P
       throw new InitCancelled('Initialization cancelled.')
     return result
   }
-  if (!complete.targets.length || !complete.notesDir || !complete.language)
+  if (!complete.hosts.length || !complete.notesDir || !complete.language)
     adapter.start(complete.root!)
-  if (!complete.targets.length)
-    complete.targets = await answer(adapter.targets())
-  if (!complete.notesDir)
+  if (!complete.hosts.length) {
+    const source = recoveryView(new Repository(complete.root!).snapshot('worktree')).source
+    const initial = readInstallation(source)?.integrations ?? integrationChoices().filter(item => item.default).map(item => item.id)
+    complete.hosts = await answer(adapter.hosts(initial))
+  }
+  if (input.command === 'install' && !complete.notesDir)
     complete.notesDir = await answer(adapter.directory())
-  if (!complete.language)
+  if (input.command === 'install' && !complete.language)
     complete.language = await answer(adapter.language())
   const resolved = finish(complete)
   context.verify()

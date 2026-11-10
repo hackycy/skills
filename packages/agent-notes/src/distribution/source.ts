@@ -15,8 +15,8 @@ export function distributionSource(): DistributionSource {
 }
 
 export function assertPackageCommand(command: string, kind = distributionSource().kind): void {
-  if (kind === 'runtime' && ['init', 'upgrade'].includes(command))
-    throw new NotesError('PACKAGE_COMMAND_REQUIRED', `Run npx --yes @hackycy/agent-notes@latest ${command} from the project root. The project runtime provides daily commands, status and repair.`, undefined, 2)
+  if (kind === 'runtime' && ['install', 'tool update'].includes(command))
+    throw new NotesError('PACKAGE_COMMAND_REQUIRED', `Run npx --yes @hackycy/agent-notes@<selected-version> ${command} from the project root. The project runtime provides daily commands, status and repair.`, undefined, 2)
 }
 
 export function repairCommand(version: string): string {

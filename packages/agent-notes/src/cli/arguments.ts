@@ -1,12 +1,13 @@
 import type { CAC } from 'cac'
 import { cac } from 'cac'
 import { z } from 'zod'
+import { integrationChoices } from '../distribution/integrations'
 import { assertPackageCommand, distributionSource } from '../distribution/source'
 import { NotesError } from '../notes/model'
 import { safePath } from '../notes/snapshot'
 import { writeCommands } from '../workflow/input'
 
-const commands = ['context', 'show', 'check', 'init', 'upgrade', 'repair', 'status', 'create', 'update', 'transition', 'archive', 'prune'] as const
+const commands = ['context', 'show', 'check', 'install', 'tool update', 'hosts set', 'repair', 'status', 'create', 'update', 'transition', 'archive', 'prune'] as const
 const nonempty = z.string().refine(value => Boolean(value.trim()), 'Supply a nonempty value.')
 export const notesDirectory = nonempty.refine(value => safePath(value) && !/[\s*?[\]#!]/.test(value)
   && !/(?:^|\/)(?:\.git|node_modules)(?:\/|$)/i.test(value), 'Supply a literal project-relative Notes directory without whitespace or Git wildcards.')
@@ -18,7 +19,7 @@ const schema = z.strictObject({
   root: nonempty.optional(),
   paths: repeated(nonempty.refine(value => safePath(value) && !/[*?]/.test(value), 'Supply concrete project-relative paths.')),
   topic: repeated(nonempty),
-  target: repeated(z.enum(['agents', 'claude'])).refine(values => new Set(values).size === values.length, 'Targets must be distinct: agents and/or claude.'),
+  host: repeated(nonempty).refine(values => new Set(values).size === values.length, 'Hosts must be distinct.'),
   notesDir: notesDirectory.optional(),
   language: z.enum(['zh-CN', 'en']).optional(),
   json: flag,
@@ -44,7 +45,7 @@ const schema = z.strictObject({
     issue('Writes require --input.')
   if (value.command === 'transition' && !value.to)
     issue('transition requires --to implemented|rejected.')
-}).transform(({ topic, target, ...value }) => ({ ...value, topics: topic, targets: target }))
+}).transform(({ topic, host, ...value }) => ({ ...value, topics: topic, hosts: host }))
 
 export type Options = z.output<typeof schema>
 export interface ParsedArguments {
@@ -65,13 +66,16 @@ function declarations(kind: 'package' | 'runtime'): CAC {
   cli.globalCommand.ignoreOptionDefaultValue()
   const installation: CAC['commands'] = []
   if (kind === 'package') {
-    const init = cli.command('init', 'Install runtime and static skill entries')
-      .option('--target <agents|claude>', 'Installation target (repeat for both)')
+    const init = cli.command('install', 'Install runtime and project skills')
+      .option('--host <id>', `Integration (repeat): ${integrationChoices().map(item => item.id).join(', ')}`)
       .option('--notes-dir <path>', 'Root for Notes, runtime and configuration (default: .agents/notes)')
       .option('--language <zh-CN|en>', 'Template language (default: zh-CN)')
       .option('--no-interactive', 'Disable initialization questions')
-    installation.push(init, cli.command('upgrade', 'Apply this npm package version to the project'))
+    installation.push(init, cli.command('tool-update', 'Apply this explicitly selected npm package version'))
   }
+  installation.push(cli.command('hosts-set', 'Replace the complete integration set')
+    .option('--host <id>', `Integration (repeat): ${integrationChoices().map(item => item.id).join(', ')}`)
+    .option('--no-interactive', 'Disable integration questions'))
   const repair = cli.command('repair', 'Restore installed tool files without changing version')
   cli.command('status', 'Inspect installation and asset integrity')
   cli.command('context', 'Find relevant Note pointers')
@@ -116,7 +120,7 @@ function normalize(args: string[], cli: ReturnType<typeof declarations>): string
     const equal = token.indexOf('=')
     const name = equal < 0 ? token : token.slice(0, equal)
     const option = names.get(name)
-    if (!option || (seen.has(option.name) && !['paths', 'topic', 'target'].includes(option.name)))
+    if (!option || (seen.has(option.name) && !['paths', 'topic', 'host'].includes(option.name)))
       throw new NotesError('INVALID_INPUT', `Unknown, misplaced or duplicate argument: ${name}`, undefined, 2)
     seen.add(option.name)
     if (!option.required) {
@@ -151,10 +155,22 @@ function helpText(cli: ReturnType<typeof declarations>): string {
     if (error !== captured)
       throw error
   }
-  return result
+  return result.replaceAll('hosts-set', 'hosts set').replaceAll('tool-update', 'tool update')
 }
 
 export function parseArguments(args: string[], kind = distributionSource().kind): ParsedArguments {
+  const original = args
+  let commandIndex = 0
+  while (commandIndex < args.length && args[commandIndex].startsWith('-')) {
+    if (args[commandIndex] === '--root')
+      commandIndex++
+    commandIndex++
+  }
+  const name = args[commandIndex]
+  const internalAlias = name === 'hosts-set' || name === 'tool-update'
+  if ((name === 'hosts' && args[commandIndex + 1] === 'set') || (name === 'tool' && args[commandIndex + 1] === 'update'))
+    args = [...args.slice(0, commandIndex), name === 'hosts' ? 'hosts-set' : 'tool-update', ...args.slice(commandIndex + 2)]
+
   const cli = declarations(kind)
   // Parse output context independently so even malformed arguments retain JSON mode.
   const context = declarations(kind)
@@ -165,6 +181,9 @@ export function parseArguments(args: string[], kind = distributionSource().kind)
   const switches = args.slice(0, !args.includes('--') ? args.length : args.indexOf('--'))
   const parsed: ParsedArguments = { command: context.matchedCommandName ?? String(context.args[0] ?? ''), json: switches.includes('--json') }
   try {
+    parsed.command = parsed.command === 'hosts-set' ? 'hosts set' : parsed.command === 'tool-update' ? 'tool update' : parsed.command
+    if (internalAlias)
+      throw new NotesError('INVALID_INPUT', `Unknown command: ${original[commandIndex]}. Use hosts set or tool update.`, undefined, 2)
     assertPackageCommand(parsed.command, kind)
     cli.parse(['node', 'agent-notes', ...normalize(args, cli)], { run: false })
     const command = cli.matchedCommand
@@ -185,7 +204,7 @@ export function parseArguments(args: string[], kind = distributionSource().kind)
       throw new Error('Supply a command. Use --help.')
     command.checkUnusedArgs()
     const decode = (value: unknown): unknown => Array.isArray(value) ? value.map(decode) : typeof value === 'string' && value.startsWith(valuePrefix) ? value.slice(valuePrefix.length) : value
-    const result = schema.safeParse({ ...Object.fromEntries(Object.entries(values).map(([key, value]) => [key, decode(value)])), command: command.name, id: cli.args[0] })
+    const result = schema.safeParse({ ...Object.fromEntries(Object.entries(values).map(([key, value]) => [key, decode(value)])), command: command.name === 'hosts-set' ? 'hosts set' : command.name === 'tool-update' ? 'tool update' : command.name, id: cli.args[0] })
     if (!result.success)
       throw new Error(result.error.issues.map(issue => `${issue.path.join('.') || 'arguments'}: ${issue.message}`).join(' '))
     parsed.input = result.data
@@ -208,14 +227,14 @@ export function options(args: string[]): Options {
 
 /** Serialize validated options for delegation without consuming write input. */
 export function runtimeArguments(input: Options): string[] {
-  const args: string[] = [input.command]
+  const args: string[] = input.command.split(' ')
   if (input.id !== undefined)
     args.push(input.id)
   for (const [key, flag] of Object.entries({ root: 'root', base: 'base', head: 'head', input: 'input', to: 'to', notesDir: 'notes-dir', language: 'language' }) as [keyof Options, string][]) {
     if (input[key] !== undefined)
       args.push(`--${flag}`, String(input[key]))
   }
-  for (const [flag, values] of [['paths', input.paths], ['topic', input.topics], ['target', input.targets]] as const) {
+  for (const [flag, values] of [['paths', input.paths], ['topic', input.topics], ['host', input.hosts]] as const) {
     for (const value of values)
       args.push(`--${flag}`, value)
   }

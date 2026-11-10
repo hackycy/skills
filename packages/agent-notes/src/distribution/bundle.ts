@@ -1,109 +1,152 @@
+import type { Snapshot } from '../notes/snapshot'
 import { Buffer } from 'node:buffer'
-import { lstatSync, readdirSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import process from 'node:process'
-import packageJson from '../../package.json'
-import { checkLinks } from '../notes/markdown'
+import { lstatSync } from 'node:fs'
+import { join } from 'node:path'
+import packageJson from '../../package.json' with { type: 'json' }
 import { NotesError } from '../notes/model'
-import { findRoot, Repository, sha256, Snapshot } from '../notes/snapshot'
-import { layoutFromDisk, layoutFromSnapshot, notesLayout } from './layout'
-import { readInstallation, skillNames } from './manifest'
+import { sha256 } from '../notes/snapshot'
+import { integrations } from './integrations'
+import { layoutFromSnapshot, notesLayout } from './layout'
+import { entryText } from './manifest'
+import { assertPath, boundedRead, budget, byteOrder, canonical, hashPattern, json, keys, limits, skillNames, versionPattern } from './protocol'
 import { distributionSource, repairCommand } from './source'
 
-export interface Bundle { version: string, files: Map<string, Buffer>, skills: Map<string, Buffer>, notesRoot?: string }
+export interface Integration { id: string, label: string, default: boolean, skillRoot: string }
+export interface SourceIndex {
+  format: 'agent-notes-source/1'
+  version: string
+  notes_dir: string | null
+  integrations: Integration[]
+  files: { path: string, sha256: string }[]
+}
+export interface Bundle { index: Buffer, files: Map<string, Buffer> }
 export const managerVersion = packageJson.version
 
-export function localizeBundle(bundle: Bundle, notesRoot: string): Bundle {
-  if (bundle.notesRoot === notesRoot)
-    return bundle
-  const replace = (bytes: Buffer): Buffer => Buffer.from(bytes.toString('utf8').replaceAll('.agents/notes', () => notesRoot))
-  const textual = (path: string): boolean => /\.(?:md|json|mjs|txt)$/i.test(path)
-  return {
-    version: bundle.version,
-    notesRoot,
-    files: new Map([...bundle.files].map(([path, bytes]) => [path, path.startsWith('assets/') && textual(path) ? replace(bytes) : bytes])),
-    skills: new Map([...bundle.skills].map(([path, bytes]) => [path, textual(path) ? replace(bytes) : bytes])),
+export function sourceIndex(version: string, files: Map<string, Buffer>, catalog: readonly Integration[] = integrations, notesDir: string | null = null): Buffer {
+  return canonical({ format: 'agent-notes-source/1', version, notes_dir: notesDir, integrations: [...catalog].sort((a, b) => byteOrder(a.id, b.id)), files: [...files].sort(([a], [b]) => byteOrder(a, b)).map(([path, bytes]) => ({ path, sha256: sha256(bytes) })) })
+}
+
+export function parseSource(bytes: Uint8Array): SourceIndex {
+  const value = json(bytes, limits.index) as SourceIndex
+  if (value?.format !== 'agent-notes-source/1')
+    throw new NotesError('UNSUPPORTED_FORMAT', 'Expected agent-notes-source/1; use a matching complete package.', undefined, 2)
+  keys(value, ['format', 'version', 'notes_dir', 'integrations', 'files'])
+  if (typeof value.version !== 'string' || !versionPattern.test(value.version) || (value.notes_dir !== null && typeof value.notes_dir !== 'string') || !Array.isArray(value.integrations) || !value.integrations.length || !Array.isArray(value.files))
+    throw new NotesError('INVALID_BUNDLE', 'Invalid source index.')
+  if (value.notes_dir !== null)
+    assertPath(value.notes_dir)
+  budget('Integrations', value.integrations.length, limits.integrations)
+  budget('Source files', value.files.length, limits.sources)
+  let previous = ''
+  for (const integration of value.integrations) {
+    keys(integration, ['id', 'label', 'default', 'skillRoot'])
+    if (typeof integration.id !== 'string' || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(integration.id) || typeof integration.label !== 'string' || !integration.label.trim() || typeof integration.default !== 'boolean' || typeof integration.skillRoot !== 'string'
+      || !/^\.[a-z][a-z0-9-]*\/skills$/.test(integration.skillRoot) || integration.skillRoot.split('/')[0] === '.git' || byteOrder(previous, integration.id) >= 0) {
+      throw new NotesError('INVALID_BUNDLE', 'Invalid, duplicate or unordered integration.')
+    }
+    assertPath(integration.skillRoot)
+    previous = integration.id
   }
+  if (value.integrations.filter(item => item.default).length !== 1)
+    throw new NotesError('INVALID_BUNDLE', 'Source must have exactly one default integration.')
+  previous = ''
+  for (const file of value.files) {
+    keys(file, ['path', 'sha256'])
+    if (typeof file.path !== 'string' || (file.path !== 'cli.mjs' && !file.path.startsWith('assets/')) || typeof file.sha256 !== 'string' || !hashPattern.test(file.sha256) || byteOrder(previous, file.path) >= 0)
+      throw new NotesError('INVALID_BUNDLE', 'Invalid, duplicate or unordered source file.')
+    assertPath(file.path)
+    previous = file.path
+  }
+  if (!value.files.some(file => file.path === 'cli.mjs') || skillNames.some(name => !value.files.some(file => file.path === `assets/skills/${name}/SKILL.md`)))
+    throw new NotesError('INVALID_BUNDLE', 'Missing CLI or required skills.')
+  // Fix field order as well as whitespace and array ordering.
+  if (!canonical({ format: value.format, version: value.version, notes_dir: value.notes_dir, integrations: value.integrations.map(item => ({ id: item.id, label: item.label, default: item.default, skillRoot: item.skillRoot })), files: value.files.map(item => ({ path: item.path, sha256: item.sha256 })) }).equals(Buffer.from(bytes)))
+    throw new NotesError('INVALID_BUNDLE', 'Noncanonical source field order.')
+  return value
+}
+
+export function verifyBundle(bundle: Bundle): SourceIndex {
+  const index = parseSource(bundle.index)
+  let total = 0
+  if (bundle.files.size !== index.files.length)
+    throw new NotesError('INVALID_BUNDLE', 'Source material must equal the indexed inventory.')
+  for (const file of index.files) {
+    const bytes = bundle.files.get(file.path)
+    if (!bytes || sha256(bytes) !== file.sha256)
+      throw new NotesError('INVALID_BUNDLE', 'Required source is missing or modified; use the matching complete npm package.', file.path)
+    budget(file.path, bytes.length, limits.sourceFile)
+    total += bytes.length
+    budget('Source total', total, limits.sourceTotal)
+  }
+  return index
+}
+
+export function localizeBundle(bundle: Bundle, notesRoot: string): Bundle {
+  const index = verifyBundle(bundle)
+  if (index.notes_dir === notesRoot)
+    return bundle
+  if (index.notes_dir !== null)
+    throw new NotesError('INVALID_BUNDLE', 'Materialized source belongs to a different Notes root.')
+  assertPath(notesRoot)
+  const files = new Map([...bundle.files].map(([path, bytes]) => [path, path.startsWith('assets/') && /\.(?:md|json|mjs|txt)$/i.test(path) ? Buffer.from(entryText(bytes, path).replaceAll('.agents/notes', () => notesRoot)) : bytes]))
+  const result = { index: sourceIndex(index.version, files, index.integrations, notesRoot), files }
+  verifyBundle(result)
+  return result
 }
 
 export function bundleHash(bundle: Bundle): string {
-  const records = [
-    ...[...bundle.files].map(([path, bytes]) => [`runtime/${path}`, sha256(bytes)]),
-    ...[...bundle.skills].map(([path, bytes]) => [`skills/${path}`, sha256(bytes)]),
-  ].sort((a, b) => a[0].localeCompare(b[0]))
-  return sha256(Buffer.from(JSON.stringify(records)))
+  verifyBundle(bundle)
+  return sha256(bundle.index)
+}
+
+export function readBundle(read: (path: string, maximum: number) => Buffer | undefined, indexPath: string, filePath: (path: string) => string): Bundle {
+  const bytes = read(indexPath, limits.index)
+  if (!bytes)
+    throw new NotesError('INVALID_BUNDLE', 'Missing source-index.json; use a matching complete npm package.', indexPath)
+  const index = parseSource(bytes)
+  const files = new Map<string, Buffer>()
+  let total = 0
+  for (const file of index.files) {
+    const bytes = read(filePath(file.path), limits.sourceFile)
+    if (!bytes)
+      throw new NotesError('INVALID_BUNDLE', 'Required indexed source is missing.', file.path)
+    total += bytes.length
+    budget('Source total', total, limits.sourceTotal)
+    files.set(file.path, bytes)
+  }
+  const result = { index: bytes, files }
+  verifyBundle(result)
+  return result
+}
+
+export function installedBundle(source: Snapshot, runtimeRoot: string): Bundle {
+  return readBundle((path, max) => source.read(path, max), `${runtimeRoot}/source-index.json`, path => `${runtimeRoot}/${path}`)
+}
+
+export function loadBundle(): Bundle {
+  const { kind, root } = distributionSource()
+  const read = (path: string, max: number): Buffer => {
+    let current = root
+    for (const part of path.split('/')) {
+      current = join(current, part)
+      if (lstatSync(current).isSymbolicLink())
+        throw new NotesError('SYMLINK_NOT_ALLOWED', 'Source must not traverse symlinks.', path)
+    }
+    return boundedRead(current, max)
+  }
+  try {
+    const bundle = readBundle(read, kind === 'runtime' ? 'source-index.json' : 'dist/source-index.json', path => kind === 'package' && path === 'cli.mjs' ? 'dist/cli.mjs' : path)
+    const index = parseSource(bundle.index)
+    if (index.version !== managerVersion || (kind === 'runtime') !== (index.notes_dir !== null) || JSON.stringify(index.integrations) !== JSON.stringify([...integrations].sort((a, b) => byteOrder(a.id, b.id))))
+      throw new NotesError('INVALID_BUNDLE', 'Source index disagrees with the executing tool.')
+    return bundle
+  }
+  catch (error) {
+    throw new NotesError('INVALID_BUNDLE', `Cannot verify tool source: ${String(error)}. Build first or run ${repairCommand(managerVersion)} using the complete npm package.`)
+  }
 }
 
 export function observeRuntime(source: Snapshot): void {
   const layout = layoutFromSnapshot(source) ?? notesLayout()
-  const installation = readInstallation(source, layout)
   source.read(layout.runtimeCli)
-  if (installation && process.argv[1] && resolve(process.argv[1]) === join(source.repository.root, layout.runtimeCli)
-    && installation.version !== managerVersion) {
-    throw new NotesError('CONCURRENT_CHANGE', 'The runtime version changed before write preflight. Retry with the installed runtime.')
-  }
-}
-
-/** The same layout is available inside the npm package and the installed runtime. */
-export function loadBundle(): Bundle {
-  const { kind, root } = distributionSource()
-  const installed = kind === 'runtime'
-  const projectRoot = installed ? findRoot(undefined, root) : root
-  const project = installed ? new Repository(projectRoot) : undefined
-  const layout = installed ? (layoutFromDisk(projectRoot) ?? notesLayout()) : undefined
-  const installation = installed ? readInstallation(project!.snapshot('worktree'), layout) : undefined
-  const invalidBundle = (message: string, path?: string): NotesError => new NotesError('INVALID_BUNDLE', `${message}${installed ? ` Run ${repairCommand(installation?.version ?? managerVersion)} using the complete npm package.` : ''}`, path)
-  const files = new Map<string, Buffer>()
-  const collect = (path: string): void => {
-    const full = join(root, path)
-    const info = lstatSync(full)
-    if (info.isSymbolicLink())
-      throw invalidBundle('Bundle source files must be regular files, not symlinks.', path)
-    if (info.isDirectory()) {
-      for (const name of readdirSync(full).sort())
-        collect(`${path}/${name}`)
-    }
-    else if (info.isFile()) {
-      files.set(path, readFileSync(full))
-    }
-    else { throw invalidBundle('Unsupported bundle source file.', path) }
-  }
-  try {
-    files.set('cli.mjs', readFileSync(join(root, installed ? 'cli.mjs' : 'dist/cli.mjs')))
-    collect('assets')
-  }
-  catch (error) {
-    if (error instanceof NotesError)
-      throw error
-    throw invalidBundle('Incomplete distribution. Build first, or reinstall the complete npm package; a standalone CLI file only supports daily commands.')
-  }
-  if (installed) {
-    for (const asset of installation?.assets ?? []) {
-      if (asset.kind === 'file' && layout && asset.path.startsWith(`${layout.runtimeRoot}/`) && !files.has(asset.path.slice(`${layout.runtimeRoot}/`.length)))
-        throw invalidBundle('Installed source file is missing.', asset.path)
-    }
-    for (const [path, bytes] of files) {
-      const asset = installation?.assets.find(asset => layout && asset.path === `${layout.runtimeRoot}/${path}` && asset.kind === 'file')
-      if (!asset || asset.sha256 !== sha256(bytes))
-        throw invalidBundle('Installed source files are modified or unknown.', layout ? `${layout.runtimeRoot}/${path}` : path)
-    }
-  }
-  const skills = new Map<string, Buffer>()
-  for (const name of skillNames) {
-    const prefix = `assets/skills/${name}/`
-    if (!files.has(`${prefix}SKILL.md`))
-      throw invalidBundle(`Bundle is missing ${name}.`)
-    for (const [path, bytes] of files) {
-      if (path.startsWith(prefix))
-        skills.set(path.slice('assets/skills/'.length), bytes)
-    }
-  }
-  const content = new Snapshot(new Repository(root), 'commit', new Map()).overlay(files)
-  const problems = checkLinks(content, [...files.keys()].filter(path => /\.md$/i.test(path)))
-  if (problems.length)
-    throw invalidBundle(`Distribution references must resolve within the bundle: ${problems[0].message}`, problems[0].path)
-  const bundle: Bundle = { version: managerVersion, files, skills, ...(layout ? { notesRoot: layout.notesRoot } : {}) }
-  if (installed && bundleHash(bundle) !== installation?.bundle_sha256)
-    throw invalidBundle('Installed source bundle does not match the installation manifest.')
-  return bundle
 }

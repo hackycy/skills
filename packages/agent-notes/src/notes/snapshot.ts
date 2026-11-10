@@ -2,9 +2,11 @@ import type { Buffer } from 'node:buffer'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import process from 'node:process'
-import { hasProjectRoute, layoutFromDisk, notesLayout, projectFromRuntime } from '../distribution/layout'
+import { layoutFromDisk, notesLayout, projectFromRuntime } from '../distribution/layout'
+import { boundedRead, budget } from '../distribution/protocol'
 import { NotesError } from './model'
 
 interface Entry { mode: string, oid?: string }
@@ -63,7 +65,9 @@ export function findRoot(explicit: string | undefined, cwd: string): string {
         return false
       }
     })
-    if (directory === initial || directory === gitRoot || marker || hasProjectRoute(directory)) {
+    const parent = dirname(directory)
+    const boundary = directory !== initial && [realpathSync(tmpdir()), homedir(), parent].includes(directory)
+    if (directory === initial || directory === gitRoot || marker || (!gitRoot && !boundary)) {
       const layout = layoutFromDisk(directory)
       if (layout) {
         const project = projectFromRuntime(join(directory, layout.runtimeCli))
@@ -72,9 +76,8 @@ export function findRoot(explicit: string | undefined, cwd: string): string {
         return realpathSync(root)
       }
     }
-    const parent = dirname(directory)
-    if (directory === gitRoot || parent === directory)
-      throw new NotesError('ROOT_NOT_FOUND', 'No installation found. Run npx --yes @hackycy/agent-notes@latest init, or pass --root <project>.', undefined, 2)
+    if (boundary || directory === gitRoot || parent === directory)
+      throw new NotesError('ROOT_NOT_FOUND', 'No installation found. Run npx --yes @hackycy/agent-notes@<selected-version> install, or pass --root <project>.', undefined, 2)
     directory = parent
   }
 }
@@ -235,18 +238,22 @@ export class Snapshot {
     walk(absolute)
   }
 
-  read(path: string): Buffer | undefined {
+  read(path: string, maximum?: number): Buffer | undefined {
     if (!safePath(path))
       throw new NotesError('UNSAFE_PATH', 'Path escapes the project or uses unsupported separators.', path)
-    if (this.cache.has(path))
-      return this.cache.get(path)
+    if (this.cache.has(path)) {
+      const bytes = this.cache.get(path)
+      if (maximum !== undefined && bytes)
+        budget(path, bytes.length, maximum)
+      return bytes
+    }
     let bytes: Buffer | undefined
     if (this.kind === 'worktree') {
       const absolute = this.localPath(path)
       if (absolute) {
         if (!lstatSync(absolute).isFile())
           throw new NotesError('NOT_REGULAR_FILE', 'Expected a regular file.', path)
-        bytes = readFileSync(absolute)
+        bytes = maximum === undefined ? readFileSync(absolute) : boundedRead(absolute, maximum)
       }
     }
     else {
@@ -303,8 +310,11 @@ class OverlaySnapshot extends Snapshot {
 
   override includeDirectory(): void {}
 
-  override read(path: string): Buffer | undefined {
-    return this.changes.has(path) ? this.changes.get(path) ?? undefined : this.source.read(path)
+  override read(path: string, maximum?: number): Buffer | undefined {
+    const bytes = this.changes.has(path) ? this.changes.get(path) ?? undefined : this.source.read(path, maximum)
+    if (maximum !== undefined && bytes)
+      budget(path, bytes.length, maximum)
+    return bytes
   }
 
   override exists(path: string): boolean {

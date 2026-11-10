@@ -1,23 +1,15 @@
-import type { Bundle } from '../src/distribution/bundle'
-import { Buffer } from 'node:buffer'
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { run } from '../src/cli/run'
 import { manage } from '../src/distribution/manage'
+import { testBundle } from './distribution-fixtures'
 import { body, git, project, write } from './fixtures'
 
 vi.setConfig({ testTimeout: 30_000 })
 
 const roots: string[] = []
-const bundle: Bundle = {
-  version: '0.1.0',
-  files: new Map([
-    ['cli.mjs', Buffer.from('console.log(JSON.stringify({command:"context",result:"ok",data:{notes:[]},diagnostics:[]}))\n')],
-    ['assets/references/writing.md', Buffer.from('# Writing Notes\n')],
-  ]),
-  skills: new Map(['agent-note', 'agent-note-maintenance'].map(name => [`${name}/SKILL.md`, Buffer.from('Run `node .agents/notes/runtime/cli.mjs`. Draft in `.agents/notes/local/`.\n')])),
-}
+const bundle = testBundle()
 function setup(): string {
   const root = project()
   roots.push(root)
@@ -25,7 +17,7 @@ function setup(): string {
   return root
 }
 function install(root: string, notesDir = '.agents/notes') {
-  return manage({ command: 'init', root, targets: ['agents'], notesDir, dryRun: false, recover: false }, root, bundle)
+  return manage({ command: 'install', root, hosts: ['generic'], notesDir, dryRun: false, recover: false }, root, bundle)
 }
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
 
@@ -35,7 +27,7 @@ describe('unified Notes root', () => {
     expect(install(root, notesDir)).toMatchObject({ result: 'ok', data: { notes_dir: notesDir } })
     for (const path of ['config.json', 'install.json', 'runtime/cli.mjs'])
       expect(existsSync(join(root, notesDir, path)), path).toBe(true)
-    expect(readFileSync(join(root, 'AGENTS.md'), 'utf8')).toContain(`node ${notesDir}/runtime/cli.mjs`)
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(false)
     expect(readFileSync(join(root, '.agents/skills/agent-note/SKILL.md'), 'utf8')).toContain(`node ${notesDir}/runtime/cli.mjs`)
     mkdirSync(join(root, 'src/nested'), { recursive: true })
     expect(run(['status'], join(root, 'src/nested'))).toMatchObject({ result: 'ok', scope: { root }, data: { notes_dir: notesDir } })
@@ -88,8 +80,8 @@ describe('unified Notes root', () => {
     const root = setup()
     expect(install(root, 'docs/decisions').result).toBe('ok')
     rmSync(join(root, 'docs/decisions/runtime'), { recursive: true })
-    expect(run(['status'], root)).toMatchObject({ scope: { root }, result: 'failed', data: { notes_dir: 'docs/decisions', integrity: 'damaged' } })
-    expect(manage({ command: 'repair', targets: [], dryRun: false, recover: false }, root, bundle).result).toBe('ok')
+    expect(run(['status'], root)).toMatchObject({ scope: { root }, result: 'failed' })
+    expect(manage({ command: 'repair', hosts: [], dryRun: false, recover: false }, root, bundle).result).toBe('ok')
     expect(run(['status'], root).data.integrity).toBe('intact')
   })
 

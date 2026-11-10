@@ -1,12 +1,12 @@
 ---
 name: agent-note
-description: Record or update an engineering decision after the user requests a Note or accepts a recording suggestion. Use for durable rationale and discarded alternatives that code, tests and existing docs cannot carry.
+description: Query relevant engineering decision Notes before planning or editing, read their guidance, and check before delivery. Also record durable rationale when the user requests a Note or accepts a suggestion.
 ---
 
-# Record a decision
+# Use engineering decision Notes
 
-1. Confirm the record is warranted: explain which durable “why” or discarded alternative would otherwise be lost. Ordinary Plan, mechanical changes and local UI changes can finish with zero Notes. When only suggesting a Note, obtain acceptance before writing; reuse authorization already given for this work.
-2. From the project root, run `node .agents/notes/runtime/cli.mjs context --paths <affected-paths> --topic <topic>`. Read relevant IDs with `show <id> --json`. Include both sides of renames and new/deleted paths; requery when scope changes.
+1. Before planning related changes or first editing code, run `node .agents/notes/runtime/cli.mjs context --paths <affected-paths> --topic <topic>` from the project root. Read relevant returned Notes with `show <id> --json` or their paths. Include both sides of renames and new/deleted paths; query again when scope or approach changes.
+2. Apply the relevant guidance to the task. Before delivery, run `node .agents/notes/runtime/cli.mjs check` over the intended scope; inspect diagnostics and review items. A task may finish with zero Notes. Continue below when durable “why” or discarded alternatives cannot live in code, tests or existing docs: obtain acceptance of a recording suggestion or use the user's explicit request, retaining authorization already given for this work.
 3. For the same decision, maintain its facts with `update`. For a different decision, create a new Note and link the old one; use partial/full supersession only for the stated extent. A rejected decision being reconsidered also gets a new Note.
 4. Read the relevant section of [write inputs][writing] and the project's `.agents/notes/config.json`. Draft in `.agents/notes/local/` using the configured language: [Chinese proposal][proposal-zh], [English proposal][proposal-en], [Chinese delivered decision][implemented-zh], or [English delivered decision][implemented-en]. Replace prompts with concrete rationale and evidence; create input supplies class/status/rationale, and the CLI assigns identity and location. Updates require the latest hash returned by `show`.
 5. Run `create` or `update` with `--input <json-file> --dry-run --json`, resolve diagnostics, then execute the same operation without dry-run. Use the maintenance skill for state transitions, archival and conditional deletion. Run `check` over the intended delivery scope.

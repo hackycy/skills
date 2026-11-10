@@ -39,18 +39,20 @@ try {
   const original = readFileSync(writing)
   rmSync(writing)
   try {
-    const incomplete = spawnSync(bin, ['init', '--root', incompleteRoot, '--target', 'agents', '--json'], { encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+    const incomplete = spawnSync(bin, ['install', '--root', incompleteRoot, '--host', 'generic', '--json'], { encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
     assert.equal(incomplete.status, 1, incomplete.stdout || incomplete.stderr)
     assert.equal((JSON.parse(incomplete.stdout) as Result).diagnostics[0].code, 'INVALID_BUNDLE')
     assert.equal(existsSync(join(incompleteRoot, '.agents/notes/install.json')), false)
     assert.equal(existsSync(join(incompleteRoot, '.agents/notes/runtime')), false)
   }
-  finally { writeFileSync(writing, original) }
-  for (const [target, language, notesDir] of [['agents', 'zh-CN', '.agents/notes'], ['claude', 'en', 'docs/decisions'], ['agents', 'en', 'docs/architecture/team/decisions/notes']] as const) {
+  finally {
+    writeFileSync(writing, original)
+  }
+  for (const [target, language, notesDir] of [['generic', 'zh-CN', '.agents/notes'], ['claude-code', 'en', 'docs/decisions'], ['generic', 'en', 'docs/architecture/team/decisions/notes']] as const) {
     const root = project()
     roots.push(root)
     rmSync(join(root, '.agents/notes'), { recursive: true })
-    if (target === 'claude')
+    if (target === 'claude-code')
       rmSync(join(root, '.git'), { recursive: true }) // Plain project initialization also works.
     write(root, 'AGENTS.md', '# Project rules\nUse the existing architecture.\n')
     write(root, 'src/orders/order.ts', 'export const owner = "orders"\n')
@@ -63,19 +65,20 @@ try {
       assert.equal(parsed.result, 'ok', result.stdout)
       return parsed
     }
-    invoke(['init', '--root', root, '--target', target, '--notes-dir', notesDir, '--language', language])
+    invoke(['install', '--root', root, '--host', target, '--notes-dir', notesDir, '--language', language])
     assert.equal(invoke(['status']).data.notes_dir, notesDir)
     for (const path of ['README.md', 'docs', 'contracts', 'writing.md'])
       assert.equal(existsSync(join(root, `${notesDir}/runtime`, path)), false, `Unexpected runtime content: ${path}`)
     assert.ok(existsSync(join(root, `${notesDir}/runtime/assets/references/writing.md`)))
     assert.ok(existsSync(join(root, `${notesDir}/runtime/assets/formats/document.md`)))
-    const entry = `.${target}/skills/agent-note/SKILL.md`
+    const skillRoot = target === 'claude-code' ? '.claude/skills' : '.agents/skills'
+    const entry = `${skillRoot}/agent-note/SKILL.md`
     const skill = readFileSync(join(root, entry), 'utf8')
     const frontmatter = /^---\n([\s\S]*?)\n---/.exec(skill)![1]
     assert.equal((jsonYaml(frontmatter, entry) as { name: string }).name, 'agent-note')
     const source = new Repository(root).snapshot('worktree')
     source.includeDirectory(`${notesDir}/runtime`)
-    source.includeDirectory(`.${target}/skills`)
+    source.includeDirectory(skillRoot)
     assert.deepEqual(checkLinks(source, source.paths().filter(path => path.endsWith('.md'))), [])
     const draft = readFileSync(join(root, `${notesDir}/runtime/assets/templates/implemented.${language}.md`), 'utf8')
       .replace('paths: [src/affected-area/**]', 'paths: [src/orders/**]')
@@ -118,13 +121,13 @@ try {
 
     const help = JSON.parse(runtime(['--help']).stdout).data.help as string
     assert.ok(help.includes('repair') && help.includes('status'))
-    assert.ok(!help.includes('init') && !help.includes('upgrade'))
+    assert.ok(!/^\s+install(?:\s|$)/m.test(help) && !/^\s+tool update(?:\s|$)/m.test(help))
     // A blocked management command must not inspect or recover this journal.
     write(root, `${notesDir}/local/write-lock/journal.json`, 'Interrupted transaction placeholder\n')
-    for (const command of ['init', 'upgrade']) {
+    for (const command of [['install'], ['tool', 'update']]) {
       for (const flags of [[], ['--help'], ['--recover']]) {
         const before = files()
-        const rejected = runtime([command, ...flags])
+        const rejected = runtime([...command, ...flags])
         assert.equal(rejected.status, 2, rejected.stdout || rejected.stderr)
         assert.equal(JSON.parse(rejected.stdout).diagnostics[0].code, 'PACKAGE_COMMAND_REQUIRED')
         assert.deepEqual(files(), before)
@@ -137,7 +140,7 @@ try {
     const sourceSkill = `${notesDir}/runtime/assets/skills/agent-note/SKILL.md`
     const unknown = `${notesDir}/runtime/assets/unknown.txt`
     const version = JSON.parse(readFileSync(join(root, `${notesDir}/install.json`), 'utf8')).version
-    for (const damage of ['missing', 'modified', 'unknown']) {
+    for (const damage of ['missing', 'modified']) {
       if (damage === 'missing')
         rmSync(join(root, template))
       else write(root, damage === 'modified' ? sourceSkill : unknown, 'Changed source\n')
@@ -148,11 +151,12 @@ try {
       assert.equal(diagnostic.code, 'INVALID_BUNDLE')
       assert.ok(diagnostic.message.includes(`@${version} repair`))
       assert.deepEqual(files(), before)
-      if (damage === 'unknown')
-        rmSync(join(root, unknown)) // Unknown project files remain the owner's responsibility.
       invoke(['repair']) // The complete npm package restores the exact installed bundle.
       assert.equal(invoke(['status']).data.integrity, 'intact')
     }
+    write(root, unknown, 'Unknown adjacent bytes\n')
+    assert.equal(runtime(['repair']).status, 0)
+    assert.equal(readFileSync(join(root, unknown), 'utf8'), 'Unknown adjacent bytes\n')
     rmSync(installed)
     invoke(['repair'])
     assert.equal(invoke(['status']).data.integrity, 'intact')

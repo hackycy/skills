@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path'
 import process from 'node:process'
 import { stringify } from 'yaml'
 import { body, commit, document, git, ids, metadata, note, project, write } from './fixtures'
+import { integrationMatrix } from './integration-matrix'
 
 // Pass an extracted tarball's CLI and optionally an alternate Node executable.
 const cli = resolve(process.argv[2] ?? 'dist/cli.mjs')
@@ -56,16 +57,16 @@ function createDraft(status: string, title: string, relations?: unknown): string
 }
 
 try {
-  assert.ok(String(invoke(['init', '--help']).data.help).includes('--no-interactive'))
-  assert.equal(invoke(['init'], 2).result, 'invalid-input')
+  integrationMatrix(cli, node, nextCli)
+  assert.ok(String(invoke(['install', '--help']).data.help).includes('--no-interactive'))
   assert.equal(invoke(['context', '--root.path=x'], 2).result, 'invalid-input')
-  const previewInstall = invoke(['init', '--target', 'agents', '--target', 'claude', '--dry-run'])
+  const previewInstall = invoke(['install', '--host', 'generic', '--host', 'claude-code', '--dry-run'])
   assert.ok(Array.isArray(previewInstall.data.changes))
   assert.equal(existsSync(join(root, '.agents/notes/install.json')), false)
-  invoke(['init', '--target', 'agents', '--target', 'claude'])
+  invoke(['install', '--host', 'generic', '--host', 'claude-code'])
   assert.equal(invoke(['status']).data.integrity, 'intact')
-  assert.deepEqual(invoke(['init', '--target', 'agents', '--target', 'claude']).data.changes, [])
-  assert.deepEqual(invoke(['init']).data.changes, [])
+  assert.deepEqual(invoke(['install', '--host', 'generic', '--host', 'claude-code']).data.changes, [])
+  assert.deepEqual(invoke(['install']).data.changes, [])
   assert.equal(existsSync(join(root, '.agents/notes/implemented')), false)
   const path = note(root)
   const base = commit(root)
@@ -125,7 +126,9 @@ try {
     for (const path of [frozen, '.agents/notes/archived/manifest.json', '.agents/notes/config.json'])
       assert.deepEqual(readFileSync(join(checkout, path)), readFileSync(join(root, path)), path)
   }
-  finally { rmSync(checkout, { recursive: true, force: true }) }
+  finally {
+    rmSync(checkout, { recursive: true, force: true })
+  }
   const preserved = new Map<string, string>([['.agents/notes/config.json', readFileSync(join(root, '.agents/notes/config.json'), 'utf8')]])
   const collect = (directory: string): void => {
     for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
@@ -141,24 +144,24 @@ try {
   }
   write(root, '.agents/skills/agent-note/SKILL.md', 'Local customization to preserve in backup\n')
   write(root, '.agents/notes/runtime/unmanaged.txt', 'Unmanaged neighboring file\n')
-  assert.ok(invoke(['upgrade'], 1).diagnostics.some(item => item.code === 'REPAIR_REQUIRED'))
+  assert.ok(invoke(['tool', 'update'], 1).diagnostics.some(item => item.code === 'REPAIR_REQUIRED'))
   const repairPreview = invoke(['repair', '--dry-run'])
   assert.ok((repairPreview.data.modified_assets as string[]).includes('.agents/skills/agent-note/SKILL.md'))
   assert.equal(existsSync(join(root, '.agents/notes/local/backups')), false)
   const repaired = invoke(['repair'])
   assert.equal(readFileSync(join(root, String(repaired.data.backup), 'original/.agents/skills/agent-note/SKILL.md'), 'utf8'), 'Local customization to preserve in backup\n')
   assert.deepEqual(invoke(['repair']).data.changes, [])
-  assert.deepEqual(invoke(['upgrade']).data.changes, [])
+  assert.deepEqual(invoke(['tool', 'update']).data.changes, [])
   if (nextCli) {
     const nextVersion = invoke(['status'], 0, undefined, nextCli).data.manager_version
-    invoke(['upgrade'], 0, undefined, nextCli)
+    invoke(['tool', 'update'], 0, undefined, nextCli)
     const status = invoke(['status'])
     assert.equal(status.data.runtime_version, nextVersion)
     assert.notEqual(status.data.manager_version, status.data.runtime_version)
-    assert.equal(invoke(['repair'], 2).diagnostics[0].code, 'REPAIR_VERSION_MISMATCH')
+    assert.equal(invoke(['repair'], 2).diagnostics[0].code, 'TOOL_UPDATE_REQUIRED')
     assert.equal(invoke(['check']).result, 'ok')
     canonicalDelegation()
-    invoke(['upgrade'])
+    invoke(['tool', 'update'])
     assert.equal(invoke(['status']).data.runtime_version, status.data.manager_version)
   }
   assert.equal(readFileSync(join(root, '.agents/notes/runtime/unmanaged.txt'), 'utf8'), 'Unmanaged neighboring file\n')
@@ -166,7 +169,7 @@ try {
     assert.equal(readFileSync(join(root, path), 'utf8'), text, path)
   const installed = join(root, '.agents/notes/runtime/cli.mjs')
   assert.deepEqual(invoke(['repair', '--dry-run'], 0, undefined, installed).data.changes, [])
-  assert.equal(invoke(['upgrade'], 2, undefined, installed).diagnostics[0].code, 'PACKAGE_COMMAND_REQUIRED')
+  assert.equal(invoke(['tool', 'update'], 2, undefined, installed).diagnostics[0].code, 'PACKAGE_COMMAND_REQUIRED')
   assert.equal(invoke(['check'], 0, undefined, installed).result, 'ok')
   rmSync(join(root, frozen))
   rmSync(join(root, '.agents/notes/archived/manifest.json'))

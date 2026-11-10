@@ -1,148 +1,144 @@
 import type { Snapshot } from '../notes/snapshot'
+import type { Projection } from './projection'
+import { Buffer } from 'node:buffer'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { NotesError } from '../notes/model'
-import { notesLayout } from './layout'
-import { block, entryText, replaceBlock, wrapBlock } from './manifest'
+import { sha256 } from '../notes/snapshot'
+import { entryText, replaceBlock } from './manifest'
+import { ancestors } from './projection'
+import { boundedRead, limits } from './protocol'
 
-export function ancestors(path: string): string[] {
-  const segments = path.split('/')
-  return segments.slice(0, -1).map((_, index) => segments.slice(0, index + 1).join('/'))
-}
+export { ancestors } from './projection'
 
-/** Git itself interprets patterns in an isolated directory; dry-run never edits project rules or index. */
-export function planGitRules(source: Snapshot, notesDir: string, assetPaths: string[], priorBlocks: Set<string>, managedFiles: string[]): Map<string, string> {
-  if (/[\s*?[\]#!]/.test(notesDir))
-    throw new NotesError('INVALID_CONFIG', 'Installation notes_dir must be a literal Git pattern without whitespace or glob metacharacters.', notesDir, 2)
-  const layout = notesLayout(notesDir)
+/** The block is fixed by project(); this adapter only verifies real Git semantics. */
+export function checkGitRules(source: Snapshot, projection: Projection, previousFiles: readonly string[] = []): () => void {
   const scratch = mkdtempSync(join(tmpdir(), 'agent-notes-rules-'))
+  const root = source.repository.root
+  const external = new Map<string, string | null>()
   const git = (args: string[], input?: string): string => execFileSync('git', ['-C', scratch, ...args], { encoding: 'utf8', input, stdio: ['pipe', 'pipe', 'pipe'] })
-  const put = (path: string, text: string | Uint8Array): void => {
+  const config = (): string => {
+    const result = spawnSync('git', ['-C', root, 'config', '--list', '--show-origin', '-z'], { encoding: 'utf8' })
+    if (result.error || result.status !== 0)
+      throw new NotesError('GIT_REQUIRED', 'Git executable and readable configuration are required before installation.')
+    return result.stdout
+  }
+  const observedConfig = config()
+  const readExternal = (path: string): Buffer | undefined => {
+    try {
+      const bytes = boundedRead(path, limits.endpoint)
+      external.set(path, sha256(bytes))
+      return bytes
+    }
+    catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
+        throw error
+      external.set(path, null)
+      return undefined
+    }
+  }
+  const put = (path: string, bytes: Uint8Array): void => {
     mkdirSync(dirname(join(scratch, path)), { recursive: true })
-    writeFileSync(join(scratch, path), text)
+    writeFileSync(join(scratch, path), bytes)
   }
   try {
     git(['init', '-q'])
     if (source.repository.available) {
       for (const name of ['exclude', 'attributes']) {
-        const path = execFileSync('git', ['-C', source.repository.root, 'rev-parse', '--git-path', `info/${name}`], { encoding: 'utf8' }).trim()
+        const path = execFileSync('git', ['-C', root, 'rev-parse', '--git-path', `info/${name}`], { encoding: 'utf8' }).trim()
+        const bytes = readExternal(resolve(root, path))
+        if (bytes)
+          put(`.git/info/${name}`, bytes)
+      }
+    }
+    for (const name of ['core.excludesFile', 'core.attributesFile']) {
+      const value = spawnSync('git', ['-C', root, 'config', '--path', '--get', name], { encoding: 'utf8' })
+      if (value.status === 0) {
+        const path = value.stdout.trim()
+        const bytes = readExternal(isAbsolute(path) ? path : resolve(root, path))
+        if (bytes) {
+          const local = `.git/${name}`
+          put(local, bytes)
+          git(['config', name, join(scratch, local)])
+        }
+      }
+    }
+    const { files, notesRoot, localRoot } = projection.gitRequirements
+    const probes = new Set(files)
+    for (const status of ['proposed', 'implemented', 'rejected', 'archived'])
+      probes.add(`${notesRoot}/${status}/architecture/2099-01-01-probe.md`)
+    probes.add(`${notesRoot}/archived/manifest.json`)
+    for (const path of source.paths().filter(path => path.startsWith(`${notesRoot}/`) && !path.startsWith(`${localRoot}/`)))
+      probes.add(path)
+    const existingNeighbors = source.paths().filter(path => !files.includes(path) && !previousFiles.includes(path) && !path.startsWith(`${notesRoot}/`))
+    const neighbors = new Set(existingNeighbors)
+    for (const path of files) {
+      for (const parent of ancestors(path)) neighbors.add(`${parent}/unknown-neighbor.txt`)
+    }
+    const rules = new Set(['.gitignore', '.gitattributes'])
+    for (const path of [...probes, ...neighbors]) {
+      for (const parent of ancestors(path)) {
+        rules.add(`${parent}/.gitignore`)
+        rules.add(`${parent}/.gitattributes`)
+      }
+    }
+    for (const path of rules) {
+      const bytes = source.read(path, limits.endpoint)
+      if (bytes)
+        put(path, bytes)
+    }
+    const ignoredPaths = (paths: string[]): Set<string> => {
+      if (!paths.length)
+        return new Set()
+      const check = spawnSync('git', ['-C', scratch, 'check-ignore', '--no-index', '-z', '--stdin'], { input: `${paths.join('\0')}\0`, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
+      if (check.status !== 0 && check.status !== 1)
+        throw new NotesError('GIT_RULES_ERROR', check.stderr || 'Cannot check ignore semantics.')
+      return new Set(check.stdout.split('\0').filter(Boolean))
+    }
+    const previouslyIgnored = ignoredPaths([...neighbors].filter(path => !path.startsWith(`${notesRoot}/`)))
+    for (const asset of projection.assets.filter(asset => asset.kind === 'block'))
+      put(asset.path, Buffer.from(replaceBlock(entryText(source.read(asset.path, limits.endpoint), asset.path), asset.path, asset.bytes.toString('utf8'))))
+    const ignoredAfter = ignoredPaths([...probes, ...neighbors, `${localRoot}/probe`])
+    for (const path of probes) {
+      if (ignoredAfter.has(path))
+        throw new NotesError('GIT_IGNORE_CONFLICT', 'Nested or higher-priority rules hide a required file; adjust them explicitly.', path)
+    }
+    for (const path of previouslyIgnored) {
+      if (!ignoredAfter.has(path))
+        throw new NotesError('GIT_IGNORE_CONFLICT', 'Exact asset rules would expose an ignored unknown neighbor; adjust external rules explicitly.', path)
+    }
+    for (const path of existingNeighbors) {
+      if (!previouslyIgnored.has(path) && ignoredAfter.has(path))
+        throw new NotesError('GIT_IGNORE_CONFLICT', 'Exact asset rules would hide a visible unknown neighbor; adjust external rules explicitly.', path)
+    }
+    if (!ignoredAfter.has(`${localRoot}/probe`))
+      throw new NotesError('GIT_IGNORE_CONFLICT', 'Local backups and locks must be ignored.', localRoot)
+    const attributes = git(['check-attr', '-z', '--stdin', 'text', 'eol'], `${[...probes].join('\0')}\0`).split('\0')
+    for (let i = 0; i + 2 < attributes.length; i += 3) {
+      const [path, attribute, value] = attributes.slice(i, i + 3)
+      if (value !== (attribute === 'text' ? 'set' : 'lf'))
+        throw new NotesError('GIT_ATTRIBUTES_CONFLICT', `${attribute}=${value} conflicts with text eol=lf.`, path)
+    }
+    return () => {
+      if (config() !== observedConfig)
+        throw new NotesError('CONCURRENT_CHANGE', 'Git configuration changed during management.')
+      for (const [path, hash] of external) {
+        let current: string | null = null
         try {
-          put(`.git/info/${name}`, readFileSync(resolve(source.repository.root, path)))
+          current = sha256(boundedRead(path, limits.endpoint))
         }
         catch (error) {
           if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
             throw error
         }
-      }
-      for (const name of ['core.excludesFile', 'core.attributesFile']) {
-        const result = spawnSync('git', ['-C', source.repository.root, 'config', '--path', '--get', name], { encoding: 'utf8' })
-        if (result.status === 0) {
-          const path = result.stdout.trim()
-          git(['config', name, isAbsolute(path) ? path : resolve(source.repository.root, path)])
-        }
+        if (current !== hash)
+          throw new NotesError('CONCURRENT_CHANGE', 'Git rule input changed.', path)
       }
     }
-    const probes = new Set([...assetPaths, layout.configPath, layout.installPath])
-    for (const status of ['proposed', 'implemented', 'rejected', 'archived']) {
-      for (const category of ['feature', 'bug-fix', 'simplification', 'architecture', 'process', 'testing'])
-        probes.add(`${notesDir}/${status}/${category}/2099-01-01-rule-probe.md`)
-    }
-    probes.add(`${notesDir}/archived/manifest.json`)
-    for (const path of source.paths().filter(path => path.startsWith(`${notesDir}/`) && !path.startsWith(`${layout.localRoot}/`)))
-      probes.add(path)
-    const rulePaths = new Set(['.gitignore', '.gitattributes'])
-    for (const path of probes) {
-      for (const parent of ancestors(path)) {
-        rulePaths.add(`${parent}/.gitignore`)
-        rulePaths.add(`${parent}/.gitattributes`)
-      }
-    }
-    for (const path of rulePaths) {
-      const bytes = source.read(path)
-      if (bytes)
-        put(path, bytes)
-    }
-    const result = new Map<string, string>()
-    const originalIgnore = entryText(source.read('.gitignore'), '.gitignore')
-    const existingIgnore = block(originalIgnore, '.gitignore')
-    if (existingIgnore && !priorBlocks.has('.gitignore'))
-      throw new NotesError('UNOWNED_ASSET', 'Existing agent-notes ignore block has no installation owner.', '.gitignore')
-    // Rebuild owned rules from the surrounding project rules, so managed edits
-    // are repaired instead of becoming a permanent local template fork.
-    const ignoreLines = new Set<string>()
-    ignoreLines.add(`/${layout.localRoot}/`)
-    const ignored = (path: string): boolean => {
-      const check = spawnSync('git', ['-C', scratch, 'check-ignore', '--no-index', '-q', '--', path], { encoding: 'utf8' })
-      if (check.status !== 0 && check.status !== 1)
-        throw new NotesError('GIT_RULES_ERROR', check.stderr || 'Unable to check ignore rules.', path)
-      return check.status === 0
-    }
-    const updateIgnore = (): void => put('.gitignore', replaceBlock(originalIgnore, '.gitignore', wrapBlock('.gitignore', [...ignoreLines].join('\n'))))
-    updateIgnore()
-    const checkedParents = new Set<string>()
-    for (const path of [...probes].sort()) {
-      for (const parent of ancestors(path)) {
-        if (checkedParents.has(parent))
-          continue
-        checkedParents.add(parent)
-        if (ignored(`${parent}/`)) {
-          ignoreLines.add(`!/${parent}/`)
-          ignoreLines.add(`/${parent}/*`)
-          updateIgnore()
-        }
-      }
-      if (ignored(path)) {
-        ignoreLines.add(`!/${path}`)
-        updateIgnore()
-      }
-    }
-    // Future Notes and files in the two named skills/runtime must also be visible.
-    const ownedRoots = new Set([notesDir, layout.runtimeRoot, ...assetPaths.flatMap((path) => {
-      const match = /^(\.(?:agents|claude)\/skills\/[^/]+)\//.exec(path)
-      return match ? [match[1]] : []
-    })])
-    for (const root of ownedRoots) {
-      for (const line of ignoreLines) {
-        if (line.startsWith(`!/${root}/`))
-          ignoreLines.delete(line)
-      }
-      ignoreLines.add(`!/${root}/`)
-      ignoreLines.add(`!/${root}/**`)
-    }
-    // A later negation must never expose drafts, locks or backups.
-    ignoreLines.delete(`/${layout.localRoot}/`)
-    ignoreLines.add(`/${layout.localRoot}/`)
-    updateIgnore()
-    for (const path of probes) {
-      if (ignored(path))
-        throw new NotesError('GIT_IGNORE_CONFLICT', 'A nested or higher-priority ignore rule still hides a required asset; adjust that rule explicitly.', path)
-    }
-    if (!ignored(`${layout.localRoot}/probe`))
-      throw new NotesError('GIT_IGNORE_CONFLICT', 'Local drafts and backups must be ignored.', layout.localRoot)
-    result.set('.gitignore', wrapBlock('.gitignore', [...ignoreLines].join('\n')))
-    const originalAttributes = entryText(source.read('.gitattributes'), '.gitattributes')
-    if (block(originalAttributes, '.gitattributes') && !priorBlocks.has('.gitattributes'))
-      throw new NotesError('UNOWNED_ASSET', 'Existing agent-notes attributes block has no installation owner.', '.gitattributes')
-    put('.gitattributes', block(originalAttributes, '.gitattributes') ? replaceBlock(originalAttributes, '.gitattributes', '') : originalAttributes)
-    const lfFiles = [...new Set([...managedFiles, layout.configPath, layout.installPath])].sort()
-    const protectedPaths = [...new Set([...probes].filter(path => path.startsWith(`${notesDir}/`)).concat(lfFiles))]
-    const checkAttributes = (required: boolean): void => {
-      const values = git(['check-attr', '-z', '--stdin', 'text', 'eol'], `${protectedPaths.join('\0')}\0`).split('\0')
-      for (let index = 0; index + 2 < values.length; index += 3) {
-        const [path, attribute, value] = values.slice(index, index + 3)
-        const allowed = attribute === 'text' ? required ? ['set'] : ['set', 'auto', 'unspecified'] : required ? ['lf'] : ['lf', 'unspecified']
-        if (!allowed.includes(value))
-          throw new NotesError('GIT_ATTRIBUTES_CONFLICT', `${attribute}=${value} conflicts with byte-stable Notes and runtime assets (text eol=lf); adjust the existing rule explicitly.`, path)
-      }
-    }
-    checkAttributes(false)
-    const attributes = wrapBlock('.gitattributes', [`/${notesDir}/** text eol=lf`, ...lfFiles.map(path => `/${path} text eol=lf`)].join('\n'))
-    put('.gitattributes', replaceBlock(originalAttributes, '.gitattributes', attributes))
-    checkAttributes(true)
-    result.set('.gitattributes', attributes)
-    return result
   }
-  finally { rmSync(scratch, { recursive: true, force: true }) }
+  finally {
+    rmSync(scratch, { recursive: true, force: true })
+  }
 }

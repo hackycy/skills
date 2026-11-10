@@ -1,562 +1,410 @@
-import type { Bundle } from '../src/distribution/bundle'
 import type { ManageOptions } from '../src/distribution/manage'
-import type { Installation, Target } from '../src/distribution/manifest'
+import type { Installation } from '../src/distribution/manifest'
 import type { TransactionHooks } from '../src/workflow/transaction'
 import { Buffer } from 'node:buffer'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { run } from '../src/cli/run'
-import { notesLayout } from '../src/distribution/layout'
 import { manage } from '../src/distribution/manage'
-import { block } from '../src/distribution/manifest'
-import { checkLinks } from '../src/notes/markdown'
-import { Repository } from '../src/notes/snapshot'
-import { executeWrite } from '../src/workflow/execute'
-import { recoverTransaction } from '../src/workflow/transaction'
-import { archive, commit, git, ids, metadata, note, project, write } from './fixtures'
+import { canonical } from '../src/distribution/protocol'
+import { validateJournal } from '../src/distribution/transition'
+import { recoverTransaction } from '../src/workflow/recovery'
+import { recoverTransaction as recoverWithHooks } from '../src/workflow/transaction'
+import { testBundle } from './distribution-fixtures'
+import { archive, git, note, project, write } from './fixtures'
 
-vi.setConfig({ testTimeout: 30_000 })
-
+vi.setConfig({ testTimeout: 120_000 })
 const roots: string[] = []
-const installPath = notesLayout().installPath
-const runtime = 'console.log(JSON.stringify({command:"context",result:"ok",data:{notes:[]},diagnostics:[]}))\n'
-function bundle(version = '0.1.0'): Bundle {
-  return { version, files: new Map([['cli.mjs', Buffer.from(runtime)], ['rules.md', Buffer.from(`Rules ${version}\n`)]]), skills: new Map(['agent-note', 'agent-note-maintenance'].map(name => [`${name}/SKILL.md`, Buffer.from(`Skill ${name} ${version}\n`)])) }
-}
-function setup(blank = false): string {
+const installPath = '.agents/notes/install.json'
+const sets = Array.from({ length: 7 }, (_, n) => ['generic', 'codex', 'claude-code'].filter((_, i) => (n + 1) & (1 << i)))
+function setup(): string {
   const root = project()
   roots.push(root)
-  if (blank)
-    rmSync(join(root, '.agents/notes'), { recursive: true })
   return root
 }
-function command(root: string, name: ManageOptions['command'] = 'init', targetBundle = bundle(), extra: Partial<ManageOptions> = {}, hooks: TransactionHooks = {}) {
-  return manage({ command: name, root, targets: ['agents'], dryRun: false, recover: false, ...extra }, root, targetBundle, hooks)
+function command(root: string, name: ManageOptions['command'] = 'install', source = testBundle(), extra: Partial<ManageOptions> = {}, hooks: TransactionHooks = {}) {
+  return manage({ command: name, root, hosts: [], dryRun: false, recover: false, ...extra }, root, source, hooks)
 }
-function read(root: string, path: string): string {
-  return readFileSync(join(root, path), 'utf8')
+function read(root: string, path: string): Buffer {
+  return readFileSync(join(root, path))
 }
 function manifest(root: string): Installation {
-  return JSON.parse(read(root, installPath))
+  return JSON.parse(read(root, installPath).toString('utf8'))
 }
-function expectOk(result: ReturnType<typeof manage>): void {
+function ok(result: ReturnType<typeof command>): void {
   expect(result.result, JSON.stringify(result)).toBe('ok')
-}
-function allFiles(root: string, prefix = '', notesDir = '.agents/notes'): Map<string, string> {
-  const result = new Map<string, string>()
-  for (const entry of readdirSync(join(root, prefix), { withFileTypes: true })) {
-    const path = prefix ? `${prefix}/${entry.name}` : entry.name
-    if (path === '.git' || path === `${notesDir}/local`)
-      continue
-    if (entry.isDirectory()) {
-      for (const [childPath, bytes] of allFiles(root, path, notesDir))
-        result.set(childPath, bytes)
-    }
-    else {
-      result.set(path, read(root, path))
-    }
-  }
-  return result
 }
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
 
-describe('installation ownership', () => {
-  it.each([['agents'], ['claude'], ['agents', 'claude']] as Target[][])('installs targets %j without creating a Note', (...targets) => {
-    const root = setup(true)
-    expectOk(command(root, 'init', bundle(), { targets }))
-    expect(manifest(root).targets).toEqual(targets)
-    expect(JSON.parse(read(root, '.agents/notes/config.json')).notes_dir).toBe('.agents/notes')
-    expect(existsSync(join(root, '.agents/notes/runtime/cli.mjs'))).toBe(true)
-    for (const target of ['agents', 'claude'])
-      expect(existsSync(join(root, `.${target}/skills/agent-note/SKILL.md`))).toBe(targets.includes(target as Target))
-    expect(existsSync(join(root, '.claude/settings.json'))).toBe(false)
-    expectOk(command(root, 'status'))
-    const before = allFiles(root)
-    expectOk(command(root, 'init', bundle(), { targets }))
-    expect(allFiles(root)).toEqual(before)
-  })
-
-  it('preserves custom configuration and original entry bytes outside its block', () => {
-    const root = setup(true)
-    const config = '{\n "format": "agent-notes-config/1", "notes_dir": "docs/decisions", "language": "en"\n}\n'
-    write(root, 'docs/decisions/config.json', config)
-    write(root, 'AGENTS.md', 'Original rules\r\n@project-guide.md\r\n')
-    write(root, 'CLAUDE.md', '@AGENTS.md\nExtra rules\n')
-    write(root, 'project-guide.md', '# Guide\n')
-    expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    expect(read(root, 'docs/decisions/config.json')).toBe(config)
-    expect(read(root, 'AGENTS.md').startsWith('Original rules\r\n@project-guide.md\r\n')).toBe(true)
-    expect(read(root, 'CLAUDE.md').startsWith('@AGENTS.md\nExtra rules\n')).toBe(true)
-    expect(existsSync(join(root, '.claude/CLAUDE.md'))).toBe(false)
-    expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(read(root, 'docs/decisions/config.json')).toBe(config)
-  })
-
-  it('keeps inherited AGENTS rules when it creates a Claude entry, including after upgrade', () => {
+describe('project integrations', () => {
+  it.each(sets)('installs %j and preserves every permanent rule file', (...hosts) => {
     const root = setup()
-    write(root, 'AGENTS.md', '# Shared project instructions\n')
-    expectOk(command(root, 'init', bundle(), { targets: ['claude'] }))
-    expect(read(root, '.claude/CLAUDE.md')).toContain('@../AGENTS.md')
-    expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(read(root, '.claude/CLAUDE.md')).toContain('@../AGENTS.md')
+    const rules = ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', 'AGENTS.override.md', '.claude/CLAUDE.local.md']
+    write(root, '.gitignore', '.agents/\n.claude/\n')
+    for (const path of rules) write(root, path, `Rules: ${path}\r\n@arbitrary\r\n`)
+    ok(command(root, 'install', testBundle(), { hosts }))
+    expect(manifest(root).integrations).toEqual([...hosts].sort())
+    expect(manifest(root).format).toBe('agent-notes-install/2')
+    for (const path of rules) expect(read(root, path).toString()).toBe(`Rules: ${path}\r\n@arbitrary\r\n`)
+    expect(existsSync(join(root, '.agents/skills/agent-note/SKILL.md'))).toBe(hosts.includes('generic') || hosts.includes('codex'))
+    expect(existsSync(join(root, '.claude/skills/agent-note/SKILL.md'))).toBe(hosts.includes('claude-code'))
+    ok(command(root, 'status'))
+    expect(command(root).data.changes).toEqual([])
   })
 
-  it('shares a single route when both targets are installed', () => {
-    const root = setup()
-    expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    expect(read(root, 'AGENTS.md')).toContain('Engineering decision Notes')
-    expect(read(root, '.claude/CLAUDE.md')).toContain('@../AGENTS.md')
-    expect(read(root, '.claude/CLAUDE.md')).not.toContain('Engineering decision Notes')
-    expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(read(root, '.claude/CLAUDE.md')).not.toContain('Engineering decision Notes')
-  })
-
-  it.each(['CLAUDE.md', '.claude/CLAUDE.md'])('reuses an existing direct AGENTS import in %s', (entry) => {
-    const root = setup()
-    const text = entry === 'CLAUDE.md' ? '@AGENTS.md\nProject rules\n' : '@../AGENTS.md\nProject rules\n'
-    write(root, entry, text)
-    expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    expect(read(root, entry)).toBe(text)
-    expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(read(root, entry)).toBe(text)
-  })
-
-  it.each(['```text\n@AGENTS.md\n```\n', '    @AGENTS.md\n'])('does not treat an import code example as an active route: %s', (example) => {
-    const root = setup()
-    write(root, 'CLAUDE.md', example)
-    expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    expect(block(read(root, 'CLAUDE.md'), 'CLAUDE.md')?.text).toContain('@AGENTS.md')
-  })
-
-  it('keeps a reused ignored Claude entry trackable without taking ownership of its content', () => {
-    const root = setup()
-    write(root, '.gitignore', '.claude/\n')
-    write(root, '.claude/CLAUDE.md', '@../AGENTS.md\nLocal rules\n')
-    expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    expect(read(root, '.claude/CLAUDE.md')).toBe('@../AGENTS.md\nLocal rules\n')
-    expect(spawnSync('git', ['-C', root, 'check-ignore', '--no-index', '-q', '.claude/CLAUDE.md']).status).toBe(1)
-    expect(manifest(root).assets.some(asset => asset.path === '.claude/CLAUDE.md')).toBe(false)
-  })
-
-  it('uses a configured language and custom document directory on blank init', () => {
-    const root = setup(true)
-    expectOk(command(root, 'init', bundle(), { notesDir: 'docs/decisions', language: 'en' }))
-    expect(JSON.parse(read(root, 'docs/decisions/config.json'))).toMatchObject({ notes_dir: 'docs/decisions', language: 'en' })
-    expect(read(root, '.gitattributes')).toContain('/docs/decisions/** text eol=lf')
-  })
-
-  it.each(['agents', 'claude'] as const)('relocates shared and skill-local resources for %s without rewriting examples', (target) => {
-    const root = setup()
-    const content = bundle()
-    const guide = '# Example\n\n[Shared](../../../references/writing.md#inputs)\n\n![Asset](example.bin)\n'
-    const skill = '# Skill\n\n[Guide][guide]\n\n[guide]: references/example.md#example\n\n[Format](../../formats/document.md)\n\n[Formats](../../formats/)\n\n[Local](references/)\n\n```md\n[Example](../../references/writing.md)\n```\n'
-    content.files.set('assets/references/writing.md', Buffer.from('# Inputs\n'))
-    content.files.set('assets/formats/document.md', Buffer.from('# Format\n'))
-    for (const [path, bytes] of [
-      ['agent-note/SKILL.md', Buffer.from(skill)],
-      ['agent-note/references/example.md', Buffer.from(guide)],
-      ['agent-note/references/example.bin', Buffer.from([0, 255, 128])],
-    ] as const) {
-      content.files.set(`assets/skills/${path}`, bytes)
-      content.skills.set(path, bytes)
-    }
-    expectOk(command(root, 'init', content, { targets: [target] }))
-    const prefix = `.${target}/skills/agent-note`
-    expect(read(root, `${prefix}/SKILL.md`)).toContain('[guide]: references/example.md#example')
-    const formatLink = target === 'agents' ? '../../notes/runtime/assets/formats/document.md' : '../../../.agents/notes/runtime/assets/formats/document.md'
-    const formatsLink = target === 'agents' ? '../../notes/runtime/assets/formats' : '../../../.agents/notes/runtime/assets/formats'
-    expect(read(root, `${prefix}/SKILL.md`)).toContain(`[Format](${formatLink})`)
-    expect(read(root, `${prefix}/SKILL.md`)).toContain(`[Formats](${formatsLink})`)
-    expect(read(root, `${prefix}/SKILL.md`)).toContain('[Local](references/)')
-    expect(read(root, `${prefix}/SKILL.md`)).toContain('```md\n[Example](../../references/writing.md)\n```')
-    expect(read(root, `${prefix}/references/example.md`)).toContain(target === 'agents' ? '../../../notes/runtime/assets/references/writing.md#inputs' : '../../../../.agents/notes/runtime/assets/references/writing.md#inputs')
-    expect(readFileSync(join(root, `${prefix}/references/example.bin`))).toEqual(Buffer.from([0, 255, 128]))
-    expect(read(root, '.agents/notes/runtime/assets/skills/agent-note/SKILL.md')).toBe(skill)
-    const source = new Repository(root).snapshot('worktree')
-    source.includeDirectory('.agents/notes/runtime')
-    expect(checkLinks(source, source.paths().filter(path => path.endsWith('.md')))).toEqual([])
-  })
-
-  it.each(['.GIT/private-notes', 'NODE_MODULES/private-notes'])('rejects reserved directory aliases on case-insensitive filesystems: %s', (notesDir) => {
-    const root = setup(true)
-    expect(command(root, 'init', bundle(), { notesDir }).diagnostics[0].code).toBe('INVALID_CONFIG')
-    expect(existsSync(join(root, installPath))).toBe(false)
-  })
-
-  it('requires explicit valid targets and rejects unknown installer flags', () => {
-    const root = setup()
-    for (const args of [['init'], ['init', '--target', 'cursor'], ['init', '--target', 'agents', '--target', 'agents'], ['upgrade', '--to', '0.2.0'], ['status', '--recover'], ['init', '--target', 'agents', '--dry-run', '--recover']])
-      expect(run([...args, '--root', root]).result).toBe('invalid-input')
-    expect(existsSync(join(root, installPath))).toBe(false)
-  })
-
-  it.each(['runtime', 'skill', 'note', 'marker'])('does not adopt an unknown %s', (kind) => {
-    const root = setup()
-    const path = kind === 'runtime' ? '.agents/notes/runtime/custom.txt' : kind === 'skill' ? '.agents/skills/agent-note/custom.txt' : kind === 'note' ? note(root) : 'AGENTS.md'
-    if (kind !== 'note')
-      write(root, path, kind === 'marker' ? '<!-- agent-notes:begin -->\nunknown\n<!-- agent-notes:end -->\n' : 'Unknown bytes\n')
-    const before = allFiles(root)
-    expect(command(root).diagnostics.map(item => item.code)).toContain('UNOWNED_ASSET')
-    expect(allFiles(root)).toEqual(before)
-  })
-
-  it.each(['.agents', '.agents/notes/runtime', 'AGENTS.md'])('refuses symlink target %s', (path) => {
-    const root = setup()
-    const outside = setup(true)
-    if (path === '.agents')
-      rmSync(join(root, '.agents'), { recursive: true })
-    else if (path.startsWith('.agents'))
-      rmSync(join(root, '.agents/notes'), { recursive: true })
-    if (path === '.agents/notes/runtime')
-      mkdirSync(join(root, '.agents/notes'), { recursive: true })
-    symlinkSync(outside, join(root, path))
-    const result = command(root)
-    expect(result.diagnostics.map(item => item.code)).toContain('SYMLINK_NOT_ALLOWED')
-    expect(existsSync(join(root, installPath))).toBe(false)
-  })
-
-  it('resolves Git root on first install and installed root from nested directories', () => {
-    const root = setup(true)
-    mkdirSync(join(root, 'src/sub'), { recursive: true })
-    const options: ManageOptions = { command: 'init', targets: ['agents'], dryRun: false, recover: false }
-    const result = manage(options, join(root, 'src/sub'), bundle())
-    expectOk(result)
-    expect(result.scope.root).toBe(root)
-    expect(manage({ ...options, command: 'status' }, join(root, 'src/sub')).scope.root).toBe(root)
-  })
-})
-
-describe('git distribution rules', () => {
-  it('makes installed assets and future Notes trackable while other ignored skills stay ignored', () => {
-    const root = setup()
-    write(root, '.gitignore', '# user rules\n.agents/\n.claude/\n.agents/notes/\n*.log\n')
-    write(root, '.agents/skills/unrelated/SKILL.md', 'User skill\n')
-    expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    const ignored = (path: string) => spawnSync('git', ['-C', root, 'check-ignore', '--no-index', '-q', path]).status === 0
-    for (const asset of manifest(root).assets)
-      expect(ignored(asset.path), asset.path).toBe(false)
-    for (const path of ['.agents/notes/config.json', installPath, '.agents/notes/implemented/feature/future.md'])
-      expect(ignored(path), path).toBe(false)
-    for (const path of ['.agents/skills/unrelated/SKILL.md', '.claude/skills/other/SKILL.md', '.agents/notes/local/draft.md', 'app.log'])
-      expect(ignored(path), path).toBe(true)
-    expect(read(root, '.gitignore').startsWith('# user rules\n.agents/\n.claude/\n.agents/notes/\n*.log\n')).toBe(true)
-    expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(ignored('.agents/notes/local/backup')).toBe(true)
-    expect(ignored('.agents/notes/implemented/feature/future.md')).toBe(false)
-  })
-
-  it('reports nested ignore rules it cannot safely override', () => {
-    const root = setup()
-    write(root, '.agents/.gitignore', 'skills/\n')
-    expect(command(root).diagnostics.map(item => item.code)).toContain('GIT_IGNORE_CONFLICT')
-    expect(existsSync(join(root, installPath))).toBe(false)
-  })
-
-  it.each(['.agents/notes/** -text', '* text eol=crlf'])('reports conflicting attributes: %s', (rule) => {
-    const root = setup()
-    write(root, '.gitattributes', `${rule}\n`)
-    expect(command(root).diagnostics.map(item => item.code)).toContain('GIT_ATTRIBUTES_CONFLICT')
-    expect(read(root, '.gitattributes')).toBe(`${rule}\n`)
-  })
-
-  it('survives Git checkout with core.autocrlf=true without changing protected bytes', () => {
-    const root = setup()
-    write(root, 'AGENTS.md', 'Original project rules\n')
-    expectOk(command(root, 'init', bundle(), { targets: ['agents', 'claude'] }))
-    const path = note(root)
-    const frozen = archive(root, path)
-    commit(root)
-    const checkout = setup(true)
-    rmSync(checkout, { recursive: true })
-    git(root, '-c', 'core.autocrlf=true', 'clone', '--no-local', root, checkout)
-    expect(read(checkout, 'AGENTS.md')).toContain('\r\n')
-    expectOk(command(checkout, 'status'))
-    for (const protectedPath of [frozen, '.agents/notes/archived/manifest.json', '.agents/notes/config.json', '.agents/notes/runtime/cli.mjs'])
-      expect(read(checkout, protectedPath), protectedPath).toBe(read(root, protectedPath))
-    const before = allFiles(checkout)
-    expect(command(checkout, 'upgrade').data.changes).toEqual([])
-    expect(allFiles(checkout)).toEqual(before)
-  })
-
-  it('reports conflicting runtime newline attributes before installing', () => {
-    const root = setup()
-    write(root, '.gitattributes', '.agents/notes/runtime/** eol=crlf\n')
-    expect(command(root).diagnostics.map(item => item.code)).toContain('GIT_ATTRIBUTES_CONFLICT')
-    expect(existsSync(join(root, installPath))).toBe(false)
-  })
-
-  it('sets LF attributes for future Notes without disturbing other file rules', () => {
-    const root = setup()
-    write(root, '.gitattributes', '* text=auto\n*.png binary\n')
-    expectOk(command(root))
-    expect(git(root, 'check-attr', 'text', 'eol', '--', '.agents/notes/implemented/feature/future.md')).toContain('eol: lf')
-    expect(git(root, 'check-attr', 'text', '--', 'image.png')).toContain('text: unset')
-  })
-})
-
-describe('upgrades and recovery boundaries', () => {
-  it('preserves every Note, seal and project byte across upgrades and supported downgrades', () => {
-    const root = setup()
-    expectOk(command(root))
-    note(root, metadata({ status: 'proposed' }))
-    const original = note(root, metadata({ id: ids[1] }), 'archive-source')
-    archive(root, original, metadata({ id: ids[1] }))
-    const prior = allFiles(root)
-    const protectedPaths = [...prior.keys()].filter(path => path.startsWith('.agents/notes/') && path !== installPath && !path.startsWith('.agents/notes/runtime/'))
-    for (const version of ['0.2.0', '0.1.0']) {
-      expectOk(command(root, 'upgrade', bundle(version)))
-      expect(manifest(root).version).toBe(version)
-      for (const path of protectedPaths)
-        expect(read(root, path), path).toBe(prior.get(path))
-    }
-  })
-
-  it.each(['upgrade', 'repair'] as const)('%s dry-run lists exact changes without backups or project writes', (operation) => {
-    const root = setup()
-    expectOk(command(root))
-    write(root, '.agents/skills/agent-note/SKILL.md', 'My modified skill\n')
-    const before = allFiles(root)
-    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), { dryRun: true })
-    expectOk(result)
-    expect(result.data.modified_assets).toContain('.agents/skills/agent-note/SKILL.md')
-    expect(result.data.changes).not.toEqual([])
-    expect(existsSync(join(root, '.agents/notes/local/backups'))).toBe(false)
-    expect(allFiles(root)).toEqual(before)
-  })
-
-  it.each(['upgrade', 'repair'] as const)('%s backs up edited files and owned blocks before replacement', (operation) => {
-    const root = setup()
-    expectOk(command(root))
-    write(root, '.agents/skills/agent-note/SKILL.md', 'My modified skill\n')
-    write(root, 'AGENTS.md', `User prefix\n${read(root, 'AGENTS.md').replace('Engineering decision Notes', 'Edited title')}User suffix\n`)
-    const entry = read(root, 'AGENTS.md')
-    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'))
-    expectOk(result)
-    const backup = result.data.backup as string
-    expect(read(root, `${backup}/original/.agents/skills/agent-note/SKILL.md`)).toBe('My modified skill\n')
-    expect(read(root, `${backup}/original/AGENTS.md`)).toBe(entry)
-    expect(read(root, `${backup}/changes.patch`)).toContain('-My modified skill')
-    expect(read(root, 'AGENTS.md').startsWith('User prefix\n')).toBe(true)
-    expect(read(root, 'AGENTS.md').endsWith('User suffix\n')).toBe(true)
-    expectOk(command(root, 'status'))
-  })
-
-  it('repairs same-version damage, and intact upgrade is a no-op', () => {
-    const root = setup()
-    expectOk(command(root))
-    rmSync(join(root, '.agents/notes/runtime/rules.md'))
-    expect(command(root, 'status').data.integrity).toBe('damaged')
-    const before = allFiles(root)
-    expect(command(root).diagnostics[0].code).toBe('REPAIR_REQUIRED')
-    expect(command(root, 'upgrade').diagnostics[0].code).toBe('REPAIR_REQUIRED')
-    expect(allFiles(root)).toEqual(before)
-    expectOk(command(root, 'repair'))
-    expect(command(root, 'repair').data.changes).toEqual([])
-    expect(command(root, 'upgrade').data.changes).toEqual([])
-    expect(command(root, 'init', bundle('0.2.0')).diagnostics[0].code).toBe('UPGRADE_REQUIRED')
-  })
-
-  it('rejects a different repair version or bundle without changing project files', () => {
-    const root = setup()
-    expectOk(command(root))
-    write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
-    const before = allFiles(root)
-    const mismatch = command(root, 'repair', bundle('0.2.0'))
-    expect(mismatch).toMatchObject({ result: 'invalid-input', diagnostics: [{ code: 'REPAIR_VERSION_MISMATCH', message: expect.stringContaining('@0.1.0 repair') }] })
-    const changed = bundle()
-    changed.files.set('rules.md', Buffer.from('Different bundle, same version\n'))
-    expect(command(root, 'repair', changed)).toMatchObject({ result: 'failed', diagnostics: [{ code: 'INVALID_BUNDLE' }] })
-    expect(allFiles(root)).toEqual(before)
-    expect(existsSync(join(root, '.agents/notes/local/backups'))).toBe(false)
-  })
-
-  it('repairs missing files and preserves Notes, seals, configuration and unknown neighbors', () => {
-    const root = setup()
-    expectOk(command(root))
-    note(root, metadata({ id: ids[1] }), 'active')
-    archive(root, note(root))
-    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agents/notes/config.json' || path === installPath)
-    rmSync(join(root, '.agents/skills/agent-note/SKILL.md'))
-    write(root, '.agents/notes/runtime/neighbor.txt', 'Project neighbor\n')
-    expectOk(command(root, 'repair'))
-    expect(read(root, '.agents/skills/agent-note/SKILL.md')).toBe('Skill agent-note 0.1.0\n')
-    expect(read(root, '.agents/notes/runtime/neighbor.txt')).toBe('Project neighbor\n')
-    for (const [path, bytes] of preserved)
-      expect(read(root, path), path).toBe(bytes)
-  })
-
-  it('removes only obsolete manifest assets and preserves unknown neighboring files', () => {
-    const root = setup()
-    const previous = bundle()
-    previous.files.set('obsolete.txt', Buffer.from('Old managed asset\n'))
-    expectOk(command(root, 'init', previous))
-    write(root, '.agents/notes/runtime/unknown.txt', 'Keep me\n')
-    expectOk(command(root, 'upgrade', bundle('0.2.0')))
-    expect(existsSync(join(root, '.agents/notes/runtime/obsolete.txt'))).toBe(false)
-    expect(read(root, '.agents/notes/runtime/unknown.txt')).toBe('Keep me\n')
-    const collision = bundle('0.3.0')
-    collision.files.set('unknown.txt', Buffer.from('Replacement\n'))
-    expect(command(root, 'upgrade', collision).diagnostics[0].code).toBe('UNOWNED_ASSET')
-    expect(read(root, '.agents/notes/runtime/unknown.txt')).toBe('Keep me\n')
-  })
-
-  it('upgrades and rolls back the resource layout while preserving project documents and seals', () => {
-    const root = setup()
-    const previous = bundle()
-    for (const path of ['README.md', 'writing.md', 'contracts/document.md'])
-      previous.files.set(path, Buffer.from('# Previous resource\n'))
-    expectOk(command(root, 'init', previous))
-    note(root, metadata({ id: ids[1] }), 'active')
-    archive(root, note(root))
-    commit(root)
-    const preserved = [...allFiles(root)].filter(([path]) => path.startsWith('.agents/notes/') || path === '.agents/notes/config.json')
-    write(root, '.agents/notes/runtime/writing.md', '# Local edit of the old reference\n')
-    write(root, '.agents/notes/runtime/unknown.txt', 'Project neighboring file\n')
-    const next = bundle('0.2.0')
-    next.files.set('assets/references/writing.md', Buffer.from('# Write inputs\n'))
-    next.files.set('assets/formats/document.md', Buffer.from('# Document format\n'))
-    const upgraded = command(root, 'upgrade', next)
-    expectOk(upgraded)
-    expect(read(root, `${upgraded.data.backup}/original/.agents/notes/runtime/writing.md`)).toBe('# Local edit of the old reference\n')
-    for (const path of ['README.md', 'writing.md', 'contracts/document.md'])
-      expect(existsSync(join(root, '.agents/notes/runtime', path))).toBe(false)
-    expect(read(root, '.agents/notes/runtime/assets/references/writing.md')).toBe('# Write inputs\n')
-    expectOk(command(root, 'upgrade', previous))
-    expect(read(root, '.agents/notes/runtime/writing.md')).toBe('# Previous resource\n')
-    expect(existsSync(join(root, '.agents/notes/runtime/assets/references/writing.md'))).toBe(false)
-    expect(read(root, '.agents/notes/runtime/unknown.txt')).toBe('Project neighboring file\n')
-    for (const [path, bytes] of preserved)
-      expect(read(root, path)).toBe(bytes)
-    expectOk(command(root, 'status'))
-  })
-
-  it.each(['../outside.md', 'README.md', '.agents/notes/implemented/architecture/2026-10-21-owned.md', '.agents/notes/config.json'])('rejects manifest ownership of %s', (path) => {
-    const root = setup()
-    expectOk(command(root))
-    const state = manifest(root)
-    state.assets.push({ path, kind: 'file', sha256: 'a'.repeat(64) })
-    write(root, installPath, JSON.stringify(state))
-    expect(command(root, 'upgrade').diagnostics[0].code).toBe('INVALID_INSTALLATION')
-  })
-
-  it('refuses unknown document contracts and a destination runtime that cannot read current Notes', () => {
-    const root = setup()
-    expectOk(command(root))
-    const path = note(root)
-    const valid = read(root, path)
-    write(root, path, valid.replace('agent-note/1', 'agent-note/999'))
-    const before = read(root, installPath)
-    expect(command(root, 'upgrade', bundle('0.2.0')).diagnostics.map(item => item.code)).toContain('UNSUPPORTED_FORMAT')
-    write(root, path, valid)
-    const unsupported = bundle('0.2.0')
-    unsupported.files.set('cli.mjs', Buffer.from('process.exit(2)\n'))
-    expect(command(root, 'upgrade', unsupported).diagnostics[0].code).toBe('BUNDLE_SMOKE_FAILED')
-    expect(read(root, installPath)).toBe(before)
-  })
-
-  it.each((['upgrade', 'repair'] as const).flatMap(operation => ['config', 'note', 'new-note', 'entry', 'runtime'].map(kind => ({ operation, kind }))))('$operation preserves a concurrent $kind edit', ({ operation, kind }) => {
-    const root = setup()
-    expectOk(command(root))
-    const path = note(root)
-    if (operation === 'repair')
-      write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
-    const manifestBefore = read(root, installPath)
-    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), {}, { beforeCommit() {
-      if (kind === 'config')
-        write(root, '.agents/notes/config.json', `${read(root, '.agents/notes/config.json')}\n`)
-      if (kind === 'note')
-        write(root, path, `${read(root, path)}\nIndependent edit\n`)
-      if (kind === 'new-note')
-        note(root, metadata({ id: ids[1] }), 'new-decision')
-      if (kind === 'entry')
-        write(root, 'AGENTS.md', `${read(root, 'AGENTS.md')}Independent rule\n`)
-      if (kind === 'runtime')
-        write(root, '.agents/notes/runtime/cli.mjs', '// external runtime edit\n')
-    } })
-    expect(result.diagnostics.map(item => item.code)).toContain('CONCURRENT_CHANGE')
-    expect(read(root, installPath)).toBe(manifestBefore)
-    if (kind === 'entry')
-      expect(read(root, 'AGENTS.md')).toContain('Independent rule')
-  })
-
-  it.each(['upgrade', 'repair'] as const)('%s rolls back on failure and keeps the manifest last', (operation) => {
-    const root = setup()
-    expectOk(command(root))
-    if (operation === 'repair')
-      write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
-    const before = allFiles(root)
-    const result = command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), {}, { afterStep(index) {
-      if (index === 0) {
-        expect(read(root, installPath)).toBe(before.get(installPath))
-        throw new Error('Disk failure')
+  it('handles all 49 complete set transitions with exact fresh receipts', () => {
+    for (const from of sets) {
+      for (const to of sets) {
+        const root = setup()
+        const fresh = setup()
+        ok(command(root, 'install', testBundle(), { hosts: from }))
+        ok(command(root, 'hosts set', testBundle(), { hosts: to }))
+        ok(command(fresh, 'install', testBundle(), { hosts: to }))
+        expect(read(root, installPath)).toEqual(read(fresh, installPath))
+        for (const asset of manifest(root).assets) expect(read(root, asset.path)).toEqual(read(fresh, asset.path))
       }
+    }
+  })
+
+  it('keeps unknown contents and refuses to readopt a residual skill directory', () => {
+    const root = setup()
+    ok(command(root))
+    write(root, '.agents/skills/agent-note/private.txt', 'Project content\n')
+    ok(command(root, 'hosts set', testBundle(), { hosts: ['claude-code'] }))
+    expect(read(root, '.agents/skills/agent-note/private.txt').toString()).toBe('Project content\n')
+    expect(existsSync(join(root, '.agents/skills/agent-note-maintenance'))).toBe(false)
+    expect(existsSync(join(root, '.agents/skills'))).toBe(true)
+    expect(command(root, 'hosts set', testBundle(), { hosts: ['generic'] }).diagnostics[0].code).toBe('UNOWNED_ASSET')
+  })
+
+  it('does not adopt identical unknown skill directories', () => {
+    const root = setup()
+    write(root, '.agents/skills/agent-note/SKILL.md', 'same')
+    expect(command(root).diagnostics[0].code).toBe('UNOWNED_ASSET')
+    expect(existsSync(join(root, installPath))).toBe(false)
+  })
+
+  it('requires repair before removing damaged assets and backs up full originals', () => {
+    const root = setup()
+    ok(command(root))
+    const path = '.agents/skills/agent-note/SKILL.md'
+    write(root, path, 'Local edit\r\n')
+    expect(command(root, 'hosts set', testBundle(), { hosts: ['claude-code'] }).diagnostics[0].code).toBe('REPAIR_REQUIRED')
+    expect(command(root, 'tool update', testBundle('0.2.0')).diagnostics[0].code).toBe('REPAIR_REQUIRED')
+    const preview = command(root, 'repair', testBundle(), { dryRun: true })
+    ok(preview)
+    expect(existsSync(join(root, '.agents/notes/local/backups'))).toBe(false)
+    const repaired = command(root, 'repair')
+    ok(repaired)
+    expect(read(root, `${repaired.data.backup}/original/${path}`).toString()).toBe('Local edit\r\n')
+    ok(command(root, 'hosts set', testBundle(), { hosts: ['claude-code'] }))
+  })
+
+  it('repairs missing/corrupt local sources only with the matching complete source', () => {
+    const root = setup()
+    ok(command(root))
+    write(root, '.agents/notes/runtime/assets/references/writing.md', 'Corrupt source')
+    expect(command(root, 'tool update', testBundle('0.2.0')).diagnostics[0].code).toBe('INVALID_BUNDLE')
+    ok(command(root, 'repair'))
+    rmSync(join(root, '.agents/notes/runtime/source-index.json'))
+    ok(command(root, 'repair'))
+    ok(command(root, 'status'))
+  })
+
+  it.each(['omit', 'extra', 'hash', 'duplicate', 'unknown', 'legacy'])('refuses invalid ownership: %s', (kind) => {
+    const root = setup()
+    ok(command(root))
+    const state = manifest(root)
+    if (kind === 'omit')
+      state.assets.pop()
+    if (kind === 'extra')
+      state.assets.push({ path: 'README.md', kind: 'file', sha256: '0'.repeat(64) })
+    if (kind === 'hash')
+      state.assets[0].sha256 = '0'.repeat(64)
+    if (kind === 'duplicate')
+      state.assets.push(state.assets[0])
+    const changed = kind === 'unknown' ? { ...state, arbitrary: true } : kind === 'legacy' ? { ...state, format: 'agent-notes-install/1' } : state
+    write(root, installPath, canonical(changed))
+    expect(command(root, 'repair').result).not.toBe('ok')
+    expect(read(root, installPath)).toEqual(canonical(changed))
+  })
+
+  it('does not reconstruct missing ownership from source files', () => {
+    const root = setup()
+    ok(command(root))
+    rmSync(join(root, installPath))
+    expect(command(root).diagnostics[0].code).toBe('INVALID_INSTALLATION')
+    expect(command(root, 'repair').diagnostics[0].code).toBe('NOT_INSTALLED')
+  })
+
+  it('switches both ways with real resource additions/removals and preserves project documents', () => {
+    const root = setup()
+    const a = testBundle()
+    const b = testBundle('0.2.0', { 'assets/new.md': '# New resource\n' })
+    ok(command(root, 'install', a))
+    const path = note(root)
+    const archived = archive(root, path)
+    const seal = read(root, '.agents/notes/archived/manifest.json')
+    const body = read(root, archived)
+    const config = read(root, '.agents/notes/config.json')
+    write(root, '.agents/notes/runtime/unknown.txt', 'Unknown neighbor')
+    for (const target of [b, a]) {
+      ok(command(root, 'tool update', target))
+      expect(read(root, archived)).toEqual(body)
+      expect(read(root, '.agents/notes/archived/manifest.json')).toEqual(seal)
+      expect(read(root, '.agents/notes/config.json')).toEqual(config)
+      expect(read(root, '.agents/notes/runtime/unknown.txt').toString()).toBe('Unknown neighbor')
+    }
+    expect(existsSync(join(root, '.agents/notes/runtime/assets/new.md'))).toBe(false)
+    const changed = testBundle('0.1.0', { 'assets/changed.md': 'Different' })
+    expect(command(root, 'tool update', changed).diagnostics[0].code).toBe('BUNDLE_MISMATCH')
+  })
+
+  it('uses exact Git exceptions and preserves ignored unknown siblings', () => {
+    const root = setup()
+    write(root, '.gitignore', '.agents/\n.claude/\n')
+    write(root, '.agents/skills/other/SKILL.md', 'Unknown')
+    ok(command(root, 'install', testBundle(), { hosts: ['generic', 'claude-code'] }))
+    expect(git(root, 'check-ignore', '--no-index', '.agents/skills/other/SKILL.md')).toBe('.agents/skills/other/SKILL.md')
+    expect(git(root, 'check-attr', 'eol', '--', '.agents/skills/agent-note/SKILL.md')).toContain('lf')
+    expect(git(root, 'ls-files', '--others', '--exclude-standard')).toContain('.agents/skills/agent-note/SKILL.md')
+  })
+
+  it('rejects nested Git conflicts and malformed rule blocks', () => {
+    const root = setup()
+    write(root, '.agents/skills/.gitignore', '*\n')
+    expect(command(root).diagnostics[0].code).toBe('GIT_IGNORE_CONFLICT')
+    rmSync(join(root, '.agents/skills/.gitignore'))
+    ok(command(root))
+    write(root, '.gitignore', '# agent-notes:begin\nBad markers\n')
+    expect(command(root, 'repair').diagnostics[0].code).toBe('BLOCK_CONFLICT')
+  })
+
+  it('refuses deterministic rules that would newly ignore existing project content', () => {
+    const root = setup()
+    write(root, '.agents/skills/other/SKILL.md', 'Visible project skill')
+    expect(git(root, 'ls-files', '--others', '--exclude-standard')).toContain('.agents/skills/other/SKILL.md')
+    expect(command(root).diagnostics[0].code).toBe('GIT_IGNORE_CONFLICT')
+    expect(existsSync(join(root, installPath))).toBe(false)
+    expect(read(root, '.agents/skills/other/SKILL.md').toString()).toBe('Visible project skill')
+  })
+
+  it('rejects symlinks and concurrent changes before replacing anything', () => {
+    const root = setup()
+    ok(command(root))
+    const original = read(root, installPath)
+    const result = command(root, 'tool update', testBundle('0.2.0'), {}, { beforeCommit() {
+      write(root, '.agents/notes/config.json', 'external edit')
+    } })
+    expect(result.diagnostics[0].code).toBe('CONCURRENT_CHANGE')
+    expect(read(root, installPath)).toEqual(original)
+    const other = setup()
+    rmSync(join(other, '.agents'), { recursive: true })
+    symlinkSync(join(root, '.agents'), join(other, '.agents'))
+    expect(command(other).result).not.toBe('ok')
+  })
+
+  it('rolls back failed writes and shares the lock with other management requests', () => {
+    const root = setup()
+    ok(command(root))
+    const before = read(root, installPath)
+    const result = command(root, 'tool update', testBundle('0.2.0'), {}, { afterStep(index) {
+      expect(command(root).diagnostics[0].code).toBe('WRITE_BUSY')
+      if (index === 1)
+        throw new Error('Injected write failure')
     } })
     expect(result.result).toBe('failed')
-    expect(allFiles(root)).toEqual(before)
+    expect(read(root, installPath)).toEqual(before)
+    ok(command(root, 'status'))
   })
 
-  it('shares the lock with content writers', () => {
+  it.each(['install', 'tool update', 'repair', 'hosts set'] as const)('recovers real SIGKILL during %s and preserves third-party edits', (operation) => {
     const root = setup()
-    expectOk(command(root))
-    note(root, metadata({ status: 'proposed' }))
-    commit(root)
-    const result = command(root, 'upgrade', bundle('0.2.0'), {}, { beforeCommit() {
-      const attempt = executeWrite(root, { command: 'transition', id: ids[0], input: '-', to: 'rejected', dryRun: false, recover: false }, '{}')
-      expect(attempt.diagnostics[0].code).toBe('WRITE_BUSY')
-      expect(command(root, 'upgrade').diagnostics[0].code).toBe('WRITE_BUSY')
-    } })
-    expectOk(result)
-  })
-
-  it.each(['upgrade', 'repair'] as const)('%s preserves original bytes when backup is unusable', (operation) => {
-    const root = setup()
-    expectOk(command(root))
-    write(root, '.agents/skills/agent-note/SKILL.md', 'My customization\n')
-    write(root, '.agents/notes/local/backups', 'Not a directory\n')
-    const before = allFiles(root)
-    expect(command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0')).result).toBe('failed')
-    expect(allFiles(root)).toEqual(before)
-  })
-
-  it.each((['init', 'upgrade', 'repair'] as const).flatMap(operation => ['.agents/notes', 'docs/decisions'].map(notesDir => ({ operation, notesDir }))))('recovers an actual SIGKILL during $operation in $notesDir and retries', ({ operation, notesDir }) => {
-    const root = setup(true)
-    if (operation !== 'init')
-      expectOk(command(root, 'init', bundle(), { notesDir }))
+    if (operation !== 'install')
+      ok(command(root))
     if (operation === 'repair')
-      write(root, '.agents/skills/agent-note/SKILL.md', 'Modified skill\n')
-    const before = allFiles(root, '', notesDir)
-    const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation, '', notesDir], { encoding: 'utf8' })
-    expect(child.signal, child.stderr).toBe('SIGKILL')
+      write(root, '.agents/skills/agent-note/SKILL.md', 'Repair edit')
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation], { timeout: 30_000 })
+    expect(child.signal, child.stderr?.toString()).toBe('SIGKILL')
+    const journalPath = '.agents/notes/local/write-lock/journal.json'
+    const journal = JSON.parse(read(root, journalPath).toString())
+    const entry = journal.entries[0]
+    write(root, entry.path, 'External editor')
+    expect(() => recoverTransaction(root)).toThrow(/outside|endpoints|projection|source/i)
+    expect(read(root, entry.path).toString()).toBe('External editor')
+    if (entry.after === null)
+      rmSync(join(root, entry.path))
+    else write(root, entry.path, Buffer.from(entry.after, 'base64'))
     expect(recoverTransaction(root)).toBe(true)
-    expect(allFiles(root, '', notesDir)).toEqual(before)
-    expectOk(command(root, operation, bundle(operation === 'repair' ? '0.1.0' : '0.2.0'), { notesDir, recover: true }))
+    if (operation !== 'install') {
+      if (operation === 'repair')
+        ok(command(root, 'repair'))
+      ok(command(root, 'status'))
+    }
+  })
+  it('validates committed after endpoints and finishes cleanup after a real crash', () => {
+    const root = setup()
+    ok(command(root))
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'hosts set', 'committed'], { timeout: 30_000 })
+    expect(child.signal, child.stderr?.toString()).toBe('SIGKILL')
+    expect(manifest(root).integrations).toEqual(['claude-code'])
+    expect(recoverTransaction(root)).toBe(true)
+    expect(existsSync(join(root, '.agents/skills/agent-note'))).toBe(false)
+    ok(command(root, 'status'))
   })
 
-  it.each(['upgrade', 'repair'] as const)('%s retains an external edit and journal on recovery conflict', (operation) => {
+  it.each(['before-config', 'after-config', 'after-install'])('recovers an initial installation killed at %s', (step) => {
     const root = setup()
-    expectOk(command(root))
-    const path = operation === 'repair' ? '.agents/skills/agent-note/SKILL.md' : '.agents/notes/runtime/rules.md'
-    if (operation === 'repair')
-      write(root, path, 'Modified skill\n')
-    const child = spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, operation], { encoding: 'utf8' })
-    expect(child.signal, child.stderr).toBe('SIGKILL')
-    write(root, path, 'Independent edit after interruption\n')
-    expect(() => recoverTransaction(root)).toThrow(/File changed outside/)
-    expect(read(root, path)).toBe('Independent edit after interruption\n')
-    expect(existsSync(join(root, '.agents/notes/local/write-lock/journal.json'))).toBe(true)
+    rmSync(join(root, '.agents'), { recursive: true })
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'install', step], { timeout: 30_000 })
+    expect(child.signal, child.stderr?.toString()).toBe('SIGKILL')
+    expect(recoverTransaction(root)).toBe(true)
+    expect(existsSync(join(root, installPath))).toBe(false)
+    expect(existsSync(join(root, '.agents/notes/config.json'))).toBe(false)
+    expect(existsSync(join(root, '.agents/skills/agent-note'))).toBe(false)
+    ok(command(root))
   })
 
-  it('refuses malformed managed blocks instead of deleting user content', () => {
+  it('rebuilds both version sources after the manifest has switched but before commit', () => {
     const root = setup()
-    expectOk(command(root))
-    const entry = read(root, 'AGENTS.md').replace('<!-- agent-notes:end -->', '')
-    write(root, 'AGENTS.md', entry)
-    expect(command(root, 'repair').diagnostics[0].code).toBe('BLOCK_CONFLICT')
-    expect(read(root, 'AGENTS.md')).toBe(entry)
-    expect(() => block('<!-- agent-notes:end -->\n<!-- agent-notes:begin -->', 'AGENTS.md')).toThrow()
+    ok(command(root))
+    const before = read(root, installPath)
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'tool update', 'after-install'], { timeout: 30_000 })
+    expect(child.signal).toBe('SIGKILL')
+    expect(manifest(root).version).toBe('0.2.0')
+    expect(existsSync(join(root, '.agents/notes/runtime/assets/new-resource.md'))).toBe(true)
+    expect(recoverTransaction(root)).toBe(true)
+    expect(read(root, installPath)).toEqual(before)
+    expect(existsSync(join(root, '.agents/notes/runtime/assets/new-resource.md'))).toBe(false)
+    ok(command(root, 'status'))
+  })
+
+  it('refuses recovery without the supplemental clean source needed by repair', () => {
+    const root = setup()
+    ok(command(root))
+    const path = '.agents/notes/runtime/assets/references/writing.md'
+    write(root, path, 'Damaged source requiring evidence')
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'repair'], { timeout: 30_000 })
+    expect(child.signal).toBe('SIGKILL')
+    const journalPath = '.agents/notes/local/write-lock/journal.json'
+    const original = read(root, journalPath)
+    const journal = JSON.parse(original.toString())
+    expect(Object.keys(journal.context.supplemental).length).toBeGreaterThan(0)
+    journal.context.supplemental = {}
+    write(root, journalPath, canonical(journal))
+    expect(() => recoverTransaction(root)).toThrow(/reconstruct/)
+    expect(existsSync(join(root, journalPath))).toBe(true)
+    write(root, journalPath, original)
+    expect(recoverTransaction(root)).toBe(true)
+    expect(read(root, path).toString()).toBe('Damaged source requiring evidence')
+    ok(command(root, 'repair'))
+  })
+
+  it('rechecks external Git input after file replacement and rolls back', () => {
+    const root = setup()
+    ok(command(root))
+    const before = read(root, installPath)
+    const result = command(root, 'tool update', testBundle('0.2.0'), {}, { afterStep(index) {
+      if (index === 0)
+        write(root, '.git/info/exclude', '# External edit during management\n')
+    } })
+    expect(result.diagnostics[0].code).toBe('CONCURRENT_CHANGE')
+    expect(read(root, installPath)).toEqual(before)
+    expect(read(root, '.git/info/exclude').toString()).toBe('# External edit during management\n')
+  })
+
+  it.each(['endpoint', 'unchanged-source'])('preserves a %s edit made during the final recovery step', (kind) => {
+    const root = setup()
+    ok(command(root))
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'hosts set'], { timeout: 30_000 })
+    expect(child.signal).toBe('SIGKILL')
+    const journalPath = '.agents/notes/local/write-lock/journal.json'
+    const journal = JSON.parse(read(root, journalPath).toString())
+    const path = kind === 'endpoint' ? journal.entries[0].path : '.agents/notes/runtime/assets/references/writing.md'
+    const original = kind === 'endpoint' ? journal.entries[0].before === null ? null : Buffer.from(journal.entries[0].before, 'base64') : read(root, path)
+    expect(() => recoverWithHooks(root, validateJournal, { afterStep(index) {
+      if (index === journal.entries.length - 1)
+        write(root, path, 'Edited during recovery')
+    } })).toThrow(/during recovery/)
+    expect(read(root, path).toString()).toBe('Edited during recovery')
+    expect(existsSync(join(root, journalPath))).toBe(true)
+    if (original === null)
+      rmSync(join(root, path))
+    else write(root, path, original)
+    expect(recoverTransaction(root)).toBe(true)
+    ok(command(root, 'status'))
+  })
+
+  it.each(['extra-entry', 'missing-entry', 'directory', 'created-public-directory', 'outside-block', 'extra-source'])('rejects forged distribution journal %s before any recovery write', (kind) => {
+    const root = setup()
+    ok(command(root))
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'tool update'], { timeout: 30_000 })
+    expect(child.signal).toBe('SIGKILL')
+    const path = '.agents/notes/local/write-lock/journal.json'
+    const original = read(root, path)
+    const journal = JSON.parse(original.toString())
+    if (kind === 'extra-entry')
+      journal.entries.push({ path: 'README.md', before: null, after: Buffer.from('Unauthorized').toString('base64'), mode: 0o644 })
+    if (kind === 'missing-entry')
+      journal.entries.pop()
+    if (kind === 'directory')
+      journal.cleanup.push('.agents')
+    if (kind === 'created-public-directory')
+      journal.directories.push('.agents')
+    if (kind === 'outside-block') {
+      const before = read(root, '.gitignore')
+      journal.entries.push({ path: '.gitignore', before: before.toString('base64'), after: Buffer.from(`Unauthorized outside text\n${before.toString()}`).toString('base64'), mode: 0o644 })
+    }
+    if (kind === 'extra-source')
+      journal.context.supplemental['0'.repeat(64)] = Buffer.from('Unnecessary').toString('base64')
+    write(root, path, canonical(journal))
+    const state = read(root, installPath)
+    expect(() => recoverTransaction(root)).toThrow()
+    expect(read(root, installPath)).toEqual(state)
+    expect(existsSync(join(root, 'README.md'))).toBe(false)
+    write(root, path, original)
+    expect(recoverTransaction(root)).toBe(true)
+  })
+  it.skipIf(process.getuid?.() === 0)('preserves edited originals when native permissions prevent necessary backup', () => {
+    const root = setup()
+    ok(command(root))
+    const path = '.agents/skills/agent-note/SKILL.md'
+    write(root, path, 'Local edit requiring a backup')
+    const backupRoot = join(root, '.agents/notes/local/backups')
+    mkdirSync(backupRoot, { recursive: true })
+    chmodSync(backupRoot, 0o500)
+    try {
+      const result = command(root, 'repair')
+      expect(result.diagnostics[0].code).toBe('BACKUP_FAILED')
+      expect(read(root, path).toString()).toBe('Local edit requiring a backup')
+    }
+    finally { chmodSync(backupRoot, 0o700) }
+  })
+
+  it('blocks an independent process while a content-compatible management lock is live', () => {
+    const root = setup()
+    ok(command(root))
+    const result = command(root, 'tool update', testBundle('0.2.0'), {}, { beforeCommit() {
+      const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('../src/cli/main.ts', import.meta.url)), 'repair', '--root', root, '--json'], { encoding: 'utf8', timeout: 30_000 })
+      expect(child.status).toBe(1)
+      expect(JSON.parse(child.stdout).diagnostics[0].code).toBe('WRITE_BUSY')
+    } })
+    ok(result)
+  })
+
+  it('rejects missing Git before writing a plain project and never creates a repository there', () => {
+    const root = setup()
+    rmSync(join(root, '.git'), { recursive: true })
+    const previous = process.env.PATH
+    process.env.PATH = root
+    try {
+      expect(command(root).diagnostics[0].code).toBe('GIT_REQUIRED')
+      expect(existsSync(join(root, installPath))).toBe(false)
+      expect(existsSync(join(root, '.git'))).toBe(false)
+    }
+    finally { process.env.PATH = previous }
   })
 })

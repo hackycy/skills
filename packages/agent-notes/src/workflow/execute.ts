@@ -9,7 +9,8 @@ import { Repository, sha256 } from '../notes/snapshot'
 import { currentDiagnostics, isRuntime, validateCurrent } from '../notes/validation'
 import { readInput } from './input'
 import { planWrite } from './plan'
-import { assertNoTransaction, commitTransaction, recoverTransaction, verifyObservations } from './transaction'
+import { recoverTransaction } from './recovery'
+import { assertNoTransaction, commitTransaction, verifyObservations } from './transaction'
 
 export function executeWrite(root: string, options: WriteOptions, stdin?: string, hooks: TransactionHooks = {}): Result {
   const result: Result = { command: options.command, result: 'ok', scope: { root, snapshot: 'worktree' }, data: {}, diagnostics: [], review: [] }
