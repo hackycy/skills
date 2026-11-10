@@ -1,0 +1,369 @@
+[
+  {
+    "id": "codex-search",
+    "url": "https://developers.openai.com/search?q=codex%20skills%20AGENTS%20hooks"
+  },
+  {
+    "id": "codex-skills",
+    "url": "https://developers.openai.com/codex/skills/"
+  },
+  {
+    "id": "codex-agents",
+    "url": "https://developers.openai.com/codex/guides/agents-md/"
+  },
+  {
+    "id": "codex-commands",
+    "url": "https://developers.openai.com/codex/cli/slash-commands/"
+  },
+  {
+    "id": "codex-config",
+    "url": "https://developers.openai.com/codex/config-reference/"
+  },
+  {
+    "id": "codex-platform-skills",
+    "url": "https://platform.openai.com/docs/codex/skills"
+  },
+  {
+    "id": "claude-skills",
+    "url": "https://code.claude.com/docs/en/skills.md"
+  },
+  {
+    "id": "claude-memory",
+    "url": "https://code.claude.com/docs/en/memory.md"
+  },
+  {
+    "id": "claude-hooks",
+    "url": "https://code.claude.com/docs/en/hooks.md"
+  },
+  {
+    "id": "claude-plugins",
+    "url": "https://code.claude.com/docs/en/plugins.md"
+  },
+  {
+    "id": "claude-settings",
+    "url": "https://code.claude.com/docs/en/settings.md"
+  },
+  {
+    "id": "cursor-skills",
+    "url": "https://cursor.com/docs/context/skills"
+  },
+  {
+    "id": "cursor-rules",
+    "url": "https://cursor.com/docs/context/rules"
+  },
+  {
+    "id": "cursor-commands",
+    "url": "https://cursor.com/docs/agent/chat/commands"
+  },
+  {
+    "id": "cursor-hooks",
+    "url": "https://cursor.com/docs/agent/hooks"
+  },
+  {
+    "id": "cursor-plugins",
+    "url": "https://cursor.com/docs/plugins"
+  },
+  {
+    "id": "gemini-skills",
+    "url": "https://geminicli.com/docs/cli/skills/"
+  },
+  {
+    "id": "gemini-memory",
+    "url": "https://geminicli.com/docs/cli/gemini-md/"
+  },
+  {
+    "id": "gemini-commands",
+    "url": "https://geminicli.com/docs/cli/custom-commands/"
+  },
+  {
+    "id": "gemini-hooks",
+    "url": "https://geminicli.com/docs/hooks/"
+  },
+  {
+    "id": "gemini-extensions",
+    "url": "https://geminicli.com/docs/extensions/"
+  },
+  {
+    "id": "copilot-skills",
+    "url": "https://docs.github.com/en/copilot/concepts/agents/about-agent-skills"
+  },
+  {
+    "id": "copilot-instructions",
+    "url": "https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions"
+  },
+  {
+    "id": "copilot-cli-instructions",
+    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions"
+  },
+  {
+    "id": "copilot-cli-skills",
+    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-skills"
+  },
+  {
+    "id": "copilot-cli-hooks",
+    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/use-hooks"
+  },
+  {
+    "id": "copilot-cli-plugins",
+    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating"
+  },
+  {
+    "id": "vscode-skills",
+    "url": "https://code.visualstudio.com/docs/copilot/customization/agent-skills"
+  },
+  {
+    "id": "vscode-instructions",
+    "url": "https://code.visualstudio.com/docs/copilot/customization/custom-instructions"
+  },
+  {
+    "id": "vscode-prompts",
+    "url": "https://code.visualstudio.com/docs/copilot/customization/prompt-files"
+  },
+  {
+    "id": "vscode-hooks",
+    "url": "https://code.visualstudio.com/docs/copilot/customization/hooks"
+  },
+  {
+    "id": "vscode-plugins",
+    "url": "https://code.visualstudio.com/docs/copilot/customization/agent-plugins"
+  },
+  {
+    "id": "opencode-skills",
+    "url": "https://opencode.ai/docs/skills/"
+  },
+  {
+    "id": "opencode-rules",
+    "url": "https://opencode.ai/docs/rules/"
+  },
+  {
+    "id": "opencode-commands",
+    "url": "https://opencode.ai/docs/commands/"
+  },
+  {
+    "id": "opencode-plugins",
+    "url": "https://opencode.ai/docs/plugins/"
+  },
+  {
+    "id": "opencode-config",
+    "url": "https://opencode.ai/docs/config/"
+  },
+  {
+    "id": "gemini-source-skillLoader",
+    "url": "https://raw.githubusercontent.com/google-gemini/gemini-cli/1930f25394c4b6338b64ffdb43083fca41614798/packages/core/src/skills/skillLoader.ts",
+    "repo": "google-gemini/gemini-cli",
+    "commit": "1930f25394c4b6338b64ffdb43083fca41614798",
+    "source_path": "packages/core/src/skills/skillLoader.ts"
+  },
+  {
+    "id": "gemini-source-skillManager",
+    "url": "https://raw.githubusercontent.com/google-gemini/gemini-cli/1930f25394c4b6338b64ffdb43083fca41614798/packages/core/src/skills/skillManager.ts",
+    "repo": "google-gemini/gemini-cli",
+    "commit": "1930f25394c4b6338b64ffdb43083fca41614798",
+    "source_path": "packages/core/src/skills/skillManager.ts"
+  },
+  {
+    "id": "gemini-source-memoryDiscovery",
+    "url": "https://raw.githubusercontent.com/google-gemini/gemini-cli/1930f25394c4b6338b64ffdb43083fca41614798/packages/core/src/utils/memoryDiscovery.ts",
+    "repo": "google-gemini/gemini-cli",
+    "commit": "1930f25394c4b6338b64ffdb43083fca41614798",
+    "source_path": "packages/core/src/utils/memoryDiscovery.ts"
+  },
+  {
+    "id": "gemini-source-memoryImportProcessor",
+    "url": "https://raw.githubusercontent.com/google-gemini/gemini-cli/1930f25394c4b6338b64ffdb43083fca41614798/packages/core/src/utils/memoryImportProcessor.ts",
+    "repo": "google-gemini/gemini-cli",
+    "commit": "1930f25394c4b6338b64ffdb43083fca41614798",
+    "source_path": "packages/core/src/utils/memoryImportProcessor.ts"
+  },
+  {
+    "id": "gemini-source-storage",
+    "url": "https://raw.githubusercontent.com/google-gemini/gemini-cli/1930f25394c4b6338b64ffdb43083fca41614798/packages/core/src/config/storage.ts",
+    "repo": "google-gemini/gemini-cli",
+    "commit": "1930f25394c4b6338b64ffdb43083fca41614798",
+    "source_path": "packages/core/src/config/storage.ts"
+  },
+  {
+    "id": "gemini-source-SkillCommandLoader",
+    "url": "https://raw.githubusercontent.com/google-gemini/gemini-cli/1930f25394c4b6338b64ffdb43083fca41614798/packages/cli/src/services/SkillCommandLoader.ts",
+    "repo": "google-gemini/gemini-cli",
+    "commit": "1930f25394c4b6338b64ffdb43083fca41614798",
+    "source_path": "packages/cli/src/services/SkillCommandLoader.ts"
+  },
+  {
+    "id": "opencode-source-skill-file",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/config/plugin/skill-file.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/config/plugin/skill-file.ts"
+  },
+  {
+    "id": "opencode-source-skill-scan",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/config/plugin/skill-scan.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/config/plugin/skill-scan.ts"
+  },
+  {
+    "id": "opencode-source-skill",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/config/plugin/skill.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/config/plugin/skill.ts"
+  },
+  {
+    "id": "opencode-source-discovery",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/skill/discovery.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/skill/discovery.ts"
+  },
+  {
+    "id": "opencode-source-skill-instructions",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/skill/instructions.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/skill/instructions.ts"
+  },
+  {
+    "id": "opencode-source-session-instructions",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/session/instructions.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/session/instructions.ts"
+  },
+  {
+    "id": "vscode-source-promptFileLocations",
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/b7727d5ec94ee28e38651d5581f367010db3db68/src/vs/workbench/contrib/chat/common/promptSyntax/config/promptFileLocations.ts",
+    "repo": "microsoft/vscode",
+    "commit": "b7727d5ec94ee28e38651d5581f367010db3db68",
+    "source_path": "src/vs/workbench/contrib/chat/common/promptSyntax/config/promptFileLocations.ts"
+  },
+  {
+    "id": "vscode-source-promptsServiceImpl",
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/b7727d5ec94ee28e38651d5581f367010db3db68/src/vs/workbench/contrib/chat/common/promptSyntax/service/promptsServiceImpl.ts",
+    "repo": "microsoft/vscode",
+    "commit": "b7727d5ec94ee28e38651d5581f367010db3db68",
+    "source_path": "src/vs/workbench/contrib/chat/common/promptSyntax/service/promptsServiceImpl.ts"
+  },
+  {
+    "id": "vscode-source-promptSkillResolver",
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/b7727d5ec94ee28e38651d5581f367010db3db68/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptSkillResolver.ts",
+    "repo": "microsoft/vscode",
+    "commit": "b7727d5ec94ee28e38651d5581f367010db3db68",
+    "source_path": "src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptSkillResolver.ts"
+  },
+  {
+    "id": "codex-source-ext-skills-src-loader-host",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/loader/host.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/ext/skills/src/loader/host.rs"
+  },
+  {
+    "id": "codex-source-ext-skills-src-loader-discovery",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/loader/discovery.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/ext/skills/src/loader/discovery.rs"
+  },
+  {
+    "id": "codex-source-ext-skills-src-host_roots",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/host_roots.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/ext/skills/src/host_roots.rs"
+  },
+  {
+    "id": "codex-source-core-src-context-user_instructions",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/core/src/context/user_instructions.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/core/src/context/user_instructions.rs"
+  },
+  {
+    "id": "codex-source-hooks-src-engine-discovery",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/hooks/src/engine/discovery.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/hooks/src/engine/discovery.rs"
+  },
+  {
+    "id": "codex-source-hooks-src-config_rules",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/hooks/src/config_rules.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/hooks/src/config_rules.rs"
+  },
+  {
+    "id": "codex-source-skills-src-loading",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/skills/src/loading.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/skills/src/loading.rs"
+  },
+  {
+    "id": "codex-source-core-src-agents_md",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/core/src/agents_md.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/core/src/agents_md.rs"
+  },
+  {
+    "id": "codex-source-core-src-agents_md_manager",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/core/src/agents_md_manager.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/core/src/agents_md_manager.rs"
+  },
+  {
+    "id": "codex-source-codex-home-src-instructions-mod",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/codex-home/src/instructions/mod.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/codex-home/src/instructions/mod.rs"
+  },
+  {
+    "id": "codex-source-app-server-tests-suite-v2-skills_list",
+    "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/app-server/tests/suite/v2/skills_list.rs",
+    "repo": "openai/codex",
+    "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+    "source_path": "codex-rs/app-server/tests/suite/v2/skills_list.rs"
+  },
+  {
+    "id": "vscode-instructions-reference",
+    "url": "https://code.visualstudio.com/docs/agents/reference/custom-instructions-reference"
+  },
+  {
+    "id": "vscode-hooks-reference",
+    "url": "https://code.visualstudio.com/docs/agents/reference/hooks-reference"
+  },
+  {
+    "id": "gemini-extensions-reference",
+    "url": "https://geminicli.com/docs/extensions/reference/"
+  },
+  {
+    "id": "copilot-hooks-reference",
+    "url": "https://docs.github.com/en/copilot/reference/hooks-reference"
+  },
+  {
+    "id": "opencode-source-config-plugin-instruction",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/config/plugin/instruction.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/config/plugin/instruction.ts"
+  },
+  {
+    "id": "opencode-source-instruction-discovery",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/instruction-discovery.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/instruction-discovery.ts"
+  },
+  {
+    "id": "opencode-source-config",
+    "url": "https://raw.githubusercontent.com/anomalyco/opencode/9e2f9311ae1b183af0c971c165aff324e8b4b2b8/packages/core/src/config.ts",
+    "repo": "anomalyco/opencode",
+    "commit": "9e2f9311ae1b183af0c971c165aff324e8b4b2b8",
+    "source_path": "packages/core/src/config.ts"
+  }
+]

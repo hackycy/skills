@@ -1,0 +1,142 @@
+{
+  "at_utc": "2026-11-10T03:45:27.626142+00:00",
+  "root": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm",
+  "env": {
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "PATH": "/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/go/bin:/opt/homebrew/bin:/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.codex/tmp/arg0-macos/codex-arg0DWXkTS:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/Users/qigong-it-1/Library/pnpm/bin:/Users/qigong-it-1/.cargo/bin:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS",
+    "SHELL": "/bin/zsh",
+    "TERM": "dumb",
+    "TMPDIR": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/",
+    "HOME": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home",
+    "XDG_CONFIG_HOME": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/config",
+    "XDG_CACHE_HOME": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/cache",
+    "XDG_DATA_HOME": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/data",
+    "CODEX_HOME": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/codex",
+    "NO_COLOR": "1",
+    "DO_NOT_TRACK": "1",
+    "CI": "1"
+  },
+  "tree_before_sha256": "284d1cb3d87f1823e79957b40cbc793193cd0031a2c7690f5e79951e709d40c7",
+  "tree_after_sha256": "0a6154a92fde815a1533aceb4f81922a39fc14fefe28de65138ce6cf9b75bf2c",
+  "results": [
+    {
+      "argv": [
+        "/Users/qigong-it-1/.opencode/bin/opencode",
+        "debug",
+        "skill"
+      ],
+      "cwd": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project",
+      "exit_code": 0,
+      "stdout_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/opencode-debug.stdout",
+      "stderr_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/opencode-debug.stderr",
+      "stdout_sha256": "d095d6a8b537f369c179d81dc133118864efb586a41e04347d1cf3694031609d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "discovered": [
+        {
+          "name": "project-opencode",
+          "location": "/private/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project/.opencode/skills/project-opencode/SKILL.md"
+        },
+        {
+          "name": "global-opencode",
+          "location": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/config/opencode/skills/global-opencode/SKILL.md"
+        },
+        {
+          "name": "global-agents",
+          "location": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/.agents/skills/global-agents/SKILL.md"
+        },
+        {
+          "name": "project-agents",
+          "location": "/private/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project/.agents/skills/project-agents/SKILL.md"
+        },
+        {
+          "name": "global-claude",
+          "location": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/.claude/skills/global-claude/SKILL.md"
+        },
+        {
+          "name": "project-claude",
+          "location": "/private/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project/.claude/skills/project-claude/SKILL.md"
+        }
+      ]
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/codex",
+        "features",
+        "list"
+      ],
+      "cwd": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project",
+      "exit_code": 0,
+      "stdout_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/codex-features.stdout",
+      "stderr_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/codex-features.stderr",
+      "stdout_sha256": "773338d5985ac7cf3184a27468bedf0096e366793906a6aa65bc4ca1989b9416",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/codex",
+        "app-server",
+        "--help"
+      ],
+      "cwd": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project",
+      "exit_code": 0,
+      "stdout_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/codex-app-server.stdout",
+      "stderr_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/codex-app-server.stderr",
+      "stdout_sha256": "95d290035d274e91e6f85b9af63e9a3fd2cf70a2295d9eedbfc23a2ee82d4383",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/codex",
+        "plugin",
+        "--help"
+      ],
+      "cwd": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project",
+      "exit_code": 0,
+      "stdout_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/codex-plugin.stdout",
+      "stderr_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/codex-plugin.stderr",
+      "stdout_sha256": "a517a3a2d1801d812751d98c8bc4d27de6bb5367aafc67495e0cde3a99680124",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/codex",
+        "app-server"
+      ],
+      "cwd": "/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project",
+      "exit_code_after_terminate": 0,
+      "skills_list_response": true,
+      "raw_file": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery/codex-rpc.json",
+      "raw_sha256": "5196a40e5631a1b425a8d691fdbb9a326981f0ad5135c10b4d26e612c40110ea",
+      "rpc_error": null,
+      "discovered": [
+        {
+          "name": "project-agents",
+          "path": "/private/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project/.agents/skills/project-agents/SKILL.md",
+          "scope": "repo",
+          "enabled": true
+        },
+        {
+          "name": "project-codex",
+          "path": "/private/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/project/.codex/skills/project-codex/SKILL.md",
+          "scope": "repo",
+          "enabled": true
+        },
+        {
+          "name": "global-agents",
+          "path": "/private/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/.agents/skills/global-agents/SKILL.md",
+          "scope": "user",
+          "enabled": true
+        },
+        {
+          "name": "global-codex",
+          "path": "/private/var/folders/t_/7hzhygj540jbb980xrx0v9zw0000gn/T/host-capability-discovery-ijqggrmm/home/codex/skills/global-codex/SKILL.md",
+          "scope": "user",
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "full_raw_cache": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/hosts/discovery-results.full.json",
+  "full_raw_sha256": "465346f73067b8c3bea7cd8a7a9bcc2afcbff05f1a94f9e6ba7233603c4c5a59"
+}
