@@ -1,0 +1,50 @@
+{
+  "baseline": "f74deccc5991e0452b3cb83feba51fe1c6bb1c1c",
+  "codeFileCount": 7,
+  "code": [
+    {
+      "path": "packages/agent-notes/src/cli/arguments.ts",
+      "beforeSha256": "a704fe397a44e4e6b844250e804e7da8bfcd50f8aa02e5f75e73ca299854907b",
+      "afterSha256": "e91a7c76cda05fc8ed9bbc763a543832f9f19ba5261b732c0c601f392d4a4fde"
+    },
+    {
+      "path": "packages/agent-notes/src/cli/init.ts",
+      "beforeSha256": "51bb3cb0721db353b70747d883ffc31e5dfe6d23b491839576dd506b90468c9a",
+      "afterSha256": "a679f0888b7844bf944297d2742af2b5ef3806c69f1066326df6d9980e22fb59"
+    },
+    {
+      "path": "packages/agent-notes/src/distribution/git-rules.ts",
+      "beforeSha256": "447e306b92c42e8d07dbcb989c5bfe51c9b7154c21d9c29db4eac2d4fc8063b0",
+      "afterSha256": "2027139df06d24bc3cbfbf3cd6c2fd43936b96a27359e064c9333968170fb29a"
+    },
+    {
+      "path": "packages/agent-notes/src/distribution/layout.ts",
+      "beforeSha256": "3dd5dc841eb533f62eee4edad72d906e7d8a0a11c0146aabe42100e05aebf050",
+      "afterSha256": "e4bf20c0268808f493cc57c2e4638b00de3d3ed736aa50e6ff73d738826ae905"
+    },
+    {
+      "path": "packages/agent-notes/src/distribution/manage.ts",
+      "beforeSha256": "520c70a854dbc7adb0d8cafed786defc1fccdef959fe4ffd13603647ed2f9c7e",
+      "afterSha256": "03fb1cabd6427b2ad68b68d7962eb8496d9cff6b8942f8500c1ceae654b78045"
+    },
+    {
+      "path": "packages/agent-notes/src/distribution/manifest.ts",
+      "beforeSha256": "07e7edbfc42d2d87192ced4dda87d14df6dfccd0ecc02f0b22c99e5936a84cb1",
+      "afterSha256": "1b000f644c9b58bb36444a0c9933afd368c716c9eb11acb9ab1eeeeba01e85fb"
+    },
+    {
+      "path": "packages/agent-notes/src/workflow/transaction.ts",
+      "beforeSha256": "939d3079b861af20877e8c412f4f0983ea9b90c4fdd6eb679ade6a490ab4d8da",
+      "afterSha256": "35ec3778c897ed0656595dda003477e793778ad0ca1e4231f3b874f21c018fa2"
+    }
+  ],
+  "numstat": "2\t2\tpackages/agent-notes/src/cli/arguments.ts\n2\t2\tpackages/agent-notes/src/cli/init.ts\n1\t1\tpackages/agent-notes/src/distribution/git-rules.ts\n1\t1\tpackages/agent-notes/src/distribution/layout.ts\n3\t3\tpackages/agent-notes/src/distribution/manage.ts\n3\t3\tpackages/agent-notes/src/distribution/manifest.ts\n2\t2\tpackages/agent-notes/src/workflow/transaction.ts\n",
+  "docPaths": [
+    "packages/agent-notes/AGENTS.md",
+    "packages/agent-notes/README.md",
+    "packages/agent-notes/docs/installation.md",
+    "packages/agent-notes/assets/references/cli.md",
+    "packages/agent-notes/docs/maintainers/design.md",
+    "packages/agent-notes/docs/maintainers/validation.md"
+  ]
+}

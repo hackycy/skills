@@ -1,0 +1,69 @@
+diff --git a/packages/agent-notes/src/cli/arguments.ts b/packages/agent-notes/src/cli/arguments.ts
+index 49aee17..363dd98 100644
+--- a/packages/agent-notes/src/cli/arguments.ts
++++ b/packages/agent-notes/src/cli/arguments.ts
+@@ -21 +21 @@ const schema = z.strictObject({
+-  target: repeated(z.enum(['agents', 'claude'])).refine(values => new Set(values).size === values.length, 'Targets must be distinct: agents and/or claude.'),
++  target: repeated(z.enum(['agents', 'claude', 'study'])).refine(values => new Set(values).size === values.length, 'Targets must be distinct: agents, claude and/or study.'),
+@@ -69 +69 @@ function declarations(kind: 'package' | 'runtime'): CAC {
+-      .option('--target <agents|claude>', 'Installation target (repeat for both)')
++      .option('--target <agents|claude|study>', 'Installation target (repeat for multiple)')
+diff --git a/packages/agent-notes/src/cli/init.ts b/packages/agent-notes/src/cli/init.ts
+index 96c9b3d..67558b9 100644
+--- a/packages/agent-notes/src/cli/init.ts
++++ b/packages/agent-notes/src/cli/init.ts
+@@ -26 +26 @@ const prompts: InitPrompts = {
+-  targets: () => multiselect<Target>({ ...terminal, message: 'Installation targets', options: [{ value: 'agents', label: 'Agents (.agents)' }, { value: 'claude', label: 'Claude (.claude)' }], initialValues: ['agents'], required: true }),
++  targets: () => multiselect<Target>({ ...terminal, message: 'Installation targets', options: [{ value: 'agents', label: 'Agents (.agents)' }, { value: 'claude', label: 'Claude (.claude)' }, { value: 'study', label: 'Study (.study; synthetic)' }], initialValues: ['agents'], required: true }),
+@@ -65 +65 @@ function finish(input: Options): Options {
+-    throw new NotesError('INVALID_INPUT', 'New installations require --target agents and/or --target claude when interaction is disabled.', undefined, 2)
++    throw new NotesError('INVALID_INPUT', 'New installations require --target agents, --target claude and/or --target study when interaction is disabled.', undefined, 2)
+diff --git a/packages/agent-notes/src/distribution/git-rules.ts b/packages/agent-notes/src/distribution/git-rules.ts
+index a92a688..38e36cf 100644
+--- a/packages/agent-notes/src/distribution/git-rules.ts
++++ b/packages/agent-notes/src/distribution/git-rules.ts
+@@ -103 +103 @@ export function planGitRules(source: Snapshot, notesDir: string, assetPaths: str
+-      const match = /^(\.(?:agents|claude)\/skills\/[^/]+)\//.exec(path)
++      const match = /^(\.(?:agents|claude|study)\/skills\/[^/]+)\//.exec(path)
+diff --git a/packages/agent-notes/src/distribution/layout.ts b/packages/agent-notes/src/distribution/layout.ts
+index d80ca4b..ba61d6e 100644
+--- a/packages/agent-notes/src/distribution/layout.ts
++++ b/packages/agent-notes/src/distribution/layout.ts
+@@ -183 +183 @@ export function hasProjectRoute(root: string): boolean {
+-  for (const path of ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md']) {
++  for (const path of ['NOTES-STUDY.md', 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md']) {
+diff --git a/packages/agent-notes/src/distribution/manage.ts b/packages/agent-notes/src/distribution/manage.ts
+index 5fa6dfb..a829e78 100644
+--- a/packages/agent-notes/src/distribution/manage.ts
++++ b/packages/agent-notes/src/distribution/manage.ts
+@@ -93 +93 @@ function protectLayout(config: ProjectConfig): void {
+-  const roots = ['.agents/skills', '.claude/skills', 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes']
++  const roots = ['.study/skills', 'NOTES-STUDY.md', '.agents/skills', '.claude/skills', 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes']
+@@ -263,2 +263,2 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
+-      const ownedEntry = installation?.assets.find(asset => asset.kind === 'block' && (target === 'agents' ? asset.path === 'AGENTS.md' : ['CLAUDE.md', '.claude/CLAUDE.md'].includes(asset.path)))?.path
+-      const entry = ownedEntry ?? (target === 'agents' ? 'AGENTS.md' : source.exists('CLAUDE.md') ? 'CLAUDE.md' : '.claude/CLAUDE.md')
++      const ownedEntry = installation?.assets.find(asset => asset.kind === 'block' && (target === 'study' ? asset.path === 'NOTES-STUDY.md' : target === 'agents' ? asset.path === 'AGENTS.md' : ['CLAUDE.md', '.claude/CLAUDE.md'].includes(asset.path)))?.path
++      const entry = ownedEntry ?? (target === 'study' ? 'NOTES-STUDY.md' : target === 'agents' ? 'AGENTS.md' : source.exists('CLAUDE.md') ? 'CLAUDE.md' : '.claude/CLAUDE.md')
+diff --git a/packages/agent-notes/src/distribution/manifest.ts b/packages/agent-notes/src/distribution/manifest.ts
+index 35adbb0..acff492 100644
+--- a/packages/agent-notes/src/distribution/manifest.ts
++++ b/packages/agent-notes/src/distribution/manifest.ts
+@@ -8 +8 @@ import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from './layout'
+-export type Target = 'agents' | 'claude'
++export type Target = 'agents' | 'claude' | 'study'
+@@ -34 +34 @@ export function managedPath(path: string, kind: Asset['kind'], targets: Target[]
+-    return ['.gitignore', '.gitattributes', ...(targets.includes('agents') ? ['AGENTS.md'] : []), ...(targets.includes('claude') ? ['CLAUDE.md', '.claude/CLAUDE.md'] : [])].includes(path)
++    return ['.gitignore', '.gitattributes', ...(targets.includes('study') ? ['NOTES-STUDY.md'] : []), ...(targets.includes('agents') ? ['AGENTS.md'] : []), ...(targets.includes('claude') ? ['CLAUDE.md', '.claude/CLAUDE.md'] : [])].includes(path)
+@@ -48 +48 @@ export function readInstallation(source: Snapshot, suppliedLayout?: NotesLayout)
+-    || !Array.isArray(value.targets) || !value.targets.length || value.targets.some(target => !['agents', 'claude'].includes(target))
++    || !Array.isArray(value.targets) || !value.targets.length || value.targets.some(target => !['agents', 'claude', 'study'].includes(target))
+diff --git a/packages/agent-notes/src/workflow/transaction.ts b/packages/agent-notes/src/workflow/transaction.ts
+index b29c3a5..6bc268b 100644
+--- a/packages/agent-notes/src/workflow/transaction.ts
++++ b/packages/agent-notes/src/workflow/transaction.ts
+@@ -29 +29 @@ export function distributionPath(path: string, layout = notesLayout()): boolean
+-    [layout.installPath, layout.configPath, 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes'].includes(path)
++    [layout.installPath, layout.configPath, 'NOTES-STUDY.md', 'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.gitignore', '.gitattributes'].includes(path)
+@@ -31 +31 @@ export function distributionPath(path: string, layout = notesLayout()): boolean
+-    || /^(?:\.agents|\.claude)\/skills\/(?:agent-note|agent-note-maintenance)\//.test(path)
++    || /^(?:\.agents|\.claude|\.study)\/skills\/(?:agent-note|agent-note-maintenance)\//.test(path)

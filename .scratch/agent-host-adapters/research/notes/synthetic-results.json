@@ -1,0 +1,215 @@
+{
+  "environment": {
+    "node": "v24.16.0",
+    "platform": "darwin",
+    "release": "25.5.0",
+    "arch": "arm64",
+    "raw": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2"
+  },
+  "records": [
+    {
+      "id": "synthetic-001-apply",
+      "argv": [
+        "python3",
+        "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.scratch/agent-host-adapters/research/notes/prepare-synthetic.py"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes",
+      "environment": {
+        "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/home",
+        "npm_config_cache": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/npm-cache",
+        "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/xdg",
+        "NODE_PATH": "",
+        "NODE_OPTIONS": "",
+        "CI": "true",
+        "GIT_CONFIG_GLOBAL": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/empty-gitconfig",
+        "GIT_CONFIG_NOSYSTEM": "1"
+      },
+      "exit": 0,
+      "signal": null,
+      "durationMs": 150,
+      "stdout": "synthetic-001-apply.stdout",
+      "stderr": "synthetic-001-apply.stderr",
+      "stdoutSha256": "c2830dabf94fc98410fda564c11392478afe29b3181c41ed426f5802fd4733ef",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tree": null,
+      "changed": [],
+      "result": null,
+      "code": null,
+      "data": null,
+      "error": null
+    },
+    {
+      "id": "synthetic-002-synthetic-tests",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@hackycy/agent-notes",
+        "test",
+        "tests/third-target.test.ts"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes",
+      "environment": {
+        "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/home",
+        "npm_config_cache": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/npm-cache",
+        "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/xdg",
+        "NODE_PATH": "",
+        "NODE_OPTIONS": "",
+        "CI": "true",
+        "GIT_CONFIG_GLOBAL": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/empty-gitconfig",
+        "GIT_CONFIG_NOSYSTEM": "1"
+      },
+      "exit": 0,
+      "signal": null,
+      "durationMs": 6654,
+      "stdout": "synthetic-002-synthetic-tests.stdout",
+      "stderr": "synthetic-002-synthetic-tests.stderr",
+      "stdoutSha256": "ddb5c1ea4b38e445e4f198cf099bed061ba9322aaddb25b8fe423f56253f683f",
+      "stderrSha256": "abf2948a627b2ef61a0518ed5cf04427ee248a65ca6031abf9aed69e22b82a7d",
+      "tree": null,
+      "changed": [],
+      "result": null,
+      "code": null,
+      "data": null,
+      "error": null
+    },
+    {
+      "id": "synthetic-003-typecheck",
+      "argv": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "--noEmit"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes",
+      "environment": {
+        "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/home",
+        "npm_config_cache": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/npm-cache",
+        "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/xdg",
+        "NODE_PATH": "",
+        "NODE_OPTIONS": "",
+        "CI": "true",
+        "GIT_CONFIG_GLOBAL": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/empty-gitconfig",
+        "GIT_CONFIG_NOSYSTEM": "1"
+      },
+      "exit": 0,
+      "signal": null,
+      "durationMs": 1516,
+      "stdout": "synthetic-003-typecheck.stdout",
+      "stderr": "synthetic-003-typecheck.stderr",
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tree": null,
+      "changed": [],
+      "result": null,
+      "code": null,
+      "data": null,
+      "error": null
+    },
+    {
+      "id": "synthetic-004-build",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@hackycy/agent-notes",
+        "build"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes",
+      "environment": {
+        "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/home",
+        "npm_config_cache": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/npm-cache",
+        "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/xdg",
+        "NODE_PATH": "",
+        "NODE_OPTIONS": "",
+        "CI": "true",
+        "GIT_CONFIG_GLOBAL": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/empty-gitconfig",
+        "GIT_CONFIG_NOSYSTEM": "1"
+      },
+      "exit": 0,
+      "signal": null,
+      "durationMs": 495,
+      "stdout": "synthetic-004-build.stdout",
+      "stderr": "synthetic-004-build.stderr",
+      "stdoutSha256": "e23feb012931500614b85bcc1f3f43e246cdf39a5607c1e4859e815ea798ade2",
+      "stderrSha256": "54506f61f0ff5d6b20d166cb10abf809b566b57b981df4aecc2298c28fc3dccb",
+      "tree": null,
+      "changed": [],
+      "result": null,
+      "code": null,
+      "data": null,
+      "error": null
+    },
+    {
+      "id": "synthetic-005-pack",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@hackycy/agent-notes",
+        "pack",
+        "--pack-destination",
+        "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes",
+      "environment": {
+        "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/home",
+        "npm_config_cache": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/npm-cache",
+        "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/xdg",
+        "NODE_PATH": "",
+        "NODE_OPTIONS": "",
+        "CI": "true",
+        "GIT_CONFIG_GLOBAL": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/empty-gitconfig",
+        "GIT_CONFIG_NOSYSTEM": "1"
+      },
+      "exit": 0,
+      "signal": null,
+      "durationMs": 474,
+      "stdout": "synthetic-005-pack.stdout",
+      "stderr": "synthetic-005-pack.stderr",
+      "stdoutSha256": "a050cf2ade241d8f41a4abfe9e480e9936ad3230f604c478187ef327a8021ee1",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tree": null,
+      "changed": [],
+      "result": null,
+      "code": null,
+      "data": null,
+      "error": null
+    },
+    {
+      "id": "synthetic-006-install",
+      "argv": [
+        "npm",
+        "install",
+        "--offline",
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund",
+        "--prefix",
+        "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/npm-study",
+        "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/hackycy-agent-notes-0.3.1-study.0.tgz"
+      ],
+      "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2",
+      "environment": {
+        "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/home",
+        "npm_config_cache": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/npm-cache",
+        "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/xdg",
+        "NODE_PATH": "",
+        "NODE_OPTIONS": "",
+        "CI": "true",
+        "GIT_CONFIG_GLOBAL": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/worktrees/notes/.cache/host-adapter-study/notes-attempt2/empty-gitconfig",
+        "GIT_CONFIG_NOSYSTEM": "1"
+      },
+      "exit": 0,
+      "signal": null,
+      "durationMs": 332,
+      "stdout": "synthetic-006-install.stdout",
+      "stderr": "synthetic-006-install.stderr",
+      "stdoutSha256": "966d2d69047ba66e1f2a557f35bee73249153347c97ed115e0856ea8bde2df6a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tree": null,
+      "changed": [],
+      "result": null,
+      "code": null,
+      "data": null,
+      "error": null
+    }
+  ]
+}
