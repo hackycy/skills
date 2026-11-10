@@ -1,0 +1,9 @@
+{
+  "base": "http://127.0.0.1:55174",
+  "requests": [
+    "/engine-v0.1.21/impeccable-darwin-arm64",
+    "/engine-v0.1.21/impeccable-darwin-arm64",
+    "/engine-v0.1.21/impeccable-darwin-arm64"
+  ],
+  "note": "Local HTTP fixture, official verified engine bytes for first request; invalid bytes for second. Not a GitHub outage test."
+}

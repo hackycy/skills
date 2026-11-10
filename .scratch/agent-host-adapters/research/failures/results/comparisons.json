@@ -1,0 +1,39 @@
+{
+  "partial_rerun_equal_clean": true,
+  "killed_rerun_equal_clean": true,
+  "clean_file_count": 125,
+  "notes_file_count": 22,
+  "impeccable_installed_bytes_equal_zip": true,
+  "installed_engines": {
+    ".agents/skills/impeccable/scripts/bin/darwin-arm64/impeccable": {
+      "size": 18499072,
+      "sha256": "086fd22e54c445a0e792f66d2f168e35ec93f7c59054e1fde539d0d95b01ce41",
+      "mode": "755"
+    },
+    ".claude/skills/impeccable/scripts/bin/darwin-arm64/impeccable": {
+      "size": 18499072,
+      "sha256": "086fd22e54c445a0e792f66d2f168e35ec93f7c59054e1fde539d0d95b01ce41",
+      "mode": "755"
+    }
+  },
+  "notes_permission_rollback_empty": true,
+  "notes_recovery_conflict_zero_diff": true,
+  "impeccable_killed_remaining": [
+    ".agents/skills/impeccable/SKILL.md",
+    ".agents/skills/impeccable/agents/impeccable_asset_producer.toml",
+    ".agents/skills/impeccable/agents/impeccable_documenter.toml",
+    ".agents/skills/impeccable/agents/impeccable_finish_reviewer.toml"
+  ],
+  "race_statuses": {
+    "notes-concurrent-init": 0,
+    "notes-concurrent-contender": 1,
+    "impeccable-concurrent-a": 1,
+    "impeccable-concurrent-b": 0,
+    "impeccable-race-1-b": 0,
+    "impeccable-race-1-a": 0,
+    "impeccable-race-2-b": 0,
+    "impeccable-race-2-a": 0,
+    "impeccable-race-3-a": 0,
+    "impeccable-race-3-b": 0
+  }
+}

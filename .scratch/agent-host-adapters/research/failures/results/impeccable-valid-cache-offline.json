@@ -1,0 +1,60 @@
+{
+  "id": "impeccable-valid-cache-offline",
+  "started": "2026-11-10T04:00:56.994Z",
+  "argv": [
+    "/usr/bin/sandbox-exec",
+    "-p",
+    "(version 1)(allow default)(deny network*)",
+    "/Users/qigong-it-1/Library/pnpm/store/v11/links/@/node/24.16.0/cd3758d92cd77785ba8e8ba047fb3f3fb8617bdf37abef9d97c0563dca124fa0/node_modules/node/bin/node",
+    "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/extracted/impeccable/package/cli/bin/cli.js",
+    "--help"
+  ],
+  "cwd": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/cache-probe",
+  "env": {
+    "PATH": "/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/go/bin:/opt/homebrew/bin:/Users/qigong-it-1/fvm/versions/3.7.2/bin:/Users/qigong-it-1/.codex/tmp/arg0-macos/codex-arg0DWXkTS:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/qigong-it-1/.grok/bin:/Users/qigong-it-1/.opencode/bin:/Users/qigong-it-1/.mimocode/bin:/opt/homebrew/opt/openjdk@17/bin:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/build-tools/36.0.0:/Users/qigong-it-1/.local/bin:/Users/qigong-it-1/.ycy-cli/bin:/Users/qigong-it-1/.bun/bin:/opt/homebrew/opt/curl/bin:/Users/qigong-it-1/Library/pnpm/bin:/Users/qigong-it-1/.cargo/bin:/Users/qigong-it-1/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS",
+    "HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home",
+    "TMPDIR": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/tmp",
+    "XDG_CACHE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.cache",
+    "CI": "1",
+    "IMPECCABLE_HOME": "/Users/qigong-it-1/Workspace/skills/.cache/host-adapter-study/clean-reproduction-4p16yriq/.cache/host-adapter-study/failures-run-rm67Dc/home/.impeccable",
+    "IMPECCABLE_DOWNLOAD_BASE": "http://127.0.0.1:9"
+  },
+  "status": 0,
+  "signal": null,
+  "killedAfterObservedPath": false,
+  "stdout": "Usage: impeccable <command> [options]\n\nCommands:\n  detect [file-or-dir-or-url...]   Scan for UI anti-patterns and design quality issues\n  ignores                          Manage detector ignore rules, files, and values\n  help                             List all available skills and commands\n  install                          Install impeccable skills into your project or global harness\n  link                             Symlink skills from a local checkout or submodule\n  update                           Update skills to the latest version\n  check                            Check if skill updates are available\n  telemetry off|on|status          Turn the roll API's anonymous usage data off or on, or show it\n\nOptions:\n  --help       Show this help message\n  --version    Show version number\n\nCompatibility:\n  impeccable skills <command>       Legacy namespace; still supported.\n",
+  "stderr": "",
+  "before": {},
+  "after": {},
+  "diff": [],
+  "homeBefore": {
+    ".impeccable/bin/0.1.21/impeccable": {
+      "size": 18499072,
+      "sha256": "086fd22e54c445a0e792f66d2f168e35ec93f7c59054e1fde539d0d95b01ce41",
+      "mode": "755"
+    }
+  },
+  "homeAfter": {
+    ".impeccable/bin/0.1.21/impeccable": {
+      "size": 18499072,
+      "sha256": "086fd22e54c445a0e792f66d2f168e35ec93f7c59054e1fde539d0d95b01ce41",
+      "mode": "755"
+    },
+    ".impeccable/bin/0.1.21/impeccable.verified": {
+      "size": 74,
+      "sha256": "0e760b4bd2e1eb98350c76d64ceffc71f1b796204af83418488bd4cce8adb915",
+      "mode": "644"
+    }
+  },
+  "homeDiff": [
+    {
+      "path": ".impeccable/bin/0.1.21/impeccable.verified",
+      "before": null,
+      "after": {
+        "size": 74,
+        "sha256": "0e760b4bd2e1eb98350c76d64ceffc71f1b796204af83418488bd4cce8adb915",
+        "mode": "644"
+      }
+    }
+  ]
+}
