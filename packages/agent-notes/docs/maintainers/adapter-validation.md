@@ -1,8 +1,8 @@
 # 项目 skill 接入实现验收
 
-日期：2026-11-10。对象为未发布工作树，基线 f74deccc5991e0452b3cb83feba51fe1c6bb1c1c；实际候选 tarball 从本次实现构建，在 checkout 外解包验证。A 的 manifest 版本仍为 0.3.0，B 为隔离的 0.3.1 夹具；两者都是新协议，不能与已发布的旧 0.3.0 混同。未发布 npm、推送 Git 或更改用户全局宿主配置。
+验收日期：2026-11-10。对象为当时未发布工作树，基线 f74deccc5991e0452b3cb83feba51fe1c6bb1c1c；该实现随后提交为 8745a26。实际候选 tarball 从该实现构建，在 checkout 外解包验证。A 的 manifest 版本仍为 0.3.0，B 为隔离的 0.3.1 夹具；两者都是新协议，不能与已发布的旧 0.3.0 混同。当次验收未发布 npm、推送 Git 或更改用户全局宿主配置。
 
-实现模型见[安装投影与恢复](integrations.md)，用户操作见[安装指南](../installation.md)。两张决策地图保留历史研究与设计记录；本记录只报告实现后的实际观察。
+实现模型与容量计量见[安装投影与恢复](integrations.md)，持续验收与支持声明门槛见[维护验证](validation.md)，固定宿主资料见[上游依据](upstreams.md)，用户操作见[安装指南](../installation.md)。这些维护文档承接已确认的设计，不依赖临时讨论地图；本记录只报告相应产物的实际观察，不替后续代码或资源变更背书。
 
 ## 已验证结果
 
@@ -50,13 +50,13 @@ B tarball SHA-256：7d360cb149226b11d491be562cddfa6235cbcfc600c525c05eaf2b03803a
 
 首次实现报告的 240 项测试不足以关闭完整验收。本次复核补齐真实宿主描述扩展包和独立容量边界，并修正了以下可复现问题：恢复收尾重建观察基准会漏掉最后一步外部修改；大端点的重复分组正则及解码前预算；内容事务编码前的累计预算；Git 仅检查未知忽略规则的单向变化；journal 可自报公共创建目录；文本物化的 UTF-8 有损解码。最终包重新构建，前述机械验证均对修正后的包或源码重新运行。
 
-机械矩阵的复现定位：M01–M03 对应真实 bundle 矩阵，M04–M09 对应 CLI/投影/分发测试及 npm smoke，M10–M11 对应真实 Git 和缺工具测试，M12–M15 对应原生备份权限、锁、竞态、多断点 SIGKILL 和恢复冲突测试，M16 对应输入与真实 PTY，M17 对应两 Node 的 npm/bin 与离线 runtime，M18 对应隔离扩展包，M19 对应边界测试及 28 场景/Node 的容量 audit，M20 对应包范围、文档闭包、旧语义拒绝及历史 Note 契约回归。宿主声明和跨平台边界仍按下一节限定。
+机械矩阵的复现定位见[安装模型验收矩阵](validation.md#安装模型验收矩阵)：M01–M03 对应真实 bundle 矩阵，M04–M09 对应 CLI/投影/分发测试及 npm smoke，M10–M11 对应真实 Git 和缺工具测试，M12–M15 对应原生备份权限、锁、竞态、多断点 SIGKILL 和恢复冲突测试，M16 对应输入与真实 PTY，M17 对应两 Node 的 npm/bin 与离线 runtime，M18 对应隔离扩展包，M19 对应边界测试及 28 场景/Node 的容量 audit，M20 对应包范围、文档闭包、旧语义拒绝及历史 Note 契约回归。宿主声明和跨平台边界仍按下一节限定。
 
 ## 宿主和证据边界
 
-Codex CLI **0.156.1**：隔离 HOME/CODEX_HOME，以真实新包安装 codex 与 claude-code，然后通过本地 app-server initialize、skills/list 查询。返回 agent-note 与 agent-note-maintenance，来源均为项目 `.agents/skills/.../SKILL.md`，scope repo，enabled true。这是 I 层发现证据，未启动 thread/turn、未调用模型。
+Codex CLI **0.156.1**，executable SHA-256 `0196e89fe5a7598f816ee54232c3d7c26d75e502ab5cfe2c9240e81d90f7255a`：隔离 HOME/CODEX_HOME，以真实新包安装 codex 与 claude-code，然后通过本地 app-server initialize、skills/list 查询。返回 agent-note 与 agent-note-maintenance，来源均为项目 `.agents/skills/.../SKILL.md`，scope repo，enabled true。这是 I 层组合发现证据，单宿主的新产物发现及 H03/H04 正文/工作流未验证；未启动 thread/turn、未调用模型。
 
-Claude Code CLI **2.1.319**：本次只记录本地版本；旧研究的官方文档与 help 事实继续作为背景。尚无新产物的真实 skill 发现/正文加载证据。两宿主均未进行显式正文加载、模型 context/check 工作流或自然触发实验，因此产品文档仅称静态候选接入；没有把机械验收写成完整宿主支持承诺。
+Claude Code CLI **2.1.319**，executable SHA-256 `1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd`：本次只记录本地版本；官方文档和固定来源见[上游依据](upstreams.md#项目-skill-接入依据)。尚无新产物的真实 skill 发现/正文加载证据。两宿主均未进行显式正文加载、模型 context/check 工作流或自然触发实验，因此产品文档仅称静态候选接入；没有把机械验收写成完整宿主支持承诺。
 
 Windows/Linux 原生、真实宿主正文与工作流、自然触发效果未运行。Node 通用跨平台设计和 macOS Git 换行检查不替代这些证据。对全部预算维度的最大值组合未作穷举压力测试；固定边界不是所有维度最大值的笛卡尔积承诺。
 

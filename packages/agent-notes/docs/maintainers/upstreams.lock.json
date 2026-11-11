@@ -1,12 +1,13 @@
 {
-  "observedOn": "2026-10-21",
-  "purpose": "Local design research; upstream checkouts are ignored and must not be committed",
+  "observedOn": "2026-11-10",
+  "purpose": "Design research baselines; upstream checkouts and fetched bodies are ignored and must not be committed",
   "repositories": [
     {
       "url": "https://github.com/deepseek-ai/deepseek-harness.git",
       "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
       "checkout": ".cache/upstreams/deepseek-harness",
-      "scope": "Agent Notes discovery, recording, maintenance, verification and runtime integration"
+      "scope": "Agent Notes discovery, recording, maintenance, verification and runtime integration",
+      "observedOn": "2026-10-21"
     },
     {
       "url": "https://github.com/mattpocock/skills.git",
@@ -19,7 +20,40 @@
         "skills/engineering/grill-with-docs/agents/openai.yaml",
         "docs/engineering/wayfinder.md",
         "docs/engineering/grill-with-docs.md"
-      ]
+      ],
+      "observedOn": "2026-10-21"
+    }
+  ],
+  "hostSkillSources": [
+    {
+      "url": "https://code.claude.com/docs/en/skills.md",
+      "fetchedAtUtc": "2026-11-10T03:37:54.617494+00:00",
+      "sha256": "50c0f7621b93db9b7d7d4db4bb079341354915aa5f33533950d3dbad8b124ff9",
+      "snapshot": ".cache/host-adapter-study/hosts/docs/claude-skills.body"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/host_roots.rs",
+      "fetchedAtUtc": "2026-11-10T03:44:39.515102+00:00",
+      "sha256": "7cae5c526a850db0f3ad8b5156a5d0c317df5b961d9f69c2a92aedb3a75291c3",
+      "snapshot": ".cache/host-adapter-study/hosts/docs/codex-source-ext-skills-src-host_roots.body",
+      "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+      "sourcePath": "codex-rs/ext/skills/src/host_roots.rs"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/loader/host.rs",
+      "fetchedAtUtc": "2026-11-10T03:44:39.513854+00:00",
+      "sha256": "dd9297df2b96a40a9639fa8b9b9fc74d14690d34352b31c87c240ff01e3f3898",
+      "snapshot": ".cache/host-adapter-study/hosts/docs/codex-source-ext-skills-src-loader-host.body",
+      "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+      "sourcePath": "codex-rs/ext/skills/src/loader/host.rs"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/openai/codex/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/loader/discovery.rs",
+      "fetchedAtUtc": "2026-11-10T03:44:39.514048+00:00",
+      "sha256": "0abff062b0115f32f653774189beabb67a440e3d6278ea3f5327052b4b5f2963",
+      "snapshot": ".cache/host-adapter-study/hosts/docs/codex-source-ext-skills-src-loader-discovery.body",
+      "commit": "551fc719d67b69997a5997d6a3f187a72ca2ab74",
+      "sourcePath": "codex-rs/ext/skills/src/loader/discovery.rs"
     }
   ]
 }

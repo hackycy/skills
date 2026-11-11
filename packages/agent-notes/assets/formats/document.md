@@ -4,7 +4,7 @@
 
 ## 1. 文档根、身份与编码
 
-默认 `.agents/notes/<lifecycle>/<class>/YYYY-MM-DD-topic.md`。lifecycle 为 proposed、implemented、rejected、archived；class 为 feature、bug-fix、simplification、architecture、process、testing。文档根在 init 时配置，必须位于项目内。
+默认 `.agents/notes/<lifecycle>/<class>/YYYY-MM-DD-topic.md`。lifecycle 为 proposed、implemented、rejected、archived；class 为 feature、bug-fix、simplification、architecture、process、testing。文档根在首次 install 时配置，必须位于项目内，后续管理命令不迁移该根。
 
 ID 为 `an-` 加小写 UUID v4，由 create 生成；标题为唯一 H1。日期为首次 create 的 UTC 日期，标题生成安全 slug；同身份的日期、slug 和 class 不随正文修改而重命名，状态转换仅移动 lifecycle。同名冲突报错，用户调整标题后重试。ID 不随移动改变，CLI 不接收调用者分配的 ID，不为删除的决定复用身份。
 
@@ -120,7 +120,7 @@ archive 从当前 implemented 原文生成终态，仅加入 archive 元数据�
 
 ## 6. 查询与引用修复
 
-静态入口只说明查询时机和命令，不列全库 Note。`context --paths ... --topic ...` 返回 ID、H1、status、read_when、路径、匹配原因及替代关系；全局、精确 topic、glob 和 requires 闭包构成必读集合。全文搜索沿用仓库搜索，不引入第二套检索服务。
+项目 skill 说明查询时机和命令，不列全库 Note。`context --paths ... --topic ...` 返回 ID、H1、status、read_when、路径、匹配原因及替代关系；全局、精确 topic、glob 和 requires 闭包构成必读集合。全文搜索沿用仓库搜索，不引入第二套检索服务。
 
 默认候选来自活跃树；archive 通过显式 `--include-archived` 查询或 show/历史关系追溯。结果完整输出，不静默截断必读项；候选过多时提示收窄范围，不自动丢弃全局约束。CLI 扫描文件不等于将正文提供给模型。
 

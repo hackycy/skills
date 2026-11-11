@@ -1,6 +1,6 @@
 # 上游依据
 
-研究基线记录于 [upstreams.lock.json](upstreams.lock.json)，含仓库 URL、完整 commit、仓库根相对的本地学习路径与阅读范围。学习副本位于已忽略的 `.cache/upstreams/`；保留版本锁用于后续对比，不提交或打包副本。
+研究基线记录于 [upstreams.lock.json](upstreams.lock.json)，含仓库 URL、完整 commit、仓库根相对的本地学习路径与阅读范围，以及宿主 skill 资料的抓取时间、hash 和快照路径。学习副本位于已忽略的 `.cache/upstreams/`，宿主资料原文位于 `.cache/host-adapter-study/hosts/docs/`；保留版本锁用于后续对比，不提交或打包副本。
 
 ## DeepSeek Harness
 
@@ -26,9 +26,20 @@
 - [wayfinder](https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/wayfinder/SKILL.md)在路线清楚、单会话可完成时允许不建地图，但没有实现自动进入原生 Plan 的协议。工作规模与文档价值应分别判断；其地图、ticket、认领及任务树不进入本产品。
 - [grill-with-docs](https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/grill-with-docs/SKILL.md)本身是委托入口；[自身文档](https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/docs/engineering/grill-with-docs.md)说明定案内容仍需满足持久化门槛，零 ADR 是正常结果。它没有提供本包所需的脚本校验与冻结闭环，其 ADR 判据不替代 Harness Notes 的记录标准。
 
-## 静态入口依据
+## 项目 skill 接入依据
 
-Claude 的[指令文件与导入](https://code.claude.com/docs/en/memory)和[项目 skills](https://code.claude.com/docs/en/skills)文档用于确定 `.claude/CLAUDE.md`、`@` 导入与 `.claude/skills/` 的静态布局。普通 Markdown 链接与全文导入不同，Notes 正文只按需打开。维护时复核相应官方文档，不从静态文件测试推导宿主会话已加载或已理解，也不维护宿主版本矩阵。
+2026-11-10 的研究用于选择本地 CLI 的候选静态目录，不据此管理 AGENTS/CLAUDE 或宣称模型已读正文。采纳范围为：
+
+| 依据 | 保留的结论与证据边界 |
+| --- | --- |
+| Claude Code [项目 skills](https://code.claude.com/docs/en/skills.md)，抓取原文 SHA-256 为 `50c0f7621b93db9b7d7d4db4bb079341354915aa5f33533950d3dbad8b124ff9` | 官方文档描述 `.claude/skills/<name>/SKILL.md` 和按需正文加载；闭源 loader 无固定实现证据，新产物发现/实际加载另验 |
+| Codex 固定提交 `551fc719d67b69997a5997d6a3f187a72ca2ab74` 的 [host roots](https://github.com/openai/codex/blob/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/host_roots.rs)、[host loader](https://github.com/openai/codex/blob/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/loader/host.rs) 与 [discovery](https://github.com/openai/codex/blob/551fc719d67b69997a5997d6a3f187a72ca2ab74/codex-rs/ext/skills/src/loader/discovery.rs) | 实现包含项目 `.agents/skills` 发现与作用域处理；固定源码未证明与本地 executable 完全同一构建，实际发现证据单列 |
+
+当时 Codex 官方 skills/AGENTS/config 等页面抓取均超时，保留为文档层缺口，不能解释为能力不支持；本次文档整理未重新联网验证。generic 只表示通用 `.agents/skills` 布局，不把其他宿主兼容读取该目录外推为完整支持。
+
+共享 skills 根不等于共享指令导入、作用域、优先级或插件协议。旧入口研究中的 `.claude/CLAUDE.md` 和 `@` 导入不再作为本产品安装策略；安装器不生成、解析导入来择路或维护任何常驻规则文件。两份 skill 的资源链接和实际 Notes 正文均按需读取。
+
+新产物在 Codex CLI 0.156.1 的发现观察及 Claude Code 2.1.319 的未验证项见[实现验收记录](adapter-validation.md)；完整宿主声明须满足[证据门槛](validation.md#宿主声明与平台政策)，不以静态文件测试推导会话已加载或已理解。
 
 ## 更新上游研究
 
