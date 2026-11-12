@@ -1,8 +1,36 @@
 # 项目 skill 接入实现验收
 
-验收日期：2026-11-10。对象为当时未发布工作树，基线 f74deccc5991e0452b3cb83feba51fe1c6bb1c1c；该实现随后提交为 8745a26。实际候选 tarball 从该实现构建，在 checkout 外解包验证。A 的 manifest 版本仍为 0.3.0，B 为隔离的 0.3.1 夹具；两者都是新协议，不能与已发布的旧 0.3.0 混同。当次验收未发布 npm、推送 Git 或更改用户全局宿主配置。
+本记录保存 **2026-11-10** 对特定候选产物的实际观察，供追溯实现和证据使用。当前设计见[安装投影与恢复](integrations.md)，后续改动的检查要求见[维护验证](validation.md)。
 
-实现模型与容量计量见[安装投影与恢复](integrations.md)，持续验收与支持声明门槛见[维护验证](validation.md)，固定宿主资料见[上游依据](upstreams.md)，用户操作见[安装指南](../installation.md)。这些维护文档承接已确认的设计，不依赖临时讨论地图；本记录只报告相应产物的实际观察，不替后续代码或资源变更背书。
+## 验收对象
+
+| 项目 | 当次身份 |
+| --- | --- |
+| 源码 | 未发布工作树，基线 `f74deccc5991e0452b3cb83feba51fe1c6bb1c1c`；实现随后提交为 `8745a26` |
+| A 包 | manifest 版本 0.3.0，新安装协议候选包 |
+| B 包 | 隔离的 0.3.1 夹具，新增 `assets/references/variant-b.md` |
+| 运行位置 | 从候选 tarball 在 checkout 外解包验证 |
+| 外部操作 | 未发布 npm、未推送 Git、未更改用户全局宿主配置 |
+
+A/B 都采用新协议，不能与已发布的旧 0.3.0 混同。下面的通过结论仅适用于当次源码和产物，不替后续修改背书。
+
+### 环境与产物
+
+原生环境为 macOS 26.5.1 arm64、Git 2.50.1。两个 Node 环境分别执行：
+
+| Node | npm | 执行方式 |
+| --- | --- | --- |
+| 22.12.0 | 10.9.0 | bundle 显式指定该 Node；npm/bin 检查使用对应 PATH |
+| 24.16.0 | 11.17.0 | bundle 显式指定该 Node；npm/bin 检查使用对应 PATH |
+
+最终复核产物：
+
+| 产物 | SHA-256 | 当时本机目录 |
+| --- | --- | --- |
+| A | `4d5f5c1772b141482d85a4e81ec99ccb1ec42c2234dbfcb5498a78ac266ce244` | `/tmp/agent-notes-assurance-a2-pack` |
+| B | `7d360cb149226b11d491be562cddfa6235cbcfc600c525c05eaf2b03803af71f` | `/tmp/agent-notes-assurance-b2-pack` |
+
+此前 final-a/final-b 产物及日志保留为早期证据，不作为修正后代码通过的依据。本机临时路径仅用于定位当次材料，不保证其他环境存在。
 
 ## 已验证结果
 
@@ -21,16 +49,11 @@
 | npm 与离线运行 | npm install --offline --ignore-scripts 后真正 bin，包引用闭包、runtime 引用闭包、同版备份修复、本地源损坏后完整匹配包修复、未知邻接文件保持、从非 Git 子目录发现自定义根 |
 | 同类扩展改动面 | 两份真实隔离测试包，各仅在 catalog 加一行 example-agent，分别使用新根和共享根；两 Node 下安装、撤出、共享及真实 SIGKILL 后由已安装 runtime 恢复均通过。正式 choices 不含该项。见 [extension-smoke.ts](../../tests/extension-smoke.ts) |
 
-真实 tarball 验收分别执行于 macOS 26.5.1 arm64、Node **22.12.0** / npm **10.9.0** 和 Node **24.16.0** / npm **11.17.0**，Git 2.50.1。bundle smoke 对应参数确实指定各自 Node，npm/bin smoke 在对应 Node/npm PATH 中执行；不是只替换了日志中的版本名。
-
-本次最终复核 A tarball SHA-256：4d5f5c1772b141482d85a4e81ec99ccb1ec42c2234dbfcb5498a78ac266ce244。
-B tarball SHA-256：7d360cb149226b11d491be562cddfa6235cbcfc600c525c05eaf2b03803af71f。产物分别位于本机 /tmp/agent-notes-assurance-a2-pack 和 /tmp/agent-notes-assurance-b2-pack；此前 final-a/final-b 产物与日志保留为早期证据，不作为修正后代码的通过依据。
-
 ## 容量与运行观测
 
 [capacity-audit.ts](../../tests/capacity-audit.ts) 对两个真实解包 CLI 的七集合，分别执行安装、A→B、B→A 和匹配源 repair，共 28 场景/Node。repair 同时损坏本地源和宿主 skill，记录 prepared journal、补充证据、完整备份和全部衍生路径。
 
-| 维度 | 实测最大值 | 已定上限 |
+| 维度 | 实测最大值 | 当次采用上限 |
 | --- | ---: | ---: |
 | journal 原始编码 | 3,694,391 B | 96 MiB |
 | 逻辑载荷（端点、双端索引/源与控制） | 5,613,860 B | 64 MiB |
@@ -46,22 +69,68 @@ B tarball SHA-256：7d360cb149226b11d491be562cddfa6235cbcfc600c525c05eaf2b03803a
 
 七集合 audit 整体耗时：Node 22 39.26 s，Node 24 37.83 s。/usr/bin/time -l 记录的 audit 进程最大 RSS 为 Node 22 305,610,752 B、Node 24 425,066,496 B。RSS 含 tsx、测试快照及多次管理，不是单次用户 CLI 内存保证；并行验证负载也会影响耗时，不设性能承诺。
 
-## 完成复核
+## 当次修复与复核
 
-首次实现报告的 240 项测试不足以关闭完整验收。本次复核补齐真实宿主描述扩展包和独立容量边界，并修正了以下可复现问题：恢复收尾重建观察基准会漏掉最后一步外部修改；大端点的重复分组正则及解码前预算；内容事务编码前的累计预算；Git 仅检查未知忽略规则的单向变化；journal 可自报公共创建目录；文本物化的 UTF-8 有损解码。最终包重新构建，前述机械验证均对修正后的包或源码重新运行。
+首次实现报告的 240 项测试尚未覆盖完整验收。最终复核补齐真实宿主描述扩展包和独立容量边界，并修复以下可复现问题后重新构建和运行：
 
-机械矩阵的复现定位见[安装模型验收矩阵](validation.md#安装模型验收矩阵)：M01–M03 对应真实 bundle 矩阵，M04–M09 对应 CLI/投影/分发测试及 npm smoke，M10–M11 对应真实 Git 和缺工具测试，M12–M15 对应原生备份权限、锁、竞态、多断点 SIGKILL 和恢复冲突测试，M16 对应输入与真实 PTY，M17 对应两 Node 的 npm/bin 与离线 runtime，M18 对应隔离扩展包，M19 对应边界测试及 28 场景/Node 的容量 audit，M20 对应包范围、文档闭包、旧语义拒绝及历史 Note 契约回归。宿主声明和跨平台边界仍按下一节限定。
+| 问题 | 复核关注点 |
+| --- | --- |
+| 恢复收尾重新读取观察基准，漏掉最后一步外部修改 | 保持初始观察值，完成前复查 |
+| 大端点重复分组正则及解码前预算不足 | 大端点处理与分配前限额 |
+| 内容事务编码前累计预算不足 | 编码前累计逻辑载荷 |
+| Git 只检查未知忽略规则的单向变化 | 忽略/可见状态双向保持 |
+| journal 可自报公共创建目录 | 目录动作从可信投影授权 |
+| 文本物化使用 UTF-8 有损解码 | 非法文本编码拒绝 |
+
+上述机械验证均针对修正后的包或源码重跑。矩阵编号与当次证据对应如下；编号定义见[安装模型验收矩阵](validation.md#安装模型验收矩阵)。
+
+| 编号 | 当次证据 |
+| --- | --- |
+| M01–M03 | 真实 bundle 矩阵与 A/B 切换 |
+| M04–M09 | CLI、投影、分发测试及 npm smoke |
+| M10–M11 | 真实 Git 和缺工具检查 |
+| M12–M15 | 原生备份权限、锁、竞态、多断点 SIGKILL 与恢复冲突 |
+| M16 | 输入与真实 PTY |
+| M17 | 两个 Node 环境的 npm/bin 与离线 runtime |
+| M18 | 隔离扩展包 |
+| M19 | 边界测试及 28 场景/Node 的容量审计 |
+| M20 | 包范围、文档闭包、旧语义拒绝与历史 Note 契约回归 |
 
 ## 宿主和证据边界
 
-Codex CLI **0.156.1**，executable SHA-256 `0196e89fe5a7598f816ee54232c3d7c26d75e502ab5cfe2c9240e81d90f7255a`：隔离 HOME/CODEX_HOME，以真实新包安装 codex 与 claude-code，然后通过本地 app-server initialize、skills/list 查询。返回 agent-note 与 agent-note-maintenance，来源均为项目 `.agents/skills/.../SKILL.md`，scope repo，enabled true。这是 I 层组合发现证据，单宿主的新产物发现及 H03/H04 正文/工作流未验证；未启动 thread/turn、未调用模型。
+当次宿主 executable 身份：
 
-Claude Code CLI **2.1.319**，executable SHA-256 `1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd`：本次只记录本地版本；官方文档和固定来源见[上游依据](upstreams.md#项目-skill-接入依据)。尚无新产物的真实 skill 发现/正文加载证据。两宿主均未进行显式正文加载、模型 context/check 工作流或自然触发实验，因此产品文档仅称静态候选接入；没有把机械验收写成完整宿主支持承诺。
+| 宿主 | 版本 | SHA-256 |
+| --- | --- | --- |
+| Codex CLI | 0.156.1 | `0196e89fe5a7598f816ee54232c3d7c26d75e502ab5cfe2c9240e81d90f7255a` |
+| Claude Code CLI | 2.1.319 | `1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd` |
 
-Windows/Linux 原生、真实宿主正文与工作流、自然触发效果未运行。Node 通用跨平台设计和 macOS Git 换行检查不替代这些证据。对全部预算维度的最大值组合未作穷举压力测试；固定边界不是所有维度最大值的笛卡尔积承诺。
+Codex 在隔离 HOME/CODEX_HOME 中，用真实新包同时安装 codex 与 claude-code，经本地 app-server initialize、skills/list 返回两份 skill：路径为项目 `.agents/skills/.../SKILL.md`，scope 为 repo，enabled 为 true。这是 I 层的组合发现证据；未启动 thread/turn 或调用模型。
+
+Claude Code 只记录本地版本，没有新产物的真实 skill 发现或正文加载证据。固定官方资料与源码来源见[项目 skill 接入依据](upstreams.md#项目-skill-接入依据)。
+
+当次未验证的范围：
+
+- Codex 单宿主的新产物发现，以及两宿主 H03/H04 的正文加载与实际工作流。
+- 显式模型 context/check 工作流和自然触发效果。
+- Windows/Linux 原生运行；Node 通用实现和 macOS Git 换行检查不替代这些证据。
+- 所有容量维度最大值的组合压力；独立边界不承诺其笛卡尔积可接受。
+
+因此，当次结论是静态候选接入及表中已验证层次，未宣称完整宿主支持。声明条件统一由[宿主声明与平台政策](validation.md#宿主声明与平台政策)定义。
 
 ## 重跑与证据
 
-从仓库根执行[验证要求](validation.md)中的 lint、tsc、包级测试、实际 pack、checkout 外 test:bundle/test:install。test:bundle 传两份当前协议、含真实资源差异的 CLI；capacity-audit.ts 同样传两个绝对 CLI 路径，可用 /usr/bin/time -l 包裹。设置 AGENT_NOTES_EVIDENCE 为输出前缀时，矩阵保存每次 argv/cwd/stdout/stderr/退出码及耗时。
+重跑流程以[维护验证](validation.md)为准。A/B 检查使用当前协议且有真实资源差异的两份 CLI；capacity-audit 同样传入两份绝对路径，可用 `/usr/bin/time -l` 记录观测。`AGENT_NOTES_EVIDENCE` 输出逐次矩阵调用证据的方法见[实验记录](validation.md#实验记录)。
 
-本地原始账本保留于根目录已忽略的 `.cache/agent-notes-adapter-implementation/`。最终复核使用 assurance-final-* 日志、assurance-release-node*.matrix.json、assurance-artifacts.json 及 assurance-source-files.json；扩展包的完整构建与运行记录在 /tmp/agent-notes-assurance-final-extension22 和 extension24 的 evidence.json。早期失败保留，包括初期 smoke/路径问题，以及本次大 Buffer 深比较导致测试断言进程内存耗尽、夹具依赖/catalog 构建问题和预期未更新；相应问题修正后重跑，未以跳过掩盖失败。缓存与隔离包不进入 npm 或提交。
+当次原始材料的位置如下，均为本地忽略内容，不进入 npm 或提交：
+
+| 材料 | 位置或名称 |
+| --- | --- |
+| 原始账本 | 仓库根 `.cache/agent-notes-adapter-implementation/` |
+| 最终复核日志 | `assurance-final-*` |
+| 矩阵调用记录 | `assurance-release-node*.matrix.json` |
+| 产物与源码身份 | `assurance-artifacts.json`、`assurance-source-files.json` |
+| Node 22 扩展包证据 | `/tmp/agent-notes-assurance-final-extension22/evidence.json` |
+| Node 24 扩展包证据 | `/tmp/agent-notes-assurance-final-extension24/evidence.json` |
+
+早期失败保留，包括初期 smoke/路径问题、大 Buffer 深比较导致断言进程内存耗尽、夹具依赖/catalog 构建问题和预期未更新。修正后重跑，未用跳过掩盖失败。
