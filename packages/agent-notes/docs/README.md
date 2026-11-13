@@ -1,12 +1,12 @@
 # Agent Notes 文档导航
 
-使用 Agent Notes 从[产品概览](../README.md)开始。维护本包时，先读[包级维护指南](../AGENTS.md)，再按改动范围选择文档。
+使用 Agent Notes 从[产品概览与入门教程](../README.md)开始。维护本包时，先读[包级维护指南](../AGENTS.md)，再按改动范围选择文档。
 
 ## 使用与接入
 
 | 目标 | 阅读入口 |
 | --- | --- |
-| 了解用途、查询记录、创建或维护决定 | [产品概览与日常使用](../README.md) |
+| 从想法形成提案，与 Agent 创建、交付和再次使用 Note | [产品概览与入门教程](../README.md) |
 | 安装、验证接入、调整宿主、升级或修复 | [安装指南](installation.md) |
 | 查命令、参数、配置、快照与退出码 | [CLI 契约](../assets/references/cli.md) |
 | 准备写入材料、处理引用与中断恢复 | [写入与生命周期](../assets/references/writing.md) |

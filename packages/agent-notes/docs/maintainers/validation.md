@@ -178,4 +178,4 @@ pnpm exec tsx packages/agent-notes/tests/extension-smoke.ts /absolute/new-eviden
 
 资源布局变化还需 A/B 替换验证：废弃受管资产被清理，手改先修复并备份，未知邻接文件保留，Notes/配置/seal 原字节保持，本地源损坏可从匹配完整包修复。
 
-README 保持概览与参考入口，参数、契约、写入规则各有定义位置。清理文档保留上游固定 commit 和实际未验证项，不用删除内容掩盖契约差异。完成时报告本次实际检查范围，历史结果继续留在[实现验收记录](adapter-validation.md)。
+README 提供产品概览与入门教程，示例串联用户和 Agent 从想法到记录及再次使用的过程；参数、格式与写入规则仍以各自契约为准。教程示例须与实际输入及输出一致，区分协作建议和 CLI 强制规则。清理文档保留上游固定 commit 和实际未验证项，不用删除内容掩盖契约差异。完成时报告本次实际检查范围，历史结果继续留在[实现验收记录](adapter-validation.md)。

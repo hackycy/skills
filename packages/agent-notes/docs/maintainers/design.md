@@ -50,7 +50,7 @@ rejected 保留原提案和拒绝理由，允许的维护限于路由元数据�
 
 | 唯一维护位置 | 内容与职责 | 分发范围 |
 | --- | --- | --- |
-| [README](../../README.md) | 产品概览与使用参考入口 | 仓库、npm |
+| [README](../../README.md) | 产品概览与入门教程，以用户和 Agent 的完整协作案例解释日常使用 | 仓库、npm |
 | [安装指南](../installation.md) | 安装、确认、升级和修复步骤 | 仓库、npm |
 | [文档导航](../README.md)、`docs/maintainers/` 与 [AGENTS](../../AGENTS.md) | 导航、设计理由、开发约束、验证和上游依据 | 仅仓库 |
 | `assets/skills/` | 两个 skill 的工作流及专用资料 | npm、runtime 与宿主 skills 目录 |
