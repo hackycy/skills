@@ -1,3 +1,4 @@
+import type { SpawnSyncReturns } from 'node:child_process'
 import type { Result } from '../src/cli/run'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -112,6 +113,15 @@ try {
   operation('prune', rejectedId, { expected_hash: currentHash(rejectedId), reason: 'The old failure cannot recur; no remaining prevention value.', references: [] })
   const archived = operation('archive', ids[0], { expected_hash: currentHash(ids[0]), reason: 'The component was retired; keep the historical rationale.' })
   const frozen = String(archived.data.path)
+  assert.equal((invoke(['context', '--topic', 'events']).data.notes as { id: string }[]).some(note => note.id === ids[0]), false)
+  assert.equal((invoke(['context', '--topic', 'events', '--include-archived']).data.notes as { id: string }[]).some(note => note.id === ids[0]), true)
+  const search = (path: string): SpawnSyncReturns<string> => spawnSync('rg', ['--no-config', '--hidden', '-l', '-F', 'Infrastructure publication', path], { cwd: root, encoding: 'utf8' })
+  const parentSearch = search('.')
+  assert.ok(parentSearch.status === 0 || parentSearch.status === 1, parentSearch.stderr)
+  assert.ok(!parentSearch.stdout.split('\n').some(path => path.replace(/^\.\//, '') === frozen))
+  const historySearch = search('.agents/notes/archived')
+  assert.equal(historySearch.status, 0, historySearch.stderr)
+  assert.ok(historySearch.stdout.split('\n').includes(frozen))
   assert.equal(invoke(['check']).result, 'ok')
   commit(root)
   const checkout = project()

@@ -64,7 +64,9 @@ node .agents/notes/runtime/cli.mjs check --json
 
 自定义根后替换入口路径，例如 `node docs/decisions/runtime/cli.mjs status --json`。项目锁定 runtime 可离线运行；阅读正文、写入和交付检查见[日常使用](../README.md#日常使用)。
 
-将 runtime、skill、配置、安装清单、Git 受管规则块和 Notes 纳入版本控制。`local/` 中的草稿、备份和 journal 由生成的规则忽略。受管 skill 通过工具更新；项目补充规则由项目自行维护。
+将 runtime、skill、配置、安装清单、Git 与 `.rgignore` 受管规则块和 Notes 纳入版本控制。`local/` 中的草稿、备份和 journal 由生成的规则忽略。受管 skill 通过工具更新；项目补充规则由项目自行维护。
+
+安装生成的 `.rgignore` 为仓库 ripgrep 搜索排除归档；显式历史查询及搜索工具边界见[归档与全文搜索](../assets/references/cli.md#归档与全文搜索)。已有合法 install/2 安装通过不同版本的 `tool update` 加入该规则，保留原有块外内容；未知同名受管块需要先人工处理。
 
 安装成功只证明静态资源完整。Codex CLI 与 Claude Code CLI 的实际发现、正文加载和工作流执行需要分别验证，因此这里称为静态候选接入；安装不保证自然触发 skill 或自动执行 `context`/`check`。Windows/Linux 采用 Node 通用实现，macOS 或 Git 换行测试不构成其他系统的原生运行证据。
 

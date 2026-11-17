@@ -7,7 +7,7 @@ import { rewriteLinks } from '../notes/rewrite'
 import { sha256 } from '../notes/snapshot'
 import { localizeBundle, verifyBundle } from './bundle'
 import { notesLayout } from './layout'
-import { wrapBlock } from './manifest'
+import { entryText, wrapBlock } from './manifest'
 import { assertPath, budget, byteOrder, canonical, keys, limits, skillNames } from './protocol'
 
 export { integrationChoices } from './integrations'
@@ -31,11 +31,12 @@ export function project(input: { source: Bundle, config: ProjectConfig, integrat
   const source = localizeBundle(input.source, input.config.notes_dir)
   const index = verifyBundle(source)
   const layout = notesLayout(input.config.notes_dir)
+  const searchRules = source.files.get('assets/templates/rgignore.txt')
   const selected = [...input.integrations].sort(byteOrder)
   if (!selected.length || new Set(selected).size !== selected.length || selected.some(id => !index.integrations.some(item => item.id === id)))
     throw new NotesError('UNKNOWN_INTEGRATION', 'Choose a nonempty, distinct set recognized by the locked tool; use tool update before selecting a newer integration.', undefined, 2)
   assertPath(layout.notesRoot)
-  if (/[\s*?[\]#!]/.test(layout.notesRoot) || [...index.integrations.map(item => item.skillRoot), '.gitignore', '.gitattributes'].some((path) => {
+  if (/[\s*?[\]#!]/.test(layout.notesRoot) || [...index.integrations.map(item => item.skillRoot), '.gitignore', '.gitattributes', ...(searchRules ? ['.rgignore'] : [])].some((path) => {
     const a = layout.notesRoot.toLowerCase()
     const b = path.toLowerCase()
     return a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)
@@ -82,6 +83,10 @@ export function project(input: { source: Bundle, config: ProjectConfig, integrat
       add(destination, 'file', /\.md$/i.test(path) ? Buffer.from(rewriteLinks(bytes.toString('utf8'), path, destination, destinations)) : bytes)
     }
   }
+  // Older source/1 bundles have no search template and must reproduce their
+  // original receipts, including the exact Git rule blocks, during upgrades.
+  if (searchRules)
+    add('.rgignore', 'block', Buffer.from(wrapBlock('.rgignore', entryText(searchRules, 'assets/templates/rgignore.txt'))))
   const files = [...assets.keys(), layout.configPath, layout.installPath].sort(byteOrder)
   // Every directory pass-through is paired with a wildcard guard, then exact
   // children are reopened. Unknown siblings retain an ancestor ignore intent.

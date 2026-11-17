@@ -13,6 +13,8 @@ description: Query relevant engineering decision Notes before planning or editin
 
 Finish with the Note ID/path, why it merits a record and validation evidence. Deliver required Notes and related code in the same PR; separate commits in that PR are fine. Structural checks validate declarations and relationships; authors and reviewers assess whether the rationale is durable and the decision is still the same.
 
+Use `context` to discover current guidance. Consult [archive discovery and repository search](../../references/cli.md#归档与全文搜索) when tracing history; archived Notes provide historical context.
+
 [writing]: ../../references/writing.md
 [proposal-zh]: ../../templates/proposed.zh-CN.md
 [proposal-en]: ../../templates/proposed.en.md

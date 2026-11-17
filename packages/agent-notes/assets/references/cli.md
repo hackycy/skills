@@ -87,7 +87,15 @@ context 返回 ID、标题、状态、路径、read_when、匹配原因及替代
 
 规划相关变更或首次编辑前查询；新增文件使用预期路径，重命名查询旧新路径，删除查询旧路径，范围扩大后重查。结果只提供指针，按需 show 或直接打开正文。scope 不准确可能漏掉相关记录，需要作者维护，零匹配不证明没有适用决策。
 
-默认查询活跃树；归档需显式 `--include-archived`，或按 ID show。索引每次从文件在内存重建，不维护人工 INDEX、已读状态或持久查询缓存。
+### 归档与全文搜索
+
+`context` 默认查询活跃树；历史查询显式使用 `--include-archived`，或按 ID show。索引每次从文件在内存重建，不维护人工 INDEX、已读状态或持久查询缓存。
+
+安装器在项目根 `.rgignore` 中维护 `/.agents/notes/archived/` 规则，自定义 Notes 根时使用实际路径。遵循该规则的 ripgrep 从仓库根或 Notes 父目录搜索时排除归档；默认 Notes 根是隐藏目录，`rg --hidden` 可遍历它，仍遵循归档排除规则。全文搜索继续使用仓库工具。
+
+追溯历史可显式指定目录，例如 `rg --hidden '关键词' .agents/notes/archived/`。`.rgignore` 不约束 grep、git grep、`rg --no-ignore`，也不能阻止其他搜索配置或命令行参数覆盖；当前工作以 `context` 发现活跃指导，归档只作为历史依据。
+
+`.rgignore` 与 Git 规则一样使用受管块，保留块外原文；损坏通过 status/repair 检查与修复。ripgrep 不是 CLI 安装依赖。已有合法 install/2 安装在升级到包含搜索模板的不同工具版本时新增该块，不改写 Notes、配置或 seal；旧 bundle 的 status/repair 不追溯新增规则。该兼容路径支持前向升级，不支持降级到尚不识别搜索受管块的版本。
 
 ## 检查快照
 

@@ -7,6 +7,8 @@ description: Maintain engineering Notes when delivering or rejecting a proposal,
 
 Run `node .agents/notes/runtime/cli.mjs check --maintenance --json` from the project root for maintenance candidates, or query `context` for a specific change. Read only relevant Notes with `show <id> --json`; retain each current hash for writes. Candidates require judgment and do not authorize automatic cleanup.
 
+Use `context` for current guidance and explicit [archive discovery](../../references/cli.md#归档与全文搜索) for historical comparisons. Treat archived Notes as history.
+
 Choose the operation by the actual outcome:
 
 | Outcome | Action |

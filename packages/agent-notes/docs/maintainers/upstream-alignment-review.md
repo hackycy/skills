@@ -1,6 +1,6 @@
 # Agent Notes 上游流程对齐评审
 
-> 状态：待决策
+> 状态：部分已决策；D5 选 C（2026-11-17），其余待定
 >
 > 评审日期：2026-11-16
 >
@@ -14,7 +14,7 @@
 
 当前 CLI 与 DeepSeek Harness Notes 的主干生命周期同构：记录门槛、`proposed`/`implemented`/`rejected` 的起点与转换、同 PR 交付、implemented 随代码维护事实、只归档 implemented 并永久冻结、rejected 仅在仍有防错价值时保留，这些判断标准一致。
 
-差异集中在 8 个点。D1 是明确的流程缺口：新建 Note 时没有绑定替代审计。D5 是可能的发现缺口：归档只在本包查询中默认排除，仓库级搜索不受控。D2-D4 是本包收紧或交互选择，D6-D8 是轻微放宽或有意差异。若只做最小对齐，优先 D1 和 D5。
+基线差异集中在 8 个点。D1 是明确的流程缺口：新建 Note 时没有绑定替代审计。D5 已选择 C 并落地为 `context` 默认排除与受管 `.rgignore` 双层规则。D2-D4 是本包收紧或交互选择，D6-D8 是轻微放宽或有意差异；其余决策仍待定。
 
 ## 当前 CLI 的流程骨架
 
@@ -100,7 +100,7 @@ local/ 草稿 → create(proposed|implemented)
 
 ### D5. 归档是否从仓库搜索中默认排除
 
-- 本包现状：`context` 默认排除 archived，`--include-archived` 显式包含；安装器只托管 `.gitignore` 和 `.gitattributes`，不托管 `.rgignore`。
+- 评审基线：`context` 默认排除 archived，`--include-archived` 显式包含；安装器只托管 `.gitignore` 和 `.gitattributes`，不托管 `.rgignore`。
 - 上游做法：用 `.rgignore` 将 archive 排除在遍历父目录的搜索之外；历史查询需要显式指向归档目录。
 - 影响：Agent 使用普通 grep/ripgrep 时可能读到冻结事实，误当成现行指导；本包文档又说“全文搜索沿用仓库搜索”，两者存在落差。
 - 选项：
@@ -108,7 +108,7 @@ local/ 草稿 → create(proposed|implemented)
   - B. 不托管搜索配置，在文档和 skill 中明确只有 `context` 保证排除，要求 Agent 用 `context` 查询。
   - C. 两者都做：`context` 保证 + `.rgignore` 兜底。
 - 建议：C；至少 B。A 涉及安装协议扩展，需要单独评估。
-- 决策：待定。
+- 决策：C（2026-11-17）。保持 `context` 默认活跃查询，安装根级 `.rgignore` 排除父目录搜索中的归档，并保留显式历史查询。合法 install/2 安装支持原地升级，利用索引中的新模板区分新旧投影，协议格式保持不变。工具边界见[发现契约](../../assets/references/cli.md#归档与全文搜索)，所有权和恢复见[安装投影](integrations.md#完整安装收据)。
 
 ### D6. rejected 是否允许维护路由元数据
 
@@ -164,7 +164,7 @@ local/ 草稿 → create(proposed|implemented)
 | D2 | 机械性 implemented 直接删除 | A 或 B | CLI + 契约 + 测试，高 | 待定 |
 | D3 | implemented 必填验证章节 | A | 文档契约，低 | 待定 |
 | D4 | 记录前用户授权 | A 或 C | skill + 设计文档，低 | 待定 |
-| D5 | 归档从仓库搜索默认排除 | C 或 B | 安装器 + 测试，中高；仅文档则低 | 待定 |
+| D5 | 归档从仓库搜索默认排除 | C 或 B | 安装器 + 测试，中高；仅文档则低 | C，已落地 |
 | D6 | rejected 路由元数据维护 | A | 文档契约，低 | 待定 |
 | D7 | hook/CI 强制点 | A | 文档，低 | 待定 |
 | D8 | 格式与双语布局 | A | 无需改动 | 待定 |
@@ -178,7 +178,7 @@ local/ 草稿 → create(proposed|implemented)
 - [写入与生命周期](../../assets/references/writing.md)：新建、更新、转换、归档、清理和恢复。
 - [文档契约](../../assets/formats/document.md)：身份、frontmatter、关系、正文和归档清单。
 - [agent-note skill](../../assets/skills/agent-note/SKILL.md)与[agent-note-maintenance skill](../../assets/skills/agent-note-maintenance/SKILL.md)。
-- 实现证据：`src/cli/arguments.ts`（命令面）、`src/distribution/projection.ts`（受管 Git 规则）、`src/distribution/git-rules.ts`（`.gitignore`/`.gitattributes`）。
+- 实现证据：`src/cli/arguments.ts`（命令面）、`src/distribution/projection.ts`（受管 Git 与搜索规则）、`src/distribution/git-rules.ts`（Git 语义验证）、`tests/search.test.ts`（真实 ripgrep）。
 
 上游材料均固定到版本锁中的提交：
 
@@ -196,5 +196,5 @@ local/ 草稿 → create(proposed|implemented)
 
 1. 按决策清单逐项确定 A/B/C，并在本文记录日期和结论。
 2. 采纳项按[内容归属](design.md#文档内容与分发)写入唯一维护位置：治理原则进 `design.md`，上游事实与采纳范围进 `upstreams.md`，命令行为进 `cli.md`/`writing.md`，格式规则进 `document.md`，动作编排进两份 skill。
-3. D1 和 D5 可以先用文档与 skill 对齐；D2 涉及 CLI 行为，D5 的 A 方案涉及安装协议，实施前按[维护验证](validation.md)补充测试和实际产物验证。
+3. D1 可先用文档与 skill 对齐；D2 涉及 CLI 行为，决策后按[维护验证](validation.md)补充测试和实际产物验证。D5 已完成 C 的实现，保留现有协议，并补充搜索、原地升级与恢复验收。
 4. 决策完成并落地后，删除本文或将其转为简短的决策记录，避免与 `design.md`、`upstreams.md` 形成第二个事实归属。

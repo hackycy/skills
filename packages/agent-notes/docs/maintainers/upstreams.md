@@ -33,6 +33,8 @@
 
 上游提供目录、格式、链接与归档校验；“值得写”“应归档”“已完整吸收”仍由作者和审查判断。本包增加稳定 ID、scope 查询、事务性转换、rejected 基线保护及首次归档来源校验，这些是本包设计，不应归为上游已有保证。上游的多文件翻译布局、历史格式例外和特定 seal 修补也不作为本包通用契约。
 
+归档搜索采纳上游根级 `.rgignore` 的父目录遍历排除策略，同时保留本包 `context` 的默认活跃查询。适用工具与显式历史入口见[发现契约](../../assets/references/cli.md#归档与全文搜索)，受管块和兼容升级机制见[安装投影](integrations.md#完整安装收据)。
+
 ## Matt Pocock skills
 
 固定基线与阅读范围见[版本锁](upstreams.lock.json)：仅 wayfinder、grill-with-docs 的入口、metadata 及各自说明，不扩展到它们委托的其他 skills。以下链接固定到锁定提交。

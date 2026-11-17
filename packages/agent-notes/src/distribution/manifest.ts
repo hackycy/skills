@@ -59,7 +59,7 @@ export function readInstallation(source: Snapshot, suppliedLayout?: NotesLayout)
 }
 
 export function markers(path: string): [string, string] {
-  return path.startsWith('.git')
+  return path.startsWith('.git') || path === '.rgignore'
     ? ['# agent-notes:begin', '# agent-notes:end']
     : ['<!-- agent-notes:begin -->', '<!-- agent-notes:end -->']
 }

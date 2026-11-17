@@ -20,7 +20,7 @@
 - 同一决定维护事实；另一决定新建并关联。交付不自动归档，完整替代不自动允许删除。rejected 与 implemented 的清理条件、归档永久冻结按文档契约执行。
 - 提供 generic/codex（共享 `.agents/skills`）与 claude-code（`.claude/skills`）项目静态 skill 接入，共享一个 Notes 根和 runtime。保持 `agent-note`、`agent-note-maintenance` 两个 skill，内容从同一源生成。
 - 产品边界是文档治理：不引入 wayfinder 地图、任务树、coding agent hooks、宿主事件/版本适配、会话或已读凭据、PR API、Git hook/CI 配置管理。
-- 工具与文档分别治理。升级替换受管 runtime、脚本、skill 和模板，保留 Notes、归档 seal、项目配置与 Git 块外原文；全部 AGENTS/CLAUDE 文件由项目维护。旧合法文档继续合法，不随工具升级迁移或重封存。
+- 工具与文档分别治理。升级替换受管 runtime、脚本、skill 和模板，保留 Notes、归档 seal、项目配置与规则块外原文；全部 AGENTS/CLAUDE 文件由项目维护。旧合法文档继续合法，不随工具升级迁移或重封存。
 
 ## 修改实现
 
@@ -28,7 +28,7 @@
 - 扩展命令时复用 reader、snapshot 和校验器。工作树、index、commit 的配置、正文和引用目标必须来自同一个快照；快照内容只作为数据读取。
 - 内容写入、安装、升级和修复共用事务锁与 journal。保留预检、持锁后及完成前的 hash 复查；恢复冲突保留外部编辑。多文件一致性由恢复协议保证。
 - 引用修复使用 Markdown AST；无法确定目标或锚点时停止事务。冻结出链保持历史原样，活跃入链仍需有效。
-- 完整受管文件和归档按原始字节计算 hash。只有 Git 受管块的比较允许 CRLF 归一；保存时保留块外原文。修改 Git 属性规则时覆盖真实换行转换场景。
+- 完整受管文件和归档按原始字节计算 hash。只有 Git 与搜索规则受管块的比较允许 CRLF 归一；保存时保留块外原文。修改 Git 属性规则时覆盖真实换行转换场景。
 - `install`、`tool update` 由 npm 包负责首次接入和版本切换；项目 runtime 提供日常命令、`hosts set`、`status` 与 `repair`。`repair` 只恢复相同版本及 bundle 的工具文件，源文件损坏时使用同版本 npm 包修复。遇到未知同名文件或未知格式要报错。
 
 ## 文档与分发

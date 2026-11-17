@@ -120,7 +120,7 @@ archive 从当前 implemented 原文生成终态，仅加入 archive 元数据�
 
 ## 6. 查询与引用修复
 
-项目 skill 说明查询时机和命令，不列全库 Note。`context --paths ... --topic ...` 返回 ID、H1、status、read_when、路径、匹配原因及替代关系；全局、精确 topic、glob 和 requires 闭包构成必读集合。全文搜索沿用仓库搜索，不引入第二套检索服务。
+项目 skill 说明查询时机和命令，不列全库 Note。`context --paths ... --topic ...` 返回 ID、H1、status、read_when、路径、匹配原因及替代关系；全局、精确 topic、glob 和 requires 闭包构成必读集合。全文搜索沿用仓库搜索，不引入第二套检索服务；默认排除归档的搜索边界及显式历史查询见 [CLI 契约](../references/cli.md#归档与全文搜索)。
 
 默认候选来自活跃树；archive 通过显式 `--include-archived` 查询或 show/历史关系追溯。结果完整输出，不静默截断必读项；候选过多时提示收窄范围，不自动丢弃全局约束。CLI 扫描文件不等于将正文提供给模型。
 

@@ -13,7 +13,7 @@ import { canonical } from '../src/distribution/protocol'
 import { validateJournal } from '../src/distribution/transition'
 import { recoverTransaction } from '../src/workflow/recovery'
 import { recoverTransaction as recoverWithHooks } from '../src/workflow/transaction'
-import { testBundle } from './distribution-fixtures'
+import { legacyBundle, testBundle } from './distribution-fixtures'
 import { archive, git, note, project, write } from './fixtures'
 
 vi.setConfig({ testTimeout: 120_000 })
@@ -40,6 +40,123 @@ function ok(result: ReturnType<typeof command>): void {
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
 
 describe('project integrations', () => {
+  it.each([false, true])('upgrades legacy receipts and preserves existing search rules: %s', (existing) => {
+    const root = setup()
+    const original = '/project-private/\r\n'
+    if (existing)
+      write(root, '.rgignore', original)
+    ok(command(root, 'install', legacyBundle()))
+    expect(manifest(root).assets.some(asset => asset.path === '.rgignore')).toBe(false)
+    ok(command(root, 'status'))
+    const frozen = archive(root, note(root))
+    const preserved = [frozen, '.agents/notes/archived/manifest.json', '.agents/notes/config.json'].map(path => [path, read(root, path)] as const)
+    const preview = command(root, 'tool update', testBundle('0.2.0'), { dryRun: true })
+    ok(preview)
+    expect(preview.data.changes).toContainEqual(expect.objectContaining({ path: '.rgignore', action: existing ? 'update' : 'create' }))
+    expect(existsSync(join(root, '.rgignore'))).toBe(existing)
+    ok(command(root, 'tool update', testBundle('0.2.0')))
+    expect(read(root, '.rgignore').toString()).toBe(`${existing ? `${original}\n` : ''}# agent-notes:begin\n/.agents/notes/archived/\n# agent-notes:end\n`)
+    expect(manifest(root).assets).toContainEqual(expect.objectContaining({ path: '.rgignore', kind: 'block' }))
+    for (const [path, bytes] of preserved) expect(read(root, path)).toEqual(bytes)
+    expect(git(root, 'ls-files', '--others', '--exclude-standard')).toContain('.rgignore')
+    expect(git(root, 'check-attr', 'text', 'eol', '--', '.rgignore')).toContain('eol: lf')
+    ok(command(root, 'status'))
+    expect(command(root, 'tool update', testBundle('0.2.0')).data.changes).toEqual([])
+  })
+
+  it('preserves CRLF and outside search rules, backs up edits and repairs missing blocks', () => {
+    const root = setup()
+    write(root, '.rgignore', '/vendor/\r\n')
+    ok(command(root))
+    const crlf = `${read(root, '.rgignore').toString().replace(/\r?\n/g, '\r\n')}/private/`
+    write(root, '.rgignore', crlf)
+    ok(command(root, 'status'))
+    expect(command(root).data.changes).toEqual([])
+    const damaged = crlf.replace('/archived/', '/implemented/')
+    write(root, '.rgignore', damaged)
+    expect(command(root, 'status').diagnostics[0].code).toBe('ASSET_INTEGRITY')
+    expect(command(root, 'tool update', testBundle('0.2.0')).diagnostics[0].code).toBe('REPAIR_REQUIRED')
+    ok(command(root, 'repair', testBundle(), { dryRun: true }))
+    expect(read(root, '.rgignore').toString()).toBe(damaged)
+    expect(existsSync(join(root, '.agents/notes/local/backups'))).toBe(false)
+    const result = command(root, 'repair')
+    ok(result)
+    expect(read(root, `${result.data.backup}/original/.rgignore`).toString()).toBe(damaged)
+    expect(read(root, '.rgignore').toString()).toBe(crlf.replace(/# agent-notes:begin[\s\S]*# agent-notes:end/, '# agent-notes:begin\n/.agents/notes/archived/\n# agent-notes:end'))
+    write(root, '.rgignore', '/vendor/\r\n/private/')
+    ok(command(root, 'repair'))
+    expect(read(root, '.rgignore').toString()).toMatch(/^\/vendor\/\r\n\/private\/\n\n# agent-notes:begin/)
+    rmSync(join(root, '.rgignore'))
+    ok(command(root, 'repair'))
+    ok(command(root, 'status'))
+  })
+
+  it('refuses to remove search block ownership when targeting a pre-search bundle', () => {
+    const root = setup()
+    ok(command(root, 'install', testBundle('0.2.0')))
+    const before = read(root, installPath)
+    const rules = read(root, '.rgignore')
+    expect(command(root, 'tool update', legacyBundle()).diagnostics[0].code).toBe('INVALID_INSTALLATION')
+    expect(read(root, installPath)).toEqual(before)
+    expect(read(root, '.rgignore')).toEqual(rules)
+  })
+
+  it.each(['malformed', 'duplicate', 'unowned'])('refuses %s search blocks without taking ownership', (kind) => {
+    const root = setup()
+    const block = '# agent-notes:begin\n/.agents/notes/archived/\n# agent-notes:end\n'
+    const original = kind === 'malformed' ? '# agent-notes:begin\n' : kind === 'duplicate' ? block.repeat(2) : block
+    write(root, '.rgignore', original)
+    expect(command(root).diagnostics[0].code).toBe(kind === 'unowned' ? 'UNOWNED_ASSET' : 'BLOCK_CONFLICT')
+    expect(read(root, '.rgignore').toString()).toBe(original)
+    expect(existsSync(join(root, installPath))).toBe(false)
+  })
+
+  it.each(['before', 'after'])('preserves an external search edit %s management writes', (stage) => {
+    const root = setup()
+    ok(command(root))
+    const before = read(root, installPath)
+    const edit = (): void => write(root, '.rgignore', '/external-editor/\n')
+    const hooks: TransactionHooks = {}
+    if (stage === 'before') {
+      hooks.beforeCommit = edit
+    }
+    else {
+      hooks.afterStep = (index) => {
+        if (index === 0)
+          edit()
+      }
+    }
+    const result = command(root, 'tool update', testBundle('0.2.0'), {}, hooks)
+    expect(result.diagnostics[0].code).toBe('CONCURRENT_CHANGE')
+    expect(read(root, installPath)).toEqual(before)
+    expect(read(root, '.rgignore').toString()).toBe('/external-editor/\n')
+  })
+
+  it.each(['after-search', 'after-install', 'committed'])('recovers a legacy search upgrade killed at %s', (step) => {
+    const root = setup()
+    const original = '/project-private/\r\n'
+    write(root, '.rgignore', original)
+    ok(command(root, 'install', legacyBundle()))
+    const before = read(root, installPath)
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'tool update', step], { timeout: 30_000 })
+    expect(child.signal, child.stderr?.toString()).toBe('SIGKILL')
+    const interrupted = read(root, '.rgignore')
+    write(root, '.rgignore', '/external-editor/\n')
+    expect(() => recoverTransaction(root)).toThrow()
+    expect(read(root, '.rgignore').toString()).toBe('/external-editor/\n')
+    write(root, '.rgignore', interrupted)
+    expect(recoverTransaction(root)).toBe(true)
+    if (step === 'committed') {
+      expect(manifest(root).version).toBe('0.2.0')
+      expect(read(root, '.rgignore')).toEqual(interrupted)
+    }
+    else {
+      expect(read(root, installPath)).toEqual(before)
+      expect(read(root, '.rgignore').toString()).toBe(original)
+    }
+    ok(command(root, 'status'))
+  })
+
   it.each(sets)('installs %j and preserves every permanent rule file', (...hosts) => {
     const root = setup()
     const rules = ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', 'AGENTS.override.md', '.claude/CLAUDE.local.md']

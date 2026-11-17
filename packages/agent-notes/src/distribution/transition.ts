@@ -46,7 +46,7 @@ export function planFiles(before: Projection | undefined, after: Projection, con
   for (const asset of before?.assets ?? []) {
     if (!desired.has(asset.path) && read(asset.path)) {
       if (asset.kind !== 'file')
-        throw new NotesError('INVALID_INSTALLATION', 'Git blocks cannot be removed.')
+        throw new NotesError('INVALID_INSTALLATION', 'Managed rule blocks cannot be removed.')
       changes.set(asset.path, null)
     }
   }

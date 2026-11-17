@@ -27,6 +27,7 @@ try {
   assert.ok(existsSync(join(packageRoot, 'docs/installation.md')))
   assert.ok(existsSync(join(packageRoot, 'assets/references/writing.md')))
   assert.ok(existsSync(join(packageRoot, 'assets/formats/document.md')))
+  assert.ok(existsSync(join(packageRoot, 'assets/templates/rgignore.txt')))
   for (const path of ['AGENTS.md', 'docs/maintainers', 'src', 'tests', 'contracts', 'writing.md'])
     assert.equal(existsSync(join(packageRoot, path)), false, `Unexpected npm content: ${path}`)
   const packageSource = new Repository(packageRoot).snapshot('worktree')
@@ -66,6 +67,7 @@ try {
       return parsed
     }
     invoke(['install', '--root', root, '--host', target, '--notes-dir', notesDir, '--language', language])
+    assert.equal(readFileSync(join(root, '.rgignore'), 'utf8'), `# agent-notes:begin\n/${notesDir}/archived/\n# agent-notes:end\n`)
     assert.equal(invoke(['status']).data.notes_dir, notesDir)
     for (const path of ['README.md', 'docs', 'contracts', 'writing.md'])
       assert.equal(existsSync(join(root, `${notesDir}/runtime`, path)), false, `Unexpected runtime content: ${path}`)

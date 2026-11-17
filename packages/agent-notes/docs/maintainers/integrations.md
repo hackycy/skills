@@ -24,7 +24,7 @@
 | [integrations.ts](../../src/distribution/integrations.ts) | 唯一可编辑接入描述表：id、label、default、字面 skillRoot |
 | [layout.ts](../../src/distribution/layout.ts) | 单一 Notes 根及配置、runtime、local、锁的路径 |
 | [bundle.ts](../../src/distribution/bundle.ts)、[source.ts](../../src/distribution/source.ts) | 精确源读取、索引验证和按 Notes 根物化 |
-| [projection.ts](../../src/distribution/projection.ts) | 纯计算资产、链接映射、共享去重、碰撞、收据、Git 块及目录候选 |
+| [projection.ts](../../src/distribution/projection.ts) | 纯计算资产、链接映射、共享去重、碰撞、收据、Git/搜索规则块及目录候选 |
 | [manage.ts](../../src/distribution/manage.ts)、[transition.ts](../../src/distribution/transition.ts) | 现场快照、管理计划、真实 Git 检查、smoke、备份与 Result |
 | [recovery.ts](../../src/workflow/recovery.ts) | 为通用事务组合固定 journal kind 与可信校验器 |
 
@@ -54,6 +54,8 @@ npm 的 `dist/source-index.json` 和 runtime 的 `source-index.json` 使用 `age
 
 共享文件从目标集合计算，不保存引用计数。切换时旧端使用旧索引，新端使用选定包；恢复不执行旧脚本取得授权。旧 install/1、旧 journal、旧 target 和命令别名没有 reader 或迁移支持。
 
+归档搜索规则源为 `assets/templates/rgignore.txt`，随 source/1 索引进入 npm 和 runtime，按 Notes 根物化后投影为根级 `.rgignore` 的 `# agent-notes:begin/end` 块，并进入 Git 可跟踪与 LF 要求。投影只在可信源包含该模板时生成此块；旧 source/1 缺少模板时保持旧资产和 Git 块的精确字节，合法 install/2 因而可以原地升级，不放宽收据完整性校验。新包验收要求模板和搜索块同时存在。
+
 信任前提是用户选择的完整 npm 包和项目认可的 runtime。hash 验证相对完整性，不认证发布者，也无法识别整套内容被一致替换的攻击。
 
 ## 计划与恢复
@@ -65,7 +67,7 @@ npm 的 `dist/source-index.json` 和 runtime 的 `source-index.json` 使用 `age
 3. 在隔离 scratch 中运行真实 Git，检查工具可见性、local 忽略、LF 和未知邻接边界；外部 Git 配置与规则也进入复查。
 4. 预检完整恢复资料、容量和必要备份，持锁后复查现场；必要备份成功落盘并复查后才覆盖。
 
-Git 受管块由投影确定，块外原文保留。未知邻接文件的忽略/可见状态须双向保持，本次合法移除的受管文件不算未知邻接。冲突直接报告，不生成环境专用块。
+Git 与 `.rgignore` 受管块由投影确定，块外原文保留，块比较允许 CRLF 归一；未知块不接管。Git 检查要求未知邻接文件的忽略/可见状态双向保持，本次合法移除的受管文件不算未知邻接。冲突直接报告，不生成环境专用块。安装不调用或要求 ripgrep；搜索行为及覆盖边界由[发现契约](../../assets/references/cli.md#归档与全文搜索)定义，真实 ripgrep 在测试中验证。
 
 目录删除只允许空的专属 skill 根及其内部父目录；回滚另可处理本事务创建的 runtime 内部目录。共享公共容器、Notes 根和未知目录不进入删除授权。
 

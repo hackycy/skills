@@ -8,11 +8,24 @@ import { integrations } from '../src/distribution/integrations'
 import { parseInstallation } from '../src/distribution/manifest'
 import { project, receipt, validate } from '../src/distribution/projection'
 import { assertPath, base64, boundedRead, canonical, limits } from '../src/distribution/protocol'
-import { testBundle } from './distribution-fixtures'
+import { legacyBundle, testBundle } from './distribution-fixtures'
 
 const config = { format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'en' } as const
 
 describe('pure projection and bounded protocols', () => {
+  it('keeps legacy receipts unchanged and projects archive search rules only from indexed templates', () => {
+    const old = project({ source: legacyBundle(), config, integrations: ['generic'] })
+    expect(old.assets.some(asset => asset.path === '.rgignore')).toBe(false)
+    expect(validate({ kind: 'installation', source: old.source, config, installation: receipt(old) }).assets).toEqual(old.assets)
+    for (const notesDir of ['.agents/notes', '.agents/notes-two', 'docs/decisions']) {
+      const output = project({ source: testBundle(), config: { ...config, notes_dir: notesDir }, integrations: ['generic'] })
+      expect(output.assets.find(asset => asset.path === '.rgignore')?.bytes.toString()).toBe(`# agent-notes:begin\n/${notesDir}/archived/\n# agent-notes:end`)
+      expect(output.gitRequirements.files).toContain('.rgignore')
+    }
+    for (const notesDir of ['.rgignore', '.RGIGNORE/notes'])
+      expect(() => project({ source: testBundle(), config: { ...config, notes_dir: notesDir }, integrations: ['generic'] })).toThrow(/control paths/)
+  })
+
   it('materializes only once even when a custom root contains the default root', () => {
     const first = localizeBundle(testBundle(), '.agents/notes-two')
     expect(localizeBundle(first, '.agents/notes-two')).toBe(first)

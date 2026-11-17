@@ -44,6 +44,7 @@ pnpm --filter @hackycy/agent-notes test
 | 草稿、expected_hash、身份保持、状态转换、AST 引用修复与内容承接 | [workflow.test.ts](../../tests/workflow.test.ts) |
 | 回滚、真实 SIGKILL、锁竞争、输入/runtime 竞态与外部编辑保留 | [transaction.test.ts](../../tests/transaction.test.ts) |
 | 接入集合、所有权、Git 规则、备份、版本切换与恢复 | [distribution.test.ts](../../tests/distribution.test.ts) |
+| 归档搜索边界、隐藏/自定义根与显式历史搜索 | [search.test.ts](../../tests/search.test.ts)，需要 PATH 中的 ripgrep |
 | 独立上限与 +1、累计超限、大端点解码、非法编码与文件增长 | [capacity.test.ts](../../tests/capacity.test.ts)、[projection.test.ts](../../tests/projection.test.ts) |
 | 产品、npm 文档及维护材料的引用闭包 | [assets.test.ts](../../tests/assets.test.ts) |
 | 参数、来源限制、缺项/复用/冲突、取消、恢复只读投影与真实 CLI | [cli-input.test.ts](../../tests/cli-input.test.ts) |
@@ -83,6 +84,12 @@ pnpm --filter @hackycy/agent-notes test:bundle /absolute/a/dist/cli.mjs /absolut
 ```
 
 该检查逐字节比较 Notes、配置和 seal。分发验收覆盖 package.json 的 Node 下限及精确 Node 24 版本；`test:install` 必须在相应 Node/npm PATH 中运行，不能用 bundle 的 Node 参数代替。原生平台要求见[宿主声明与平台政策](#宿主声明与平台政策)。
+
+归档搜索升级另用 D5 之前的固定基线包与不同版本的新包验证，两个 CLI 均来自仓库外的真实 tarball。该测试覆盖七集合、默认/自定义根及 Notes/config/seal 原字节保留，需要 ripgrep：
+
+```sh
+pnpm exec tsx packages/agent-notes/tests/archive-search-upgrade.ts /absolute/old/dist/cli.mjs /absolute/new/dist/cli.mjs /absolute/node
+```
 
 ## 容量与同类接入扩展
 

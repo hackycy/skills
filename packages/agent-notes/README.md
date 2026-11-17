@@ -48,7 +48,7 @@ npx --yes @hackycy/agent-notes@X.Y.Z install --host codex --no-interactive
 node .agents/notes/runtime/cli.mjs status --json
 ```
 
-预览不写项目；实际安装生成 runtime、项目 skill、配置和安装清单，并维护 Git 规则。`status` 返回安装身份、接入集合与资源完整性结果。日常命令使用项目锁定的 runtime，检出项目后可离线运行。
+预览不写项目；实际安装生成 runtime、项目 skill、配置和安装清单，并维护 Git 规则与排除归档搜索的 `.rgignore` 块。`status` 返回安装身份、接入集合与资源完整性结果。日常命令使用项目锁定的 runtime，检出项目后可离线运行。
 
 | 使用环境 | 安装参数 | skill 位置 |
 | --- | --- | --- |
@@ -256,7 +256,7 @@ node .agents/notes/runtime/cli.mjs show <id> --json
 | 内容 | Git 管理方式 |
 | --- | --- |
 | 正式 Notes，包括 proposed、rejected 和归档清单 | 纳入版本控制；提案与拒绝理由也是共享记录 |
-| runtime、项目 skill、config.json、install.json、Git 受管规则块 | 纳入版本控制，便于检出后使用相同工具 |
+| runtime、项目 skill、config.json、install.json、Git 与 `.rgignore` 受管规则块 | 纳入版本控制，便于检出后使用相同工具 |
 | local 中的草稿、操作 JSON、备份、锁和 journal | 安装器生成规则保持忽略，留在本机 |
 
 `local/` 是工作材料目录。草稿和 JSON 用于准备写入，`backups/` 用于修复受管工具文件前保存原文等材料，`write-lock/` 用于写入互斥和中断恢复；一次正常事务结束后会清理写锁，但可以留下空的 local 父目录。

@@ -78,7 +78,7 @@ describe('independent capacity boundaries', () => {
     const source = testBundle()
     for (let i = 0; i < 10; i++)
       source.files.set(`assets/skills/agent-note/resource-${i}.bin`, Buffer.alloc(0))
-    while (source.files.size < 253)
+    while (source.files.size < 252)
       source.files.set(`assets/resource-${String(source.files.size).padStart(4, '0')}.bin`, Buffer.alloc(0))
     const catalog = Array.from({ length: limits.integrations }, (_, i) => ({ id: `example-${String(i).padStart(2, '0')}`, label: 'Example', default: i === 0, skillRoot: `.example-${i}/skills` }))
     source.index = sourceIndex('0.1.0', source.files, catalog)

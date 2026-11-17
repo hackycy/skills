@@ -18,7 +18,7 @@ const result = manage({ command: operation, root, hosts: operation === 'hosts se
     const journal = JSON.parse(readFileSync(join(root, notesDir, 'local/write-lock/journal.json'), 'utf8'))
     const path = journal.entries[index].path
     const next = journal.entries[index + 1]?.path
-    if (!(step === 'before-config' && next === `${notesDir}/config.json`) && !(step === 'after-config' && path === `${notesDir}/config.json`) && !(step === 'after-install' && path === `${notesDir}/install.json`))
+    if (!(step === 'before-config' && next === `${notesDir}/config.json`) && !(step === 'after-config' && path === `${notesDir}/config.json`) && !(step === 'after-install' && path === `${notesDir}/install.json`) && !(step === 'after-search' && path === '.rgignore'))
       return
   }
   process.kill(process.pid, 'SIGKILL')
