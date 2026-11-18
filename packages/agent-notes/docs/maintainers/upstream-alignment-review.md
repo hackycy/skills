@@ -1,6 +1,6 @@
 # Agent Notes 上游流程对齐评审
 
-> 状态：部分已决策；D5 选 C（2026-11-17），其余待定
+> 状态：部分已决策；D5 选 C（2026-11-17），D1 选 A、D4 选 B（2026-11-18），其余待定
 >
 > 评审日期：2026-11-16
 >
@@ -14,7 +14,7 @@
 
 当前 CLI 与 DeepSeek Harness Notes 的主干生命周期同构：记录门槛、`proposed`/`implemented`/`rejected` 的起点与转换、同 PR 交付、implemented 随代码维护事实、只归档 implemented 并永久冻结、rejected 仅在仍有防错价值时保留，这些判断标准一致。
 
-基线差异集中在 8 个点。D1 是明确的流程缺口：新建 Note 时没有绑定替代审计。D5 已选择 C 并落地为 `context` 默认排除与受管 `.rgignore` 双层规则。D2-D4 是本包收紧或交互选择，D6-D8 是轻微放宽或有意差异；其余决策仍待定。
+基线差异集中在 8 个点。D1 和 D4 已在 skill 层对齐上游：新建前定向审计，不再单独确认记录。D5 已选择 C 并落地为 `context` 默认排除与受管 `.rgignore` 双层规则。D2–D3 和 D6–D8 仍待定。
 
 ## 当前 CLI 的流程骨架
 
@@ -37,7 +37,7 @@ local/ 草稿 → create(proposed|implemented)
 | 流程节点 | 一致之处 |
 | --- | --- |
 | 何时写 | 只记录代码、测试和现有文档不能承载的长期理由；机械性和局部 UI 改动可零 Note |
-| 起点状态 | 提案走 `proposed`，已实施走 `implemented`；没有 `accepted` 状态；进入 Plan 不等于同意记录 |
+| 起点状态 | 提案走 `proposed`，已实施走 `implemented`；没有 `accepted` 状态；进入 Plan 不授予写权限 |
 | 同一决定与新决定 | 同一决定更新原 Note；不同决定新建并互链；partial/full 只表达实际替代范围 |
 | implemented 维护 | 事实随代码更新，不把原决定改写成另一个决定 |
 | 交付 | 必要 Note 与相关代码在同一 PR |
@@ -52,15 +52,14 @@ local/ 草稿 → create(proposed|implemented)
 
 ### D1. 新建 Note 时是否绑定替代审计
 
-- 本包现状：`agent-note` skill 第 3 步只要求“不同决定新建并关联旧 Note”；`check --maintenance` 能列出失配 scope 和替代候选，但 skill 没有要求创建时执行。
+- 评审基线：`agent-note` skill 第 3 步只要求“不同决定新建并关联旧 Note”；`check --maintenance` 能列出失配 scope 和替代候选，但 skill 没有要求创建时执行。
 - 上游做法：归档 skill 要求每个新 Note 触发同决定、同机制或同替代方案的 active Notes 审计，并在同一 PR 归档完整替代、保留并互链部分替代、拒绝过时提案、删除失去防错价值的 rejected；归档政策 note 明确“不把已知匹配推迟到之后的语料清理”。
 - 影响：新决定可能留下冗余的 active authority；`supersedes` 关系可能只表达意图，没有同步处理旧记录；后续审计成本更高。
 - 选项：
-  - A. 对齐上游：`agent-note` 新建分支加入 scoped audit，create 后运行 `check --maintenance` 或同主题检索，在同一 PR 分类处理。
+  - A. 对齐上游：`agent-note` 新建分支在起草前做定向审计，在同一 PR 分类处理。
   - B. 折中：skill 要求检查候选并说明处理结果，但清理可以延后到维护任务。
   - C. 保持现状：只靠作者判断和按需执行维护命令。
-- 建议：A 或 B；A 最接近上游。
-- 决策：待定。
+- 决策：A（2026-11-18）。起草前按[维护 skill](../../assets/skills/agent-note-maintenance/SKILL.md)审计，同一 PR 处理确认的匹配，不扩展清理条件。
 
 ### D2. 机械性 implemented 记录能否直接删除
 
@@ -88,15 +87,14 @@ local/ 草稿 → create(proposed|implemented)
 
 ### D4. 记录前是否需要用户授权
 
-- 本包现状：需要用户接受记录建议或显式要求；设计文档明确“进入原生 Plan 不代表同意创建记录”。
+- 评审基线：需要用户接受记录建议或显式要求。
 - 上游做法：作者按记录判据直接添加或更新，没有显式授权步骤。
 - 影响：本包多一次交互；但避免在用户不知情时写入项目文档。这是产品安全选择，不是流程缺陷。
 - 选项：
   - A. 保持现状。
   - B. 对齐上游：Agent 按判据自主记录，事后评审。
   - C. 分级：`proposed` 需要授权，implemented 的事实维护和交付转换可在已有工作授权内自主进行。
-- 建议：A 或 C；不宜默默改成 B。
-- 决策：待定。
+- 决策：B（2026-11-18）。在任务允许的范围内按判据直接记录，保留 Plan、只读和明确禁止记录的写入边界。见[设计约束](design.md#规划与记录分别判断)。
 
 ### D5. 归档是否从仓库搜索中默认排除
 
@@ -160,10 +158,10 @@ local/ 草稿 → create(proposed|implemented)
 
 | ID | 决策点 | 建议 | 落地成本 | 决策 |
 | --- | --- | --- | --- | --- |
-| D1 | 新建 Note 时绑定替代审计 | A 或 B | skill + 设计文档，低 | 待定 |
+| D1 | 新建 Note 时绑定替代审计 | A | skill + 设计文档，低 | A，已落地 |
 | D2 | 机械性 implemented 直接删除 | A 或 B | CLI + 契约 + 测试，高 | 待定 |
 | D3 | implemented 必填验证章节 | A | 文档契约，低 | 待定 |
-| D4 | 记录前用户授权 | A 或 C | skill + 设计文档，低 | 待定 |
+| D4 | 记录前用户授权 | B | skill + 设计文档，低 | B，已落地 |
 | D5 | 归档从仓库搜索默认排除 | C 或 B | 安装器 + 测试，中高；仅文档则低 | C，已落地 |
 | D6 | rejected 路由元数据维护 | A | 文档契约，低 | 待定 |
 | D7 | hook/CI 强制点 | A | 文档，低 | 待定 |
@@ -196,5 +194,5 @@ local/ 草稿 → create(proposed|implemented)
 
 1. 按决策清单逐项确定 A/B/C，并在本文记录日期和结论。
 2. 采纳项按[内容归属](design.md#文档内容与分发)写入唯一维护位置：治理原则进 `design.md`，上游事实与采纳范围进 `upstreams.md`，命令行为进 `cli.md`/`writing.md`，格式规则进 `document.md`，动作编排进两份 skill。
-3. D1 可先用文档与 skill 对齐；D2 涉及 CLI 行为，决策后按[维护验证](validation.md)补充测试和实际产物验证。D5 已完成 C 的实现，保留现有协议，并补充搜索、原地升级与恢复验收。
+3. D2 若调整 CLI 行为，决策后按[维护验证](validation.md)补充测试和实际产物验证。D5 已完成 C 的实现，保留现有协议，并补充搜索、原地升级与恢复验收。
 4. 决策完成并落地后，删除本文或将其转为简短的决策记录，避免与 `design.md`、`upstreams.md` 形成第二个事实归属。

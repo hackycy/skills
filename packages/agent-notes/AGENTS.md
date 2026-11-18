@@ -16,7 +16,7 @@
 ## 保持的产品约束
 
 - Notes 保存代码、测试和现有文档无法承载的长期理由与取舍。普通 Plan 可以零 Note 完成；机械性和局部 UI 改动豁免。必要记录与相关代码在同一 PR 交付。
-- 记录由 Agent 建议获同意或用户显式要求发起；同一工作已有授权延续。CLI 校验材料与结构，作者和评审负责记录价值、同一决定及完整吸收的语义判断。
+- 任务允许写入且记录在当前范围内时，Agent 按判据直接记录，无需单独确认。新建前定向审计替代关系，在同一 PR 处理确认的匹配。CLI 校验材料与结构，作者和评审负责记录价值、决定身份及完整吸收的语义判断。
 - 同一决定维护事实；另一决定新建并关联。交付不自动归档，完整替代不自动允许删除。rejected 与 implemented 的清理条件、归档永久冻结按文档契约执行。
 - 提供 generic/codex（共享 `.agents/skills`）与 claude-code（`.claude/skills`）项目静态 skill 接入，共享一个 Notes 根和 runtime。保持 `agent-note`、`agent-note-maintenance` 两个 skill，内容从同一源生成。
 - 产品边界是文档治理：不引入 wayfinder 地图、任务树、coding agent hooks、宿主事件/版本适配、会话或已读凭据、PR API、Git hook/CI 配置管理。

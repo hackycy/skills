@@ -1,6 +1,6 @@
 # 写入与生命周期命令
 
-五个写命令共用项目锁定的 runtime。用户在对话中接受 Agent 的记录建议，或显式要求记录后，即可准备材料并调用；CLI 不要求批准令牌、聊天记录或会话凭据。
+五个写命令共用项目锁定的 runtime。任务允许修改项目且记录属于当前范围时，Agent 按记录判据写入，不需要为 Note 单独确认；只读、纯规划或用户及项目规则禁止时不写。CLI 不要求批准令牌、聊天记录或会话凭据。
 
 所有命令支持 `--root`、`--json`、`--input <json-file|->` 和 `--dry-run`。输入文件与草稿路径相对项目根解析；`--input -` 从标准输入读取一个 JSON 对象。字段固定，未知字段和重复键拒绝。下面的命令在仓库根运行；将项目路径和 ID 替换为真实值。
 
@@ -35,7 +35,7 @@ node .agents/notes/runtime/cli.mjs create --root /path/to/project --input .agent
 
 status 允许 `proposed` 或 `implemented`。CLI 从首次创建的 UTC 日期、class 和标题生成稳定路径，生成 UUID v4 身份；同路径冲突失败。`--dry-run` 不写入任何文件，以固定临时 ID 检验关系并展示 before/after，结果 `data.id` 为 null；实际执行才生成身份。
 
-同标题或同 topic 的现有 Note 作为 candidates 返回，不机械认定重复。作者仍应确认同一决定使用 update，不同决定新建并关联。rationale 必须非空，长期理由本身也应写在正文中；CLI 不会把该输入另外存成审计台账。
+`data.candidates` 返回同标题或同 topic 的活跃 Note，不机械认定重复。Agent 在起草前应按维护 skill 定向审计，并复核预览时出现的额外候选：同一决定维护原记录，不同决定才新建并关联。rationale 必须非空，长期理由本身也应写在正文中；CLI 不会把该输入另外存成审计台账。
 
 ## 维护和交付
 

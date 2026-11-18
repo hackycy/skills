@@ -147,7 +147,7 @@ pnpm exec tsx packages/agent-notes/tests/extension-smoke.ts /absolute/new-eviden
 | H01 | 文档与可取得的实现 | 固定抓取时间/hash 或 commit、路径和启用条件；闭源 loader 标不可取得，不能用 README 补造 C |
 | H02 | 真实新产物的发现 | 观察两份 skill 的 name/path/来源/启用状态，覆盖单宿主与组合并隔离用户环境；文件清单不等于宿主发现 |
 | H03 | 显式正文加载 | 两份 skill 各有可观察读取/trace；名单、名称回复或模型自称已读不足以证明加载 |
-| H04 | 显式调用后工作流 | agent-note 实际查询、阅读、范围变化重查和交付 check；maintenance 按职责验证，保留 argv/结果，写 Note 仍需授权 |
+| H04 | 显式调用后工作流 | agent-note 实际查询、阅读、范围变化重查和交付 check；maintenance 按职责验证，保留 argv/结果，覆盖可写任务无需单独确认、纯规划/只读/禁止记录时不写入，以及新建前定向审计和同 PR 处理匹配 |
 | H05 | 自然任务触发 | 与显式点名样例分开，用于评估 description，不从单次成功推断每次触发 |
 
 完整接入声明须具备该固定本地 CLI 版本的 H02–H04；缺项时只声明候选或已验证层次。闭源缺 C 不自动判不可支持；generic 只承诺通用静态布局。真实模型、登录或凭据实验依届时授权执行，不通过改全局配置或注入规则文件弥补证据缺口。

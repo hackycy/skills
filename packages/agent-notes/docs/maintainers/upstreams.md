@@ -22,7 +22,7 @@
 | --- | --- |
 | [Notes README](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/.agents/notes/README.md#when-to-write-one) | 只记录代码/测试/现有文档不能承载的长期理由，必要记录与代码同 PR；机械/局部 UI 改动豁免 |
 | [已交付记录维护规则](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/.agents/notes/implemented/AGENTS.md) | 同一决定的事实随代码维护，另一决定新建并互链 |
-| [维护 skill](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/.agents/skills/dsh-archive-agent-notes/SKILL.md) | 新增决定时同步检查替代范围；保留仍有效的指导，有条件清理失去防错价值或已完整吸收的记录 |
+| [维护 skill](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/.agents/skills/dsh-archive-agent-notes/SKILL.md) | `description` 把新增 Note 列为触发点；正文要求起草前按决定、机制或被拒替代方案定向审计，并在同一 PR 处理确认的匹配 |
 | [冻结归档决定](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/.agents/notes/implemented/process/2026-07-26-frozen-agent-note-archive.md) | 归档按未来指导价值判断，封存后不追随代码、链接或格式变化，默认搜索排除 |
 | [归档校验实现](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/scripts/archived-agent-notes.ts)及[测试](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/scripts/archived-agent-notes.spec.ts) | hash 与追加 seal 还需可信基线，不能允许正文和清单一起篡改 |
 | [文档层次](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/AGENTS.md) | 规则入口短、事实只有一个归属，决策理由与使用参考分开 |
@@ -30,6 +30,8 @@
 上游的 [Plan](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/plan/plan-mode/README.md) 是会话规划，未绑定 Note 创建。[指令加载](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/context/agent-instructions/README.md)也不等于首次编辑前已读 Note。上游有 [Git hook](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/lefthook.yml) 与 CI 调用校验脚本，但不能将其描述为 coding agent 工具调用前的 Notes 阅读门禁。
 
 ### 采纳范围与本包扩展
+
+上游 Notes README 按长期价值判断是否添加或更新，没有单独的记录确认步骤。本包采纳这一规则，仍以任务写入范围和项目指令为边界。固定版维护 skill 的 `description` 是本包触发语义的权威参考；本包由 `agent-note` 负责发现和写作，由 `agent-note-maintenance` 负责新建审计与生命周期，不照搬恢复归档触发、双语三件套或机械性记录直接删除规则。
 
 上游提供目录、格式、链接与归档校验；“值得写”“应归档”“已完整吸收”仍由作者和审查判断。本包增加稳定 ID、scope 查询、事务性转换、rejected 基线保护及首次归档来源校验，这些是本包设计，不应归为上游已有保证。上游的多文件翻译布局、历史格式例外和特定 seal 修补也不作为本包通用契约。
 
