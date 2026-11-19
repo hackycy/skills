@@ -1,5 +1,7 @@
 # @hackycy/agent-notes
 
+[![npm version](https://img.shields.io/npm/v/@hackycy/agent-notes)](https://www.npmjs.com/package/@hackycy/agent-notes)
+
 Agent Notes 将值得长期保留的工程提案和决策写成项目内的 Markdown Note。后续修改相关代码时，Agent 可以找到当初的理由、取舍和验证依据，继续维护同一决定。
 
 本教程以用户与 Agent 的协作为主线，从一个模糊想法开始，走到创建、交付和再次使用 Note。准备草稿、调用 CLI 通常由 Agent 完成；命令示例帮助你理解它实际做了什么，也可以手动执行。
@@ -319,7 +321,7 @@ jobs:
 
 维护 Note 正文使用 `update <id>`。调整接入集合和修复安装的步骤见[安装、升级与修复](docs/installation.md)。
 
-已交付且仍指导当前工作的 Note 保持活跃；不再指导工程但值得追溯时，按[归档规则](assets/references/writing.md#归档)处理，归档后永久冻结。记录被替代不会自动归档或允许删除；删除需要满足[条件清理](assets/references/writing.md#条件清理)，包括独有内容的承接与入链处理。
+已交付且仍指导当前工作的 Note 保持活跃。不再指导工程但值得追溯时，按[归档规则](assets/references/writing.md#归档)处理，归档后永久冻结。只记录局部 UI 或纯机械改动的 Note 可直接清理，实质性记录合并删除时须完整承接独有内容。删除时逐项处理活跃入链，见[条件清理](assets/references/writing.md#条件清理)。
 
 | 查找内容 | 文档 |
 | --- | --- |

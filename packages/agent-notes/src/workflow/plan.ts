@@ -219,12 +219,15 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
       put(`${root}/archived/manifest.json`, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`))
     }
     else {
-      object(input, subject.metadata.status === 'implemented'
+      if (options.mechanical && subject.metadata.status !== 'implemented')
+        throw new NotesError('INVALID_REMOVAL', '--mechanical requires an active implemented Note.', subject.path)
+      const requiresOwner = subject.metadata.status === 'implemented' && !options.mechanical
+      object(input, requiresOwner
         ? ['expected_hash', 'reason', 'owner', 'coverage', 'references']
         : ['expected_hash', 'reason', 'references'], 'prune input')
       if (subject.metadata.status === 'proposed')
         throw new NotesError('INVALID_REMOVAL', 'Resolve a proposal to implemented or rejected before pruning.', subject.path)
-      if (subject.metadata.status === 'implemented') {
+      if (requiresOwner) {
         if (!input.owner || !Array.isArray(input.coverage) || !input.coverage.length)
           throw new NotesError('NEEDS_DECISION', 'An implemented Note needs an owner and concrete coverage mappings before pruning.', subject.path, 3)
         const ownerInput = object(input.owner, ['id', 'expected_hash', 'document'], 'Absorption owner')
@@ -299,9 +302,12 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
       }
       put(subject.path, null)
       data.references = input.references
-      review.push({ code: 'PRUNE_REVIEW', path: subject.path, note_id: subject.metadata.id, message: subject.metadata.status === 'rejected'
-        ? `Confirm the rejected idea no longer prevents a plausible mistake: ${reason}`
-        : `Confirm all unique rationale, alternatives, consequences, verification and coverage gaps were absorbed; mappings are locations, not proof: ${reason}` })
+      let message = requiresOwner
+        ? `Confirm all unique rationale, alternatives, consequences, verification and coverage gaps were absorbed; mappings are locations, not proof: ${reason}`
+        : `Confirm the rejected idea no longer prevents a plausible mistake: ${reason}`
+      if (options.mechanical)
+        message = `Confirm the Note covers only a small UI adjustment or purely mechanical change and contains no lasting guidance. Reason: ${reason}`
+      review.push({ code: 'PRUNE_REVIEW', path: subject.path, note_id: subject.metadata.id, message })
     }
   }
 

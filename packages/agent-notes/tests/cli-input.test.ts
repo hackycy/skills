@@ -44,6 +44,7 @@ describe('cLI responsibilities and inputs', () => {
     ['transition', 'id', '--input', '-', '--to=rejected'],
     ['archive', 'id', '--input', 'file', '--base=HEAD'],
     ['prune', 'id', '--input', 'file', '--recover'],
+    ['prune', 'id', '--mechanical', '--input=-', '--base=HEAD', '--dry-run'],
     ['context', '--topic=-internal'],
     ['context', '--paths', '-generated/file.ts', '-other/file.ts'],
   ])('preserves canonical delegation for %j', (...args) => {
@@ -69,6 +70,8 @@ describe('cLI responsibilities and inputs', () => {
     ['update', '--input', '-'],
     ['update'],
     ['transition', 'id', '--input', '-', '--to', 'proposed'],
+    ['archive', 'id', '--input', '-', '--mechanical'],
+    ['prune', 'id', '--input', '-', '--mechanical=false'],
     ['check', '--head', 'HEAD'],
     ['check', '--head', 'HEAD', '--base', 'HEAD', '--staged'],
     ['install', '--dry-run', '--recover'],

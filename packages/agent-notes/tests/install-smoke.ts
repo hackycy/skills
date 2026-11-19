@@ -9,7 +9,7 @@ import process from 'node:process'
 import { checkLinks } from '../src/notes/markdown'
 import { jsonYaml } from '../src/notes/reader'
 import { Repository, sha256 } from '../src/notes/snapshot'
-import { project, write } from './fixtures'
+import { commit, ids, mechanicalBody, note, project, write } from './fixtures'
 
 // Exercise npm's actual bin link, then use each installed runtime without npm.
 const tarball = resolve(process.argv[2])
@@ -58,8 +58,8 @@ try {
     write(root, 'AGENTS.md', '# Project rules\nUse the existing architecture.\n')
     write(root, 'src/orders/order.ts', 'export const owner = "orders"\n')
     mkdirSync(join(root, 'src/orders/sub'), { recursive: true })
-    const invoke = (args: string[], executable = bin): Result => {
-      const result = spawnSync(executable, [...args, '--json'], { cwd: join(root, 'src/orders/sub'), encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+    const invoke = (args: string[], input?: unknown): Result => {
+      const result = spawnSync(bin, [...args, '--json'], { cwd: join(root, 'src/orders/sub'), encoding: 'utf8', input: input === undefined ? undefined : JSON.stringify(input), env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
       assert.equal(result.status, 0, result.stdout || result.stderr)
       assert.equal(result.stderr, '')
       const parsed = JSON.parse(result.stdout) as Result
@@ -96,6 +96,18 @@ try {
     assert.equal(pointers[0].id, created.data.id)
     assert.equal('text' in pointers[0], false)
     invoke(['check'])
+    if (notesDir === '.agents/notes') {
+      const path = note(root, undefined, 'button-label', mechanicalBody)
+      commit(root)
+      const args = ['prune', ids[0], '--mechanical', '--input', '-']
+      const input = { expected_hash: invoke(['show', ids[0]]).data.hash, reason: 'Only records removal of a duplicate button label.', references: [] }
+      const preview = invoke([...args, '--dry-run'], input)
+      assert.deepEqual((preview.data.changes as { path: string, action: string }[]).map(change => [change.path, change.action]), [[path, 'delete']])
+      assert.ok(existsSync(join(root, path)))
+      invoke(args, input)
+      assert.ok(!existsSync(join(root, path)))
+      invoke(['check'])
+    }
     // Once installed, ordinary use does not depend on the npm package or source checkout.
     const local = spawnSync(process.execPath, [join(root, `${notesDir}/runtime/cli.mjs`), 'show', String(created.data.id), '--json'], { cwd: sandbox, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
     assert.equal(local.status, 0, local.stdout || local.stderr)

@@ -60,7 +60,7 @@ export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snap
         continue
       }
       if (!current) {
-        review.push({ code: 'NOTE_REMOVAL_REVIEW', note_id: id, path: previous.path, message: 'Verify rejected history no longer prevents mistakes, or all unique implemented content was absorbed. Snapshot comparison cannot prove absorption.' })
+        review.push({ code: 'NOTE_REMOVAL_REVIEW', note_id: id, path: previous.path, message: 'Review the removal reason: rejected history lost its prevention value, an implemented Note covered only a small UI adjustment or purely mechanical change, or its unique content was fully absorbed. Snapshot comparison cannot establish the reason or intermediate transitions.' })
         continue
       }
       if (current.identityPath !== previous.identityPath)

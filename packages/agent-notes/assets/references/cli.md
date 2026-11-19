@@ -20,7 +20,7 @@ npm 包的可执行命令为 `agent-notes`；项目入口为 `node .agents/notes
 | `update <id>` | 同上 | 维护同一决定；rejected 只接受限定元数据 |
 | `transition <id>` | 同上，加 `--to implemented\|rejected` | 交付或拒绝 proposed，保持身份并修复引用 |
 | `archive <id>` | 同上，可选 `--base` | 封存 implemented，要求可信 Git 基线 |
-| `prune <id>` | 同上，可选 `--base` | 条件清理未归档记录，要求可信 Git 基线 |
+| `prune <id>` | 同上，可选 `--base`、`--mechanical` | 条件清理未归档记录，要求可信 Git 基线。`--mechanical` 仅用于活跃 implemented，输入见[条件清理](writing.md#条件清理) |
 
 四个安装写命令与五个内容写命令接受互斥的 `--dry-run`、`--recover`。预览不写项目、锁、备份或 journal，不执行恢复；status 也不恢复。中断现场阻止普通写入；显式恢复先校验并恢复旧事务，再重新规划请求。输入校验、问答及取消先于恢复写入；执行时重新检查现场。内容写入材料见[写入参考](writing.md)。
 

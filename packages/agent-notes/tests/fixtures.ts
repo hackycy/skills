@@ -92,6 +92,24 @@ export function document(meta = metadata(), contents = body(meta.status)): strin
   return `---\n${stringify(meta)}---\n${contents}`
 }
 
+export const mechanicalBody = `# Button label
+
+## Problem
+The submit button displays its label twice.
+
+## Decision
+Remove the duplicate label.
+
+## Alternatives considered
+Leaving both labels makes the button harder to read.
+
+## Consequences
+The submit button displays its label once and submits the same form.
+
+## Verification
+The button rendering test passed with a single label.
+`
+
 export function note(root: string, meta = metadata(), slug = 'event-ownership', contents = body(meta.status)): string {
   const path = `.agents/notes/${meta.archive ? 'archived' : meta.status}/architecture/2026-10-21-${slug}.md`
   write(root, path, document(meta, contents))

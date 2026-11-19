@@ -1,6 +1,6 @@
 # Agent Notes 上游流程对齐评审
 
-> 状态：部分已决策；D5 选 C（2026-11-17），D1 选 A、D4 选 B（2026-11-18），D7 选 A（2026-11-19），其余待定
+> 状态：部分已决策。D5 选 C（2026-11-17），D1 选 A、D4 选 B（2026-11-18），D2 和 D7 选 A（2026-11-19），其余待定。
 >
 > 评审日期：2026-11-16
 >
@@ -14,7 +14,7 @@
 
 当前 CLI 与 DeepSeek Harness Notes 的主干生命周期同构：记录门槛、`proposed`/`implemented`/`rejected` 的起点与转换、同 PR 交付、implemented 随代码维护事实、只归档 implemented 并永久冻结、rejected 仅在仍有防错价值时保留，这些判断标准一致。
 
-基线差异集中在 8 个点。D1 和 D4 已在 skill 层对齐上游：新建前定向审计，不再单独确认记录。D5 已选择 C 并落地为 `context` 默认排除与受管 `.rgignore` 双层规则。D7 已选择 A，由接入项目按 README 示例配置 CI。D2–D3、D6 和 D8 仍待定。
+基线差异集中在 8 个点。D1 和 D4 已在 skill 层对齐上游：新建前定向审计，不再单独确认记录。D2 已选择 A，通过 `prune --mechanical` 支持直接清理。D5 已选择 C 并落地为 `context` 默认排除与受管 `.rgignore` 双层规则。D7 已选择 A，由接入项目按 README 示例配置 CI。D3、D6 和 D8 仍待定。
 
 ## 当前 CLI 的流程骨架
 
@@ -28,7 +28,7 @@ local/ 草稿 → create(proposed|implemented)
 ```
 
 - 读取：`context` 按 scope paths、精确 topic、global、requires 闭包返回指针；`show` 返回正文和原文 hash；`check` 校验结构、关系、链接和历史，`--maintenance` 给出维护候选。
-- 写入：草稿放 `local/`，`create` 生成稳定 ID（`an-UUID`）和 `lifecycle/class/日期-slug` 路径；`update` 用 `expected_hash` 防止覆盖；`transition` 保持身份并修复活跃引用；`archive` 需要可信 Git 基线并写 seal；`prune` 需要 owner、coverage 和逐项入链处理。
+- 写入：草稿放 `local/`，`create` 生成稳定 ID（`an-UUID`）和 `lifecycle/class/日期-slug` 路径；`update` 用 `expected_hash` 防止覆盖；`transition` 保持身份并修复活跃引用；`archive` 需要可信 Git 基线并写 seal。`prune` 逐项处理入链，合并删除 implemented 时另需 owner 和 coverage。
 - 保证：dry-run、写锁、journal、`--recover`；归档和清理要求可信基线；不维护持久索引，每次从文件在内存重建。
 - 分工：`agent-note` 与 `agent-note-maintenance` 编排动作，CLI 只做机械校验和事务，长期价值和语义身份留给作者与评审。
 
@@ -63,15 +63,15 @@ local/ 草稿 → create(proposed|implemented)
 
 ### D2. 机械性 implemented 记录能否直接删除
 
-- 本包现状：`prune` 的 implemented 必须有现行 owner、owner 的 `expected_hash` 和 coverage，否则只能 `archive`。没有“小 UI 或纯机械 implemented 直接删除”的路径。
-- 上游做法：直接删除只描述小 UI 调整或纯机械变更的完整 triplet（英文、中文、sidecar），修复或移除入链；明确不要把符合直接删除条件的记录归档。
-- 影响：低价值 implemented 记录会进入归档，增加冻结历史噪声；采用本包前已经存在的这类记录无法按上游策略清理。
-- 选项：
-  - A. 增加无 owner 的机械性删除路径（例如 `prune --mechanical`），要求 reason、入链处理和可信基线。
-  - B. 保持现状，并在文档中说明低价值 implemented 由 archive 承载，把差异写成产品选择。
-  - C. 只调整维护 skill 的优先级，不扩展 CLI。
-- 建议：若目标是保留完整历史，B；若要与上游清理语义一致，A（需要 CLI 变更和测试）。
-- 决策：待定。
+2026-11-19 专项复核。远端默认分支 `master` 指向 `2e39e704`，D2 相关的 Notes README、归档 skill 和归档校验脚本与评审基线一致。[上游提交](https://github.com/deepseek-ai/deepseek-harness/commit/2e39e70496aa02986ca6a820c5d497e816b69d7e)
+
+- 本包评审基线要求 implemented 清理提供现行 owner、owner 的 `expected_hash` 和非空 `coverage`。在临时仓库手动删除无入链的活跃 implemented 文件后，`check --base HEAD` 退出 0，并发出 `NOTE_REMOVAL_REVIEW`，由评审确认内容承接。[生命周期设计](design.md#决定身份与历史价值)
+- 上游直接删除**只描述小范围 UI 调整或纯机械变更**的活跃 implemented 记录。英文、中文和 sidecar 三件套一起删除，修复或移除入链，跳过归档，无需另找 owner。保留仍能指导后续工作的理由，例如机械重命名记录下的长期命名规则。局部 bug 修复、性能变化和新增能力不能凭改动小就归入这一例外。对已完成且仍有历史价值的实质性决定，可以归档。对完全替代后计划合并删除的实质性记录，现行 owner 仍须承接全部独有理由、替代方案、后果、必要验证和覆盖缺口。[上游 Notes README](https://github.com/deepseek-ai/deepseek-harness/blob/2e39e70496aa02986ca6a820c5d497e816b69d7e/.agents/notes/README.md#L36-L52)、[上游归档 skill](https://github.com/deepseek-ai/deepseek-harness/blob/2e39e70496aa02986ca6a820c5d497e816b69d7e/.agents/skills/dsh-archive-agent-notes/SKILL.md#L18-L46)。
+- 上游由作者和评审判断记录是否纯机械。文档检查覆盖存量三件套和活跃链接，归档校验保护已封存内容。2026-09-18 的清理提交实际直接删除了行为不变的 `issue-policy` 函数搬迁记录和 composer 占位符调整记录的三件套。[文档检查](https://github.com/deepseek-ai/deepseek-harness/blob/2e39e70496aa02986ca6a820c5d497e816b69d7e/scripts/run-gates.ts#L860-L891)、[归档校验](https://github.com/deepseek-ai/deepseek-harness/blob/2e39e70496aa02986ca6a820c5d497e816b69d7e/scripts/verify-archived-agent-notes.ts#L23-L112)、[清理提交](https://github.com/deepseek-ai/deepseek-harness/commit/de742f7f450562076a646160d973407c59cd1e8e)。
+- A. 在 `prune` 加显式的机械性清理路径，免除 owner 和 coverage，保留原 Note 的 `expected_hash`、删除理由、可信基线及活跃入链处置。作者与评审判断是否只有机械内容。
+- B. 保留现行承接规则。无可用 owner 时，仍有历史价值的记录可归档，其余留存。
+- C. 仅调整维护 skill 的优先级。`prune` 仍会拒绝无 owner 的删除。
+- 决策 A（2026-11-19），已落地。[条件清理](../../assets/references/writing.md#条件清理)定义命令与输入，[维护 skill](../../assets/skills/agent-note-maintenance/SKILL.md)在审计范围内优先应用这条规则。已通过包级测试及 Node 22.12.0、24.16.0 的实际包与 npm 安装验收。
 
 ### D3. implemented 是否必须包含验证章节
 
@@ -150,7 +150,7 @@ local/ 草稿 → create(proposed|implemented)
 - 用 `context` 的 scope 查询替代上游的目录树和全文搜索；发现能力更强，但依赖 scope 维护准确。
 - 用 `related`/`requires`/`supersedes` 结构关系替代纯正文链接；增加图环校验、requires 闭包和反向关系维护。
 - 内容写入、安装和修复共用写锁、journal 与恢复协议；上游主要依赖 Git 和 CI。
-- rejected 基线保护、归档来源校验和条件清理的 owner/coverage 证据；上游有对应的冻结与合并规则，但检查粒度不同。
+- rejected 基线保护、归档来源校验和合并删除的 owner/coverage 证据；上游有对应的冻结与合并规则，但检查粒度不同。
 - 单语言模板、稳定 ID 和 frontmatter 属于本包身份设计，不随上游格式变化。
 
 ## 决策清单
@@ -158,7 +158,7 @@ local/ 草稿 → create(proposed|implemented)
 | ID | 决策点 | 建议 | 落地成本 | 决策 |
 | --- | --- | --- | --- | --- |
 | D1 | 新建 Note 时绑定替代审计 | A | skill + 设计文档，低 | A，已落地 |
-| D2 | 机械性 implemented 直接删除 | A 或 B | CLI + 契约 + 测试，高 | 待定 |
+| D2 | 机械性 implemented 直接删除 | A 或 B | CLI + 契约 + 测试，高 | A，已落地 |
 | D3 | implemented 必填验证章节 | A | 文档契约，低 | 待定 |
 | D4 | 记录前用户授权 | B | skill + 设计文档，低 | B，已落地 |
 | D5 | 归档从仓库搜索默认排除 | C 或 B | 安装器 + 测试，中高；仅文档则低 | C，已落地 |
@@ -187,11 +187,11 @@ local/ 草稿 → create(proposed|implemented)
 - `docs/AGENTS.md`：文档层次与一个事实一个归属。
 - `scripts/archived-agent-notes.ts`：三元组、seal 和 append-only manifest 校验。
 
-上游学习副本不在本机时，按版本锁的 commit 从 GitHub 重新取得。本次评审读取的是固定提交，不是上游 HEAD；上游后续变化需要按[更新上游研究](upstreams.md#更新上游研究)重新核对。
+上游学习副本不在本机时，按版本锁的 commit 从 GitHub 重新取得。评审使用固定提交，D2 节另记载了专项复核时的上游 HEAD。后续变化按[更新上游研究](upstreams.md#更新上游研究)重新核对。
 
 ## 后续动作
 
 1. 按决策清单逐项确定 A/B/C，并在本文记录日期和结论。
 2. 采纳项按[内容归属](design.md#文档内容与分发)写入唯一维护位置：治理原则进 `design.md`，上游事实与采纳范围进 `upstreams.md`，命令行为进 `cli.md`/`writing.md`，格式规则进 `document.md`，动作编排进两份 skill。
-3. D2 若调整 CLI 行为，决策后按[维护验证](validation.md)补充测试和实际产物验证。D5 已完成 C 的实现，保留现有协议，并补充搜索、原地升级与恢复验收。
+3. D5 已完成 C 的实现，保留现有协议，并补充搜索、原地升级与恢复验收。
 4. 决策完成并落地后，删除本文或将其转为简短的决策记录，避免与 `design.md`、`upstreams.md` 形成第二个事实归属。

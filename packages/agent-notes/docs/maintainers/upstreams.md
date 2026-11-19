@@ -31,7 +31,7 @@
 
 ### 采纳范围与本包扩展
 
-上游 Notes README 按长期价值判断是否添加或更新，没有单独的记录确认步骤。本包采纳这一规则，仍以任务写入范围和项目指令为边界。固定版维护 skill 的 `description` 是本包触发语义的权威参考；本包由 `agent-note` 负责发现和写作，由 `agent-note-maintenance` 负责新建审计与生命周期，不照搬恢复归档触发、双语三件套或机械性记录直接删除规则。
+上游 Notes README 按长期价值判断是否添加或更新，没有单独的记录确认步骤。本包采纳这一规则，仍以任务写入范围和项目指令为边界。固定版维护 skill 的 `description` 是本包触发语义的权威参考。本包由 `agent-note` 负责发现和写作，由 `agent-note-maintenance` 负责新建审计与生命周期。本包采纳[机械性记录直接删除的判据](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/.agents/notes/README.md#archiving-and-deletion)，通过 `prune --mechanical` 清理单文件 Note。恢复归档触发与双语三件套属于上游流程。
 
 上游提供目录、格式、链接与归档校验；“值得写”“应归档”“已完整吸收”仍由作者和审查判断。本包增加稳定 ID、scope 查询、事务性转换、rejected 基线保护及首次归档来源校验，这些是本包设计，不应归为上游已有保证。上游的多文件翻译布局、历史格式例外和特定 seal 修补也不作为本包通用契约。
 

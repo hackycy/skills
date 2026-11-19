@@ -15,6 +15,7 @@ export interface WriteOptions {
   id?: string
   input: string
   to?: 'implemented' | 'rejected'
+  mechanical?: boolean
   dryRun: boolean
   recover: boolean
   base?: string

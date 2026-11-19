@@ -85,7 +85,25 @@ node .agents/notes/runtime/cli.mjs archive <id> --root /path/to/project --input 
 
 ## 条件清理
 
-rejected 需要 reason 说明为何已无防错价值，以及 references。implemented 还需要一个当前有效的 implemented owner、owner 的 expected_hash 和 coverage。owner 可附 document 在同一事务中承接内容；部分 supersedes 不能作为删除依据，完整 supersedes 也不能替代 coverage。
+所有清理输入都需要目标 Note 的 `expected_hash`、非空 `reason` 和 `references`。基线与[归档](#归档)使用同一规则，默认 HEAD，可显式指定 `--base <commit>`。
+
+对照[清理条件](../formats/document.md#4-正文与生命周期)选择方式。`prune --mechanical` 仅接受活跃 implemented，输入只包含上述三项。理由说明记录为何只涉及局部 UI 或纯机械改动。以下是无入链时的输入示例。
+
+```json
+{
+  "expected_hash": "通过 show 取得的 Note SHA-256",
+  "reason": "这条记录只描述按钮间距调整，没有可指导后续工作的理由。",
+  "references": []
+}
+```
+
+```sh
+node .agents/notes/runtime/cli.mjs prune <id> --mechanical --input .agents/notes/local/prune.json --dry-run --json
+```
+
+核对预览后去掉 `--dry-run` 执行。在 PR 说明中记录删除理由，供评审核对 `PRUNE_REVIEW` 或快照检查的 `NOTE_REMOVAL_REVIEW`。
+
+普通 `prune` 清理 rejected 时，reason 说明为何已无防错价值。合并删除 implemented 时，另需一个当前有效的 implemented owner、owner 的 expected_hash 和 coverage。owner 可附 document 在同一事务中承接内容。
 
 ```json
 {

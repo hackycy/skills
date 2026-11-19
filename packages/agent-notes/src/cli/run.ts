@@ -94,7 +94,7 @@ export function execute(input: Options, cwd = process.cwd(), stdin?: string): Re
       return manage({ ...input, command: input.command }, cwd)
     const root = findRoot(input.root, cwd)
     if (writeCommands.includes(input.command))
-      return executeWrite(root, { command: input.command as WriteCommand, id: input.id, input: input.input!, to: input.to as 'implemented' | 'rejected' | undefined, dryRun: input.dryRun, recover: input.recover, base: input.base }, stdin)
+      return executeWrite(root, { command: input.command as WriteCommand, id: input.id, input: input.input!, to: input.to as 'implemented' | 'rejected' | undefined, mechanical: input.mechanical, dryRun: input.dryRun, recover: input.recover, base: input.base }, stdin)
     if (!input.head && !input.staged)
       assertNoTransaction(root)
     const repository = new Repository(root)

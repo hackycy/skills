@@ -26,6 +26,7 @@ const schema = z.strictObject({
   includeArchived: flag,
   staged: flag,
   maintenance: flag,
+  mechanical: flag,
   dryRun: flag,
   recover: flag,
   interactive: z.boolean().optional(),
@@ -91,6 +92,7 @@ function declarations(kind: 'package' | 'runtime'): CAC {
   const writes = writeCommands.map(name => cli.command(`${name}${name === 'create' ? '' : ' <id>'}`, `${name} a Note`)
     .option('--input <json-file|->', 'Complete operation materials; - reads stdin'))
   writes.find(command => command.name === 'transition')!.option('--to <implemented|rejected>', 'Target status')
+  writes.find(command => command.name === 'prune')!.option('--mechanical', 'Prune a purely mechanical or local UI implemented Note without an owner')
   for (const command of writes.filter(command => ['archive', 'prune'].includes(command.name)))
     command.option('--base <commit>', 'Trusted history baseline')
   for (const command of [...installation, repair, ...writes]) {
@@ -238,7 +240,7 @@ export function runtimeArguments(input: Options): string[] {
     for (const value of values)
       args.push(`--${flag}`, value)
   }
-  for (const [key, flag] of Object.entries({ json: 'json', includeArchived: 'include-archived', staged: 'staged', maintenance: 'maintenance', dryRun: 'dry-run', recover: 'recover' }) as [keyof Options, string][]) {
+  for (const [key, flag] of Object.entries({ json: 'json', includeArchived: 'include-archived', staged: 'staged', maintenance: 'maintenance', mechanical: 'mechanical', dryRun: 'dry-run', recover: 'recover' }) as [keyof Options, string][]) {
     if (input[key])
       args.push(`--${flag}`)
   }

@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { stringify } from 'yaml'
 import { exitCode, run } from '../src/cli/run'
-import { body, commit, document, ids, metadata, note, project, write } from './fixtures'
+import { body, commit, document, ids, mechanicalBody, metadata, note, project, write } from './fixtures'
 
 const roots: string[] = []
 function setup(): string {
@@ -35,6 +35,8 @@ function input(root: string, extra: Record<string, unknown> = {}, id = ids[0]): 
 function check(root: string) {
   return run(['check', '--root', root])
 }
+
+const mechanicalReason = 'The note only records removal of a duplicate UI label and carries no lasting guidance.'
 
 describe('create and update', () => {
   it('previews without permanent identity or any writes, then creates a complete Note', () => {
@@ -364,6 +366,111 @@ describe('conditional prune', () => {
     expect(action(root, 'prune', input(root, { references: [] }), [ids[0]]).result).toBe('ok')
     expect(check(root).result).toBe('ok')
     expect(check(root).review.map(item => item.code)).toContain('NOTE_REMOVAL_REVIEW')
+  })
+})
+
+describe('mechanical prune', () => {
+  it('deletes an implemented Note without an owner or archive entry', () => {
+    const root = setup()
+    const old = note(root, undefined, 'button-label', mechanicalBody)
+    const base = commit(root)
+    const params = input(root, { reason: mechanicalReason, references: [] })
+    const result = action(root, 'prune', params, [ids[0], '--mechanical', '--base', base])
+    expect(result.result, JSON.stringify(result)).toBe('ok')
+    expect(result.scope.base).toBe(base)
+    expect(result.data.changes).toMatchObject([{ path: old, action: 'delete' }])
+    expect(result.data).not.toHaveProperty('owner')
+    expect(result.data).not.toHaveProperty('coverage')
+    expect(existsSync(join(root, old))).toBe(false)
+    expect(result.review).toContainEqual(expect.objectContaining({ code: 'PRUNE_REVIEW', message: expect.stringContaining(mechanicalReason) }))
+    expect(check(root).review).toContainEqual(expect.objectContaining({ code: 'NOTE_REMOVAL_REVIEW', message: expect.stringContaining('purely mechanical change') }))
+  })
+
+  it('previews and applies deletion with explicit Markdown and structural reference dispositions', () => {
+    const root = setup()
+    const old = note(root, undefined, 'button-label', mechanicalBody)
+    const referringMeta = metadata({ id: ids[1], relations: { requires: [ids[0]] } })
+    const referring = note(root, referringMeta, 'consumer')
+    note(root, metadata({ id: ids[2] }), 'current-dependency')
+    const originalReadme = `[Prior UI label](${old}#decision)\n`
+    write(root, 'README.md', originalReadme)
+    commit(root)
+    const markdown = { path: 'README.md', target_id: null }
+    const relation = { path: referring, target_id: ids[2] }
+    const args = [ids[0], '--mechanical']
+    const params = input(root, { reason: mechanicalReason, references: [markdown] })
+    const incomplete = action(root, 'prune', params, args)
+    expect(incomplete.diagnostics).toContainEqual(expect.objectContaining({ code: 'NEEDS_DECISION', path: referring }))
+    params.references = [markdown, relation]
+    const preview = action(root, 'prune', params, [...args, '--dry-run'])
+    expect(preview.result, JSON.stringify(preview)).toBe('ok')
+    expect(preview.data.changes).toHaveLength(3)
+    expect(preview.data.changes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: old, action: 'delete' }),
+      expect.objectContaining({ path: 'README.md', action: 'update' }),
+      expect.objectContaining({ path: referring, action: 'update' }),
+    ]))
+    expect(existsSync(join(root, old))).toBe(true)
+    expect(readFileSync(join(root, 'README.md'), 'utf8')).toBe(originalReadme)
+    expect(readFileSync(join(root, referring), 'utf8')).toBe(document(referringMeta))
+    const result = action(root, 'prune', params, args)
+    expect(result.result, JSON.stringify(result)).toBe('ok')
+    expect(existsSync(join(root, old))).toBe(false)
+    expect(readFileSync(join(root, 'README.md'), 'utf8')).toBe('Prior UI label\n')
+    expect(readFileSync(join(root, referring), 'utf8')).toContain(ids[2])
+    expect(readFileSync(join(root, referring), 'utf8')).not.toContain(ids[0])
+    expect(check(root).result).toBe('ok')
+  })
+
+  it('requires a resolvable Git base and current hash, a reason, and explicit references', () => {
+    const root = setup()
+    const old = note(root, undefined, 'button-label', mechanicalBody)
+    const params = input(root, { reason: mechanicalReason, references: [] })
+    const args = [ids[0], '--mechanical']
+    expect(action(root, 'prune', params, args).diagnostics).toContainEqual(expect.objectContaining({ code: 'BASE_NOT_FOUND' }))
+    commit(root)
+    const cases = [
+      ['NEEDS_DECISION', { reason: ' ' }],
+      ['NEEDS_DECISION', { references: undefined }],
+      ['CONCURRENT_CHANGE', { expected_hash: '0'.repeat(64) }],
+      ['INVALID_INPUT', { owner: { id: ids[1] } }],
+      ['INVALID_INPUT', { coverage: [] }],
+    ] as const
+    for (const [code, overrides] of cases)
+      expect(action(root, 'prune', { ...params, ...overrides }, args).diagnostics).toContainEqual(expect.objectContaining({ code }))
+    expect(existsSync(join(root, old))).toBe(true)
+  })
+
+  it.each(['proposed', 'rejected'] as const)('rejects a %s target', (status) => {
+    const root = setup()
+    const old = note(root, metadata({ status, ...(status === 'rejected' ? { rejection_reason: 'Declined.' } : {}) }))
+    commit(root)
+    const result = action(root, 'prune', input(root, { reason: mechanicalReason, references: [] }), [ids[0], '--mechanical'])
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'INVALID_REMOVAL' }))
+    expect(existsSync(join(root, old))).toBe(true)
+  })
+
+  it('protects archived targets and rejected prose linking to the target', () => {
+    const root = setup()
+    const old = note(root, undefined, 'button-label', mechanicalBody)
+    const frozenMeta = metadata({ id: ids[1] })
+    note(root, frozenMeta, 'historical')
+    const rejectedMeta = metadata({ id: ids[2], status: 'rejected', rejection_reason: 'Keep the history.' })
+    const rejectedProse = `${body('rejected')}\n[UI history](../../implemented/architecture/2026-10-21-button-label.md)\n`
+    const rejected = note(root, rejectedMeta, 'rejected', rejectedProse)
+    commit(root)
+    const archived = action(root, 'archive', input(root, {}, ids[1]), [ids[1]])
+    expect(archived.result, JSON.stringify(archived)).toBe('ok')
+    const frozen = String(archived.data.path)
+    const sealed = readFileSync(join(root, frozen))
+    commit(root)
+    const params = { reason: mechanicalReason, references: [{ path: rejected, target_id: null }] }
+    expect(action(root, 'prune', input(root, params), [ids[0], '--mechanical']).diagnostics).toContainEqual(expect.objectContaining({ code: 'REJECTED_NOTE_CHANGED' }))
+    const frozenInput = input(root, { reason: mechanicalReason, references: [] }, ids[1])
+    expect(action(root, 'prune', frozenInput, [ids[1], '--mechanical']).diagnostics).toContainEqual(expect.objectContaining({ code: 'FROZEN_NOTE_CHANGED' }))
+    expect(readFileSync(join(root, frozen))).toEqual(sealed)
+    expect(readFileSync(join(root, rejected), 'utf8')).toBe(document(rejectedMeta, rejectedProse))
+    expect(existsSync(join(root, old))).toBe(true)
   })
 })
 

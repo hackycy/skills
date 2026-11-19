@@ -11,8 +11,11 @@ Before drafting a new Note, run `node .agents/notes/runtime/cli.mjs context --pa
 
 ## Resolve confirmed matches in the same PR
 
+Apply the mechanical-prune row first to any in-scope active implemented Note, including in a standalone audit.
+
 | Finding | Action |
 | --- | --- |
+| Implemented Note covers only small UI adjustments or purely mechanical changes and carries no lasting guidance | Use `prune --mechanical` with the reason and explicit inbound reference dispositions. Read the [deletion criteria](../../formats/document.md#4-正文与生命周期) if the change may contain a substantive decision. |
 | Same active decision | Update the existing Note or deliver its proposal after implementation and verification. Rejected Notes retain their proposal and rejection rationale; reconsidering one requires a new Note. |
 | Different decision, related or partly replacing the old one | Link the decisions. Use `supersedes` only for the actual replacement scope and only against an implemented or rejected target. Keep partial replacements cross-linked and maintain any facts that still apply. |
 | New proposal would fully replace an implemented decision | Record the intended replacement, but keep the old decision current. Reassess when the proposal ships. |
@@ -24,6 +27,6 @@ Handle known matches as part of adding or delivering the replacement; do not def
 
 ## Preview, write, and verify
 
-For the chosen action, read the corresponding [write inputs and recovery](../../references/writing.md). `transition --to implemented` replaces proposal sections with the shipped decision, consequences, and verification. `prune` of an implemented Note requires owner/hash and section coverage for rationale, alternatives, consequences, verification and gaps; full supersession alone is insufficient. Archive only implemented history after resolving current dependencies. Never edit, move, delete, or reseal an existing archive.
+For the chosen action, read the corresponding [write inputs and recovery](../../references/writing.md). `transition --to implemented` replaces proposal sections with the shipped decision, consequences, and verification. Consolidation with `prune` requires the owner, its hash and section coverage. Archive only implemented history after resolving current dependencies. Never edit, move, delete, or reseal an existing archive.
 
 Write only within the task's permitted scope and project rules. Refresh hashes with `show`, prepare input in `.agents/notes/local/`, and preview with `--dry-run --json` before executing. Resolve ambiguous references rather than bypassing the CLI. Run `check --maintenance` against the intended Git baseline and review diagnostics. Report affected IDs/paths, the disposition and reason for each confirmed match, and unresolved blockers. No age threshold automatically makes a decision obsolete.
