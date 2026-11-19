@@ -1,6 +1,6 @@
 # Agent Notes 上游流程对齐评审
 
-> 状态：部分已决策；D5 选 C（2026-11-17），D1 选 A、D4 选 B（2026-11-18），其余待定
+> 状态：部分已决策；D5 选 C（2026-11-17），D1 选 A、D4 选 B（2026-11-18），D7 选 A（2026-11-19），其余待定
 >
 > 评审日期：2026-11-16
 >
@@ -14,7 +14,7 @@
 
 当前 CLI 与 DeepSeek Harness Notes 的主干生命周期同构：记录门槛、`proposed`/`implemented`/`rejected` 的起点与转换、同 PR 交付、implemented 随代码维护事实、只归档 implemented 并永久冻结、rejected 仅在仍有防错价值时保留，这些判断标准一致。
 
-基线差异集中在 8 个点。D1 和 D4 已在 skill 层对齐上游：新建前定向审计，不再单独确认记录。D5 已选择 C 并落地为 `context` 默认排除与受管 `.rgignore` 双层规则。D2–D3 和 D6–D8 仍待定。
+基线差异集中在 8 个点。D1 和 D4 已在 skill 层对齐上游：新建前定向审计，不再单独确认记录。D5 已选择 C 并落地为 `context` 默认排除与受管 `.rgignore` 双层规则。D7 已选择 A，由接入项目按 README 示例配置 CI。D2–D3、D6 和 D8 仍待定。
 
 ## 当前 CLI 的流程骨架
 
@@ -129,8 +129,7 @@ local/ 草稿 → create(proposed|implemented)
   - A. 保持产品边界，在文档中给出可选的 CI 调用示例，不自动安装。
   - B. 提供专用 CI 命令或配置生成器。
   - C. 自动安装 hook/CI，与当前产品边界冲突。
-- 建议：A；最多补一个文档示例。
-- 决策：待定。
+- 决策：A（2026-11-19）。接入项目可通过 GitHub Actions 将 `check` 设为合并必需检查，见 [README 示例](../../README.md#在-ci-中校验-pull-request)。
 
 ### D8. 是否对齐上游的格式与双语布局
 
@@ -164,7 +163,7 @@ local/ 草稿 → create(proposed|implemented)
 | D4 | 记录前用户授权 | B | skill + 设计文档，低 | B，已落地 |
 | D5 | 归档从仓库搜索默认排除 | C 或 B | 安装器 + 测试，中高；仅文档则低 | C，已落地 |
 | D6 | rejected 路由元数据维护 | A | 文档契约，低 | 待定 |
-| D7 | hook/CI 强制点 | A | 文档，低 | 待定 |
+| D7 | hook/CI 强制点 | A | 文档，低 | A，已落地 |
 | D8 | 格式与双语布局 | A | 无需改动 | 待定 |
 
 ## 依据与阅读范围

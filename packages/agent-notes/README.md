@@ -8,6 +8,7 @@ Agent Notes 将值得长期保留的工程提案和决策写成项目内的 Mark
 - [快速开始](#快速开始)
 - [日常使用：从一个想法开始](#日常使用)
 - [目录与 Git](#目录与-git)
+- [在 CI 中校验 Pull Request](#在-ci-中校验-pull-request)
 - [管理与深入参考](#管理与深入参考)
 
 ## 什么时候需要 Note
@@ -259,6 +260,43 @@ node .agents/notes/runtime/cli.mjs show <id> --json
 `local/` 是工作材料目录。草稿和 JSON 用于准备写入，`backups/` 用于修复受管工具文件前保存原文等材料，`write-lock/` 用于写入互斥和中断恢复；一次正常事务结束后会清理写锁，但可以留下空的 local 父目录。
 
 如果看到中断事务的 `write-lock/journal.json`，保留现场并按[事务和恢复](assets/references/writing.md#事务和恢复)处理。恢复时为原写命令附加 `--recover`；它与 `--dry-run` 互斥，恢复冲突需要协调外部编辑与 journal，不能当成普通草稿直接删除。
+
+## 在 CI 中校验 Pull Request
+
+如果项目希望在合并前运行 Notes 校验，可以将以下 GitHub Actions 示例保存为 `.github/workflows/agent-notes.yml`。先将 Agent Notes 安装产物提交到 PR 的目标分支。使用自定义 Notes 根时，替换示例中的 `.agents/notes`。
+
+```yaml
+name: Agent Notes
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  agent-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check Notes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/agent-notes-base" "$BASE_SHA"
+          cd "$RUNNER_TEMP/agent-notes-base"
+          node .agents/notes/runtime/cli.mjs check --base "$BASE_SHA" --head "$GITHUB_SHA" --json
+```
+
+`BASE_SHA` 是 PR 事件中的目标分支提交，`GITHUB_SHA` 是 GitHub 生成的 PR 合并提交。完整 Git 历史让 CLI 能读取两个提交并比较历史。独立 worktree 让 CI 启动 `BASE_SHA` 中已提交的 runtime，检查合并结果中的 Notes、配置和引用目标。快照细节见[检查快照](assets/references/cli.md#检查快照)。
+
+在目标分支的保护规则中将 `agent-notes` job 设为合并必需的状态检查。CLI 校验失败时，非零退出码会使 job 失败。是否需要记录 Note、替代时是否完整承接旧决定，仍由作者和评审判断。
 
 ## 管理与深入参考
 
