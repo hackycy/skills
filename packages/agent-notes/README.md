@@ -6,6 +6,7 @@ Agent Notes 将值得长期保留的工程提案和决策写成项目内的 Mark
 
 - [什么时候需要 Note](#什么时候需要-note)
 - [快速开始](#快速开始)
+- [升级项目版本](#升级项目版本)
 - [日常使用：从一个想法开始](#日常使用)
 - [目录与 Git](#目录与-git)
 - [在 CI 中校验 Pull Request](#在-ci-中校验-pull-request)
@@ -63,6 +64,22 @@ node .agents/notes/runtime/cli.mjs status --json
 > 使用 agent-note，先查已有的相关记录，再帮我分析商品列表查询慢的问题。若有值得保留的取舍，随交付说明记录及其价值。
 
 安装器保留所有 AGENTS/CLAUDE 文件原文。安装成功证明静态资源完整；宿主是否发现、加载 skill，以及 Agent 是否执行了工作流，需要分别验证。具体边界见[验证安装与日常使用](docs/installation.md#验证安装与日常使用)。
+
+## 升级项目版本
+
+在目标项目根目录执行。先用 `status` 查看当前安装版本，也可以用 `npm view @hackycy/agent-notes version` 查询 npm 默认提供的版本。将 `X.Y.Z` 替换为选定的完整版本号，确认 `--dry-run` 的结果后再升级。
+
+```sh
+node .agents/notes/runtime/cli.mjs status --json
+npx --yes @hackycy/agent-notes@X.Y.Z tool update --dry-run
+npx --yes @hackycy/agent-notes@X.Y.Z tool update
+node .agents/notes/runtime/cli.mjs status --json
+node .agents/notes/runtime/cli.mjs check --json
+```
+
+`tool update` 由目标版本的 npm 包执行，更新项目内的受管工具文件。升级后用 `status` 确认版本和安装完整性，用 `check` 校验 Notes。升级产生的受管文件变更可随项目提交。使用自定义 Notes 根时，替换示例中的 runtime 路径。
+
+若预览报告受管文件损坏，先用当前安装版本执行 `repair`。原地升级要求 `install.json` 使用 `agent-notes-install/2`，旧版 `agent-notes-install/1` 安装的迁移需单独处理。详见[升级与修复](docs/installation.md#升级项目版本)。
 
 ## 日常使用
 
@@ -300,7 +317,7 @@ jobs:
 
 ## 管理与深入参考
 
-工具版本切换使用 `tool update`，维护 Note 正文使用 `update <id>`。调整接入集合、升级和同版本修复的步骤见[安装、升级与修复](docs/installation.md)。
+维护 Note 正文使用 `update <id>`。调整接入集合和修复安装的步骤见[安装、升级与修复](docs/installation.md)。
 
 已交付且仍指导当前工作的 Note 保持活跃；不再指导工程但值得追溯时，按[归档规则](assets/references/writing.md#归档)处理，归档后永久冻结。记录被替代不会自动归档或允许删除；删除需要满足[条件清理](assets/references/writing.md#条件清理)，包括独有内容的承接与入链处理。
 
