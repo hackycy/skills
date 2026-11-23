@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
-import { checkLinks } from '../src/notes/markdown'
+import { checkLinks, links, relativeTarget } from '../src/notes/markdown'
 import { jsonYaml } from '../src/notes/reader'
 import { Repository, sha256 } from '../src/notes/snapshot'
 import { commit, ids, mechanicalBody, note, project, write } from './fixtures'
@@ -82,7 +82,18 @@ try {
     source.includeDirectory(`${notesDir}/runtime`)
     source.includeDirectory(skillRoot)
     assert.deepEqual(checkLinks(source, source.paths().filter(path => path.endsWith('.md'))), [])
-    const draft = readFileSync(join(root, `${notesDir}/runtime/assets/templates/implemented.${language}.md`), 'utf8')
+    const templateDir = `${notesDir}/runtime/assets/templates`
+    const templateLinks = links(skill)
+      .map(link => relativeTarget(entry, link.url)?.path)
+      .filter(path => path === templateDir || path?.startsWith(`${templateDir}/`))
+    assert.deepEqual(templateLinks, [templateDir])
+    for (const status of ['proposed', 'implemented']) {
+      for (const templateLanguage of ['zh-CN', 'en']) {
+        const template = `${templateDir}/${status}.${templateLanguage}.md`
+        assert.ok(source.read(template), `Missing installed template: ${template}`)
+      }
+    }
+    const draft = readFileSync(join(root, `${templateDir}/implemented.${language}.md`), 'utf8')
       .replace('paths: [src/affected-area/**]', 'paths: [src/orders/**]')
       .replaceAll('Replace this prompt with concrete reasoning or evidence for this section.', 'Only the order aggregate publishes events; duplicate entry-point delivery tests passed. The infrastructure alternative would obscure the transaction boundary.')
       .replaceAll('将这段提示替换为本节的具体理由或证据。', '订单聚合独占事件发布；两个入口的重复投递回归测试通过。基础设施统一代发会隐藏事务边界，因此不采用。')
