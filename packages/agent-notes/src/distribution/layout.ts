@@ -1,5 +1,5 @@
 import { lstatSync, readdirSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, posix, relative, resolve } from 'node:path'
 import { NotesError } from '../notes/model'
 import { boundedRead, limits } from './protocol'
 
@@ -72,25 +72,70 @@ export function layoutFromPaths(paths: string[]): NotesLayout | undefined {
   return choose(paths.filter(path => path.endsWith('/config.json') && paths.includes(`${dirname(path)}/runtime/cli.mjs`)).map(path => dirname(path)))
 }
 
-export function layoutFromSnapshot(snapshot: LayoutSnapshot): NotesLayout | undefined {
-  const paths = new Set(snapshot.paths())
+export function layoutFromSnapshot(snapshot: LayoutSnapshot): NotesLayout | undefined
+export function layoutFromSnapshot(snapshot: LayoutSnapshot, fallbackRoot: string): NotesLayout
+export function layoutFromSnapshot(snapshot: LayoutSnapshot, fallbackRoot?: string): NotesLayout | undefined {
+  const root = snapshot.kind === 'worktree' ? snapshot.repository?.root : undefined
+  const checkoutMarkers = new Map<string, boolean>()
   const candidates = new Set<string>()
   const defaults = notesLayout()
-  for (const path of [defaults.configPath, defaults.installPath]) {
-    if (snapshot.read(path, limits.installation))
-      candidates.add(defaultNotesRoot)
+  if (!root || !inNestedCheckout(root, defaultNotesRoot, checkoutMarkers)) {
+    for (const path of [defaults.configPath, defaults.installPath]) {
+      if (snapshot.read(path, limits.installation))
+        candidates.add(defaultNotesRoot)
+    }
   }
-  for (const path of paths) {
-    if ((path.endsWith('/config.json') || path.endsWith('/install.json')) && isNotesFile(snapshot.read(path, limits.installation)))
-      candidates.add(dirname(path))
-    if (path.endsWith('/config.json') && snapshot.read(path, limits.installation) && snapshot.read(`${dirname(path)}/install.json`, limits.installation) && snapshot.read(`${dirname(path)}/runtime/cli.mjs`, limits.sourceFile))
-      candidates.add(dirname(path))
+  for (const path of snapshot.paths()) {
+    const isConfig = path.endsWith('/config.json')
+    if (!isConfig && !path.endsWith('/install.json'))
+      continue
+    const directory = posix.dirname(path)
+    if (root && inNestedCheckout(root, directory, checkoutMarkers))
+      continue
+    const bytes = snapshot.read(path, limits.installation)
+    if (isNotesFile(bytes))
+      candidates.add(directory)
+    if (isConfig && bytes && snapshot.read(`${directory}/install.json`, limits.installation) && snapshot.read(`${directory}/runtime/cli.mjs`, limits.sourceFile))
+      candidates.add(directory)
   }
-  const found = choose(candidates)
-  // Worktree configuration may be ignored by Git. Historical snapshots use only their own entries.
-  return snapshot.kind === 'worktree' && snapshot.repository
-    ? choose([...(found ? [found.notesRoot] : []), ...diskRoots(snapshot.repository.root)])
-    : found
+  // The working tree can contain ignored configurations.
+  if (root) {
+    for (const candidate of diskRoots(root))
+      candidates.add(candidate)
+  }
+  const layout = choose(candidates)
+  if (layout || fallbackRoot === undefined)
+    return layout
+  if (root && inNestedCheckout(root, fallbackRoot, checkoutMarkers))
+    throw new NotesError('ROOT_NOT_FOUND', 'The Notes directory belongs to a nested Git checkout.', fallbackRoot, 2)
+  return notesLayout(fallbackRoot)
+}
+
+function isGitMarker(entry: { isFile: () => boolean, isDirectory: () => boolean }): boolean {
+  return entry.isFile() || entry.isDirectory()
+}
+
+function inNestedCheckout(root: string, directory: string, cache: Map<string, boolean>): boolean {
+  if (/^[a-z]:/i.test(directory))
+    return false
+  // Git can track files beneath directories the disk scan skips.
+  let ancestor = root
+  for (const segment of directory.split('/')) {
+    if (!segment || segment === '.' || segment === '..' || segment.includes('\\'))
+      return false // The snapshot reader diagnoses unsupported paths.
+    ancestor = join(ancestor, segment)
+    let marker = cache.get(ancestor)
+    if (marker === undefined) {
+      if (!lstatSync(ancestor, { throwIfNoEntry: false })?.isDirectory())
+        return false
+      const entry = lstatSync(join(ancestor, '.git'), { throwIfNoEntry: false })
+      marker = entry !== undefined && isGitMarker(entry)
+      cache.set(ancestor, marker)
+    }
+    if (marker)
+      return true
+  }
+  return false
 }
 
 function fileObject(directory: string, name: string): Record<string, unknown> | undefined {
@@ -119,10 +164,12 @@ function hasFile(directory: string, path: string): boolean {
 }
 
 function diskRoots(root: string): string[] {
-  const candidates: string[] = []
+  const roots: string[] = []
   const walk = (directory: string): void => {
     const entries = readdirSync(directory, { withFileTypes: true })
     const local = relative(root, directory).split('\\').join('/')
+    if (local && entries.some(entry => entry.name === '.git' && isGitMarker(entry)))
+      return
     const config = entries.find(entry => entry.name === 'config.json')
     const install = entries.find(entry => entry.name === 'install.json')
     const format = config?.isFile() ? fileObject(directory, 'config.json')?.format : undefined
@@ -142,7 +189,7 @@ function diskRoots(root: string): string[] {
       || (typeof format === 'string' && format.startsWith('agent-notes-config/'))
       || (typeof installed === 'string' && installed.startsWith('agent-notes-install/')) || complete || lock)
     if (recognized)
-      candidates.push(local)
+      roots.push(local)
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name === '.git' || entry.name === 'node_modules'
         || (recognized && ['runtime', 'local'].includes(entry.name))) {
@@ -152,11 +199,15 @@ function diskRoots(root: string): string[] {
     }
   }
   walk(resolve(root))
-  return candidates
+  return roots
 }
 
 export function layoutFromDisk(root: string): NotesLayout | undefined {
   return choose(diskRoots(root))
+}
+
+export function localNotesLayout(root: string): NotesLayout | undefined {
+  return layoutFromDisk(root) ?? (inNestedCheckout(root, defaultNotesRoot, new Map()) ? undefined : notesLayout())
 }
 
 /** Infer the project boundary from the installed executable, including custom-depth Notes roots. */

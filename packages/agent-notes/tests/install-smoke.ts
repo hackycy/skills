@@ -9,7 +9,7 @@ import process from 'node:process'
 import { checkLinks, links, relativeTarget } from '../src/notes/markdown'
 import { jsonYaml } from '../src/notes/reader'
 import { Repository, sha256 } from '../src/notes/snapshot'
-import { commit, ids, mechanicalBody, note, project, write } from './fixtures'
+import { commit, git, ids, mechanicalBody, note, project, write } from './fixtures'
 
 // Exercise npm's actual bin link, then use each installed runtime without npm.
 const tarball = resolve(process.argv[2])
@@ -109,7 +109,20 @@ try {
     invoke(['check'])
     if (notesDir === '.agents/notes') {
       const path = note(root, undefined, 'button-label', mechanicalBody)
-      commit(root)
+      write(root, '.gitignore', `${readFileSync(join(root, '.gitignore'), 'utf8')}\n/.claude/worktrees/\n`)
+      const revision = commit(root)
+      const nested = join(root, '.claude/worktrees/agent-token-fixed')
+      git(root, 'worktree', 'add', '--detach', nested, revision)
+      for (const [command, ...prefix] of [[bin], [process.execPath, join(root, `${notesDir}/runtime/cli.mjs`)]]) {
+        for (const args of [['show', ids[0]], ['check'], ['context', '--topic', 'events']]) {
+          const result = spawnSync(command, [...prefix, ...args, '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } })
+          assert.equal(result.status, 0, result.stdout || result.stderr)
+          const parsed = JSON.parse(result.stdout) as Result
+          assert.equal(parsed.result, 'ok', result.stdout)
+          assert.equal(parsed.scope.root, root)
+        }
+      }
+      git(root, 'worktree', 'remove', nested)
       const args = ['prune', ids[0], '--mechanical', '--input', '-']
       const input = { expected_hash: invoke(['show', ids[0]]).data.hash, reason: 'Only records removal of a duplicate button label.', references: [] }
       const preview = invoke([...args, '--dry-run'], input)

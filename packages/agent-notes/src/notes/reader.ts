@@ -8,7 +8,7 @@ import { isAlias, isMap, isScalar, parseDocument, visit } from 'yaml'
 import noteSchema from '../../assets/formats/agent-note-1.schema.json'
 import archiveSchema from '../../assets/formats/agent-note-archive-1.schema.json'
 import { validPattern } from '../discovery/scope'
-import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from '../distribution/layout'
+import { defaultNotesRoot, layoutFromSnapshot } from '../distribution/layout'
 import { checkBody } from './markdown'
 import { diagnostic, NotesError } from './model'
 import { safePath, sha256 } from './snapshot'
@@ -68,7 +68,7 @@ export function jsonYaml(text: string, path: string): unknown {
 }
 
 export function readConfig(snapshot: Snapshot, suppliedLayout?: NotesLayout): ProjectConfig {
-  const layout = suppliedLayout ?? layoutFromSnapshot(snapshot) ?? notesLayout(defaultNotesRoot)
+  const layout = suppliedLayout ?? layoutFromSnapshot(snapshot, defaultNotesRoot)
   const path = layout.configPath
   const bytes = snapshot.read(path)
   if (!bytes)
@@ -115,7 +115,7 @@ export function parseNote(bytes: Buffer, path: string, notesDir: string): Note {
 }
 
 export function readIndex(snapshot: Snapshot): NoteIndex {
-  const layout = layoutFromSnapshot(snapshot) ?? notesLayout(defaultNotesRoot)
+  const layout = layoutFromSnapshot(snapshot, defaultNotesRoot)
   const config = readConfig(snapshot, layout)
   snapshot.includeDirectory(config.notes_dir)
   const result: NoteIndex = { config, notes: new Map(), manifest: { format: 'agent-note-archive/1', entries: {} }, diagnostics: [] }

@@ -6,7 +6,7 @@ import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, renam
 import { hostname } from 'node:os'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
-import { layoutFromDisk, layoutFromPaths, notesLayout } from '../distribution/layout'
+import { layoutFromDisk, layoutFromPaths, localNotesLayout, notesLayout } from '../distribution/layout'
 import { assertPath, base64, boundedRead, budget, canonical, json, keys, limits } from '../distribution/protocol'
 import { NotesError } from '../notes/model'
 import { safePath, sha256 } from '../notes/snapshot'
@@ -30,11 +30,6 @@ export interface TransactionHooks {
   beforeCommit?: () => void
   afterStep?: (index: number) => void
   afterCommit?: () => void
-}
-
-// Recovery never trusts a manifest to authorize arbitrary project paths.
-function transactionLayout(root: string): NotesLayout {
-  return layoutFromDisk(root) ?? notesLayout()
 }
 
 function absent(error: unknown): boolean {
@@ -198,7 +193,9 @@ function alive(owner: Owner): boolean {
 }
 
 export function assertNoTransaction(root: string): void {
-  const layout = transactionLayout(root)
+  const layout = localNotesLayout(root)
+  if (!layout)
+    return
   const full = local(root, layout.lockPath)
   if (!existsSync(full))
     return
@@ -284,9 +281,9 @@ function recoveryEndpoints(root: string, journal: Journal): Map<string, Buffer |
 /** Inspect recovery without acquiring a marker, modifying files or cleaning the lock. */
 export function recoveryView(source: Snapshot, validator?: JournalValidator): { source: Snapshot, verify: () => void } {
   const root = source.repository.root
-  const layout = transactionLayout(root)
-  const full = local(root, layout.lockPath)
-  if (!existsSync(full)) {
+  const layout = localNotesLayout(root)
+  const full = layout && local(root, layout.lockPath)
+  if (!layout || !full || !existsSync(full)) {
     return { source, verify: () => {
       assertNoTransaction(root)
       verifyObservations(source, source.repository.snapshot('worktree'))
@@ -312,7 +309,9 @@ export function recoveryView(source: Snapshot, validator?: JournalValidator): { 
 }
 
 export function recoverTransaction(root: string, validator?: JournalValidator, hooks: TransactionHooks = {}): boolean {
-  const layout = transactionLayout(root)
+  const layout = localNotesLayout(root)
+  if (!layout)
+    return false
   const full = local(root, layout.lockPath)
   if (!existsSync(full))
     return false

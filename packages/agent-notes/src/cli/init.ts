@@ -2,7 +2,7 @@ import type { Options } from './arguments'
 import process from 'node:process'
 import { cancel, intro, isCancel, isCI, multiselect, select, text } from '@clack/prompts'
 import { integrationChoices } from '../distribution/integrations'
-import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from '../distribution/layout'
+import { defaultNotesRoot, layoutFromSnapshot } from '../distribution/layout'
 import { installationRoot } from '../distribution/manage'
 import { readInstallation } from '../distribution/manifest'
 import { NotesError } from '../notes/model'
@@ -45,7 +45,7 @@ function initContext(input: Options, cwd: string): { input: Options, verify: () 
   if (!input.recover)
     assertNoTransaction(root)
   const view = recoveryView(new Repository(root).snapshot('worktree'))
-  const layout = layoutFromSnapshot(view.source) ?? notesLayout(input.notesDir ?? defaultNotesRoot)
+  const layout = layoutFromSnapshot(view.source, input.notesDir ?? defaultNotesRoot)
   const installation = readInstallation(view.source, layout)
   const hasConfig = Boolean(view.source.read(layout.configPath))
   if (installation && !hasConfig)

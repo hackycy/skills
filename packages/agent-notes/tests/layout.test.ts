@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { run } from '../src/cli/run'
 import { manage } from '../src/distribution/manage'
 import { testBundle } from './distribution-fixtures'
-import { body, git, project, write } from './fixtures'
+import { body, commit, document, git, ids, note, project, write } from './fixtures'
 
 vi.setConfig({ testTimeout: 30_000 })
 
@@ -66,6 +66,58 @@ describe('unified Notes root', () => {
     write(root, 'docs/decisions/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'docs/decisions', language: 'zh-CN' }))
     expect(run(['status', '--root', root]).diagnostics[0].code).toBe('ROOT_CONFLICT')
     expect(run(['context'], root).diagnostics[0].code).toBe('ROOT_CONFLICT')
+  })
+
+  it('reads each checkout independently with an ignored linked worktree', () => {
+    const root = setup()
+    expect(install(root).result).toBe('ok')
+    const path = note(root)
+    write(root, '.gitignore', `${readFileSync(join(root, '.gitignore'), 'utf8')}\n/.claude/worktrees/\n`)
+    const revision = commit(root)
+    const nestedPath = '.claude/worktrees/agent-token-fixed'
+    const nested = join(root, nestedPath)
+    git(root, 'worktree', 'add', '--detach', nested, revision)
+    expect(git(root, 'check-ignore', nestedPath)).toBe(nestedPath)
+    const nestedText = document(undefined, body().replace('# Event ownership', '# Worktree event ownership'))
+    write(nested, path, nestedText)
+
+    for (const [checkout, expectedText, title] of [
+      [root, document(), 'Event ownership'],
+      [nested, nestedText, 'Worktree event ownership'],
+    ] as const) {
+      expect(run(['show', ids[0]], checkout)).toMatchObject({ result: 'ok', scope: { root: checkout }, data: { path, text: expectedText } })
+      expect(run(['check'], checkout)).toMatchObject({ result: 'ok', scope: { root: checkout }, data: { notes_checked: 1 } })
+      expect(run(['context', '--topic', 'events'], checkout)).toMatchObject({ result: 'ok', scope: { root: checkout }, data: { notes: [{ id: ids[0], title }] } })
+    }
+  })
+
+  it.each(['vendor/engine', 'node_modules/engine'])('excludes working tree configs Git still tracks in the nested repository %s', (nested) => {
+    const root = setup()
+    const config = `${nested}/decisions/config.json`
+    note(root)
+    write(root, '.agents/notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'en' }))
+    write(root, config, JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'decisions', language: 'en' }))
+    git(root, 'add', '-f', config)
+    const revision = commit(root)
+    git(root, 'init', nested)
+    expect(git(root, 'ls-files', '--', nested)).toBe(config)
+
+    expect(run(['context', '--root', root, '--topic', 'events'], root)).toMatchObject({ result: 'ok', data: { notes: [{ id: ids[0] }] } })
+    expect(run(['context'], join(root, nested))).toMatchObject({ result: 'ok', scope: { root: join(root, nested) } })
+    expect(run(['check', '--staged'], root).diagnostics[0].code).toBe('ROOT_CONFLICT')
+    expect(run(['check', '--base', revision, '--head', revision], root).diagnostics[0].code).toBe('ROOT_CONFLICT')
+  })
+
+  it('does not use a nested checkout as the default Notes root', () => {
+    const root = setup()
+    git(root, 'init', '.agents')
+    write(root, '.agents/notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'notes', language: 'en' }))
+    expect(run(['context'], root).diagnostics[0]?.code).toBe('ROOT_NOT_FOUND')
+    mkdirSync(join(root, '.agents/notes/local/write-lock'), { recursive: true })
+    expect(run(['context', '--root', root], root).diagnostics[0]?.code).toBe('ROOT_NOT_FOUND')
+
+    write(root, 'docs/decisions/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: 'docs/decisions', language: 'en' }))
+    expect(run(['context'], root)).toMatchObject({ result: 'ok', scope: { root }, data: { notes: [] } })
   })
 
   it('reports damaged custom configuration instead of reading an empty Notes tree', () => {

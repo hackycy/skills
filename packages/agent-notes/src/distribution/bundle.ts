@@ -6,7 +6,7 @@ import packageJson from '../../package.json' with { type: 'json' }
 import { NotesError } from '../notes/model'
 import { sha256 } from '../notes/snapshot'
 import { integrations } from './integrations'
-import { layoutFromSnapshot, notesLayout } from './layout'
+import { defaultNotesRoot, layoutFromSnapshot } from './layout'
 import { entryText } from './manifest'
 import { assertPath, boundedRead, budget, byteOrder, canonical, hashPattern, json, keys, limits, skillNames, versionPattern } from './protocol'
 import { distributionSource, repairCommand } from './source'
@@ -147,6 +147,6 @@ export function loadBundle(): Bundle {
 }
 
 export function observeRuntime(source: Snapshot): void {
-  const layout = layoutFromSnapshot(source) ?? notesLayout()
+  const layout = layoutFromSnapshot(source, defaultNotesRoot)
   source.read(layout.runtimeCli)
 }

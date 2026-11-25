@@ -9,7 +9,7 @@ import { findRoot, Repository, sha256 } from '../notes/snapshot'
 import { recoveryView } from '../workflow/recovery'
 import { assertNoTransaction } from '../workflow/transaction'
 import { managerVersion } from './bundle'
-import { layoutFromSnapshot, notesLayout } from './layout'
+import { layoutFromSnapshot } from './layout'
 import { readInstallation } from './manifest'
 import { repairCommand } from './source'
 
@@ -22,7 +22,9 @@ export function delegate(input: Options, executable: string): number | undefined
     assertNoTransaction(root)
   const live = new Repository(root).snapshot('worktree')
   const source = input.recover ? recoveryView(live).source : live
-  const layout = layoutFromSnapshot(source) ?? notesLayout()
+  const layout = layoutFromSnapshot(source)
+  if (!layout)
+    return undefined
   const installation = readInstallation(source, layout)
   if (!installation)
     return undefined

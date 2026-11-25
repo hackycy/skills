@@ -4,6 +4,8 @@ npm 包的可执行命令为 `agent-notes`；项目入口为 `node .agents/notes
 
 所有命令接受 `--root <path>`、`--json` 和 `--help`。root 省略时发现唯一 Notes 根，多根报 `ROOT_CONFLICT`，缺失报 `ROOT_NOT_FOUND`；首装使用 Git 根或当前目录。带值参数接受空格或等号；host/topic 可重复，paths 支持 `--paths a b --paths c`。单值、布尔开关和同一 host 不可重复，未知/错位/缺值参数退出 2。
 
+工作树内按项目目录发现 Notes 根。下级目录中的 `.git` 文件或目录标记另一个工作区，父项目扫描时跳过该目录。当前项目在 `.gitignore` 中忽略的自定义 Notes 根仍可被发现。`check --staged` 和 `check --head` 从各自的 Git 快照发现 Notes 根。
+
 ## 命令与参数
 
 | 命令 | 主要参数 | 输入与结果 |

@@ -49,8 +49,7 @@ export function installationRoot(explicit: string | undefined, cwd: string, inst
     return repository.available ? realpathSync(execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim()) : realpathSync(cwd)
   }
 }
-function configFor(source: Snapshot, options: ManageOptions, discovered?: NotesLayout): ProjectConfig {
-  const layout = discovered ?? notesLayout(options.notesDir ?? defaultNotesRoot)
+function configFor(source: Snapshot, options: ManageOptions, layout: NotesLayout): ProjectConfig {
   const existing = source.read(layout.configPath)
   if (existing) {
     const config = readConfig(source, layout)
@@ -154,7 +153,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
     if (!view)
       assertNoTransaction(root)
     const source = view?.source ?? repository.snapshot('worktree')
-    const config = configFor(source, options, layoutFromSnapshot(source))
+    const config = configFor(source, options, layoutFromSnapshot(source, options.notesDir ?? defaultNotesRoot))
     const layout = notesLayout(config.notes_dir)
     const installation = readInstallation(source, layout)
     if (!installation && options.command !== 'install')

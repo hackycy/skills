@@ -2,7 +2,7 @@ import type { Snapshot } from '../notes/snapshot'
 import type { NotesLayout } from './layout'
 import { NotesError } from '../notes/model'
 import { sha256 } from '../notes/snapshot'
-import { defaultNotesRoot, layoutFromSnapshot, notesLayout } from './layout'
+import { layoutFromSnapshot } from './layout'
 import { assertPath, budget, byteOrder, hashPattern, json, keys, limits, versionPattern } from './protocol'
 
 export interface Asset { path: string, kind: 'file' | 'block', sha256: string }
@@ -53,7 +53,9 @@ export function parseInstallation(bytes: Uint8Array): Installation {
 }
 
 export function readInstallation(source: Snapshot, suppliedLayout?: NotesLayout): Installation | undefined {
-  const layout = suppliedLayout ?? layoutFromSnapshot(source) ?? notesLayout(defaultNotesRoot)
+  const layout = suppliedLayout ?? layoutFromSnapshot(source)
+  if (!layout)
+    return undefined
   const bytes = source.read(layout.installPath, limits.installation)
   return bytes ? parseInstallation(bytes) : undefined
 }
