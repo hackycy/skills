@@ -1,11 +1,11 @@
-import type { Metadata } from '../src/notes/model'
 import { Buffer } from 'node:buffer'
 import { existsSync, readdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { stringify } from 'yaml'
-import { exitCode, run } from '../src/cli/run'
+import { exitCode } from '../src/cli/run'
 import { body, commit, document, ids, mechanicalBody, metadata, note, project, write } from './fixtures'
+import { run } from './production'
 
 const roots: string[] = []
 function setup(): string {
@@ -322,7 +322,7 @@ describe('conditional prune', () => {
   it('can absorb additional content into the owner in the same transaction', () => {
     const root = setup()
     const { owner } = absorption(root)
-    const ownerMeta: Metadata = metadata({ id: ids[1], relations: { supersedes: [{ id: ids[0], extent: 'full', reason: 'All responsibility absorbed.' }] } })
+    const ownerMeta = metadata({ id: ids[1], relations: { supersedes: [{ id: ids[0], extent: 'full', reason: 'All responsibility absorbed.' }] } })
     write(root, '.agents/notes/local/owner.md', document(ownerMeta, `${body()}\n## Legacy coverage gap\nThe old retry worker remains uncovered and requires integration evidence.\n`))
     const result = action(root, 'prune', input(root, {
       owner: { id: ids[1], expected_hash: hash(root, ids[1]), document: '.agents/notes/local/owner.md' },

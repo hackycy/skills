@@ -1,3 +1,5 @@
+import type { Buffer } from 'node:buffer'
+
 export interface Scope {
   paths?: string[]
   topics?: string[]
@@ -8,10 +10,10 @@ export interface Supersession {
   id: string
   extent: 'full' | 'partial'
   reason: string
+  activation?: 'on-proposal'
 }
 
 export interface Metadata {
-  format: 'agent-note/1'
   id: string
   status: 'proposed' | 'implemented' | 'rejected'
   scope: Scope
@@ -21,17 +23,38 @@ export interface Metadata {
   archive?: { date: string, reason: string }
 }
 
-export interface Note {
+export interface NoteContent {
   metadata: Metadata
+  title: string
+  body: string
+}
+
+export interface LocatedNote extends NoteContent {
   path: string
   relativePath: string
-  lifecycle: string
+  lifecycle: Metadata['status'] | 'archived'
   identityPath: string
-  title: string
-  text: string
-  body: string
-  hash: string
 }
+
+export interface ReadonlyBytes {
+  readonly byteLength: number
+  copy: () => Buffer
+}
+
+export interface Source {
+  readonly format: string
+  readonly path: string
+  readonly hash: string
+  readonly bytes: ReadonlyBytes
+  readonly residue: { readonly hasComments: boolean, readonly hasOpaque: boolean }
+}
+
+export interface Parsed<T> {
+  value: T
+  source: Source
+}
+
+export type Note = Parsed<LocatedNote>
 
 export interface ArchiveEntry {
   path: string
@@ -40,7 +63,6 @@ export interface ArchiveEntry {
 }
 
 export interface Manifest {
-  format: 'agent-note-archive/1'
   entries: Record<string, ArchiveEntry>
 }
 
@@ -49,29 +71,32 @@ export interface Diagnostic {
   message: string
   path?: string
   note_id?: string
+  details?: Record<string, unknown>
 }
 
 export interface ProjectConfig {
-  format: 'agent-notes-config/1'
   notes_dir: string
   language: 'zh-CN' | 'en'
 }
 
 export interface NoteIndex {
   config: ProjectConfig
+  configSource?: Source
   notes: Map<string, Note>
   manifest: Manifest
+  manifestSource?: Source
+  allowProposalActivation: boolean
   diagnostics: Diagnostic[]
 }
 
 export class NotesError extends Error {
-  constructor(readonly code: string, message: string, readonly path?: string, readonly exitCode: 1 | 2 | 3 = 1) {
+  constructor(readonly code: string, message: string, readonly path?: string, readonly exitCode: 1 | 2 | 3 = 1, readonly details?: Diagnostic['details']) {
     super(message)
   }
 }
 
 export function diagnostic(error: unknown): Diagnostic {
   return error instanceof NotesError
-    ? { code: error.code, message: error.message, ...(error.path ? { path: error.path } : {}) }
+    ? { code: error.code, message: error.message, ...(error.path ? { path: error.path } : {}), ...(error.details ? { details: error.details } : {}) }
     : { code: 'IO_ERROR', message: error instanceof Error ? error.message : String(error) }
 }

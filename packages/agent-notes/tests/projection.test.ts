@@ -10,7 +10,7 @@ import { project, receipt, validate } from '../src/distribution/projection'
 import { assertPath, base64, boundedRead, canonical, limits } from '../src/distribution/protocol'
 import { legacyBundle, testBundle } from './distribution-fixtures'
 
-const config = { format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'en' } as const
+const config = { notes_dir: '.agents/notes', language: 'en' } as const
 
 describe('pure projection and bounded protocols', () => {
   it('keeps legacy receipts unchanged and projects archive search rules only from indexed templates', () => {

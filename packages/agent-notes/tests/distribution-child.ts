@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { readBundle } from '../src/distribution/bundle'
-import { manage } from '../src/distribution/manage'
 import { testBundle } from './distribution-fixtures'
+import { manage } from './production'
 
 const root = process.argv[2]
 const operation = process.argv[3] as 'install' | 'repair' | 'tool update' | 'hosts set'

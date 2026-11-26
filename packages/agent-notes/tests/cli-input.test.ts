@@ -6,11 +6,11 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { options, parseArguments, runtimeArguments } from '../src/cli/arguments'
-import { completeInit, InitCancelled, interactiveInit, promptInit } from '../src/cli/init'
-import { manage } from '../src/distribution/manage'
+import { InitCancelled, interactiveInit } from '../src/cli/init'
 import { sha256 } from '../src/notes/snapshot'
 import { testBundle } from './distribution-fixtures'
 import { project, write } from './fixtures'
+import { completeInit, manage, promptInit } from './production'
 
 const roots: string[] = []
 function setup(): string {

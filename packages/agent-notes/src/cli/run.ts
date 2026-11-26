@@ -1,3 +1,4 @@
+import type { FormatRegistry } from '../notes/formats/registry'
 import type { Diagnostic, NoteIndex } from '../notes/model'
 import type { Snapshot } from '../notes/snapshot'
 import type { WriteCommand } from '../workflow/input'
@@ -41,22 +42,22 @@ function changedFiles(target: Snapshot, baseline: Snapshot, index: NoteIndex, be
   // Governed Notes are also read directly, including ignored/untracked files.
   for (const [id, note] of index.notes) {
     const previous = before.notes.get(id)
-    if (previous?.hash !== note.hash || previous.path !== note.path) {
-      paths.add(note.path)
+    if (previous?.source.hash !== note.source.hash || previous.value.path !== note.value.path) {
+      paths.add(note.value.path)
       if (previous)
-        paths.add(previous.path)
+        paths.add(previous.value.path)
     }
   }
   for (const [id, note] of before.notes) {
     if (!index.notes.has(id))
-      paths.add(note.path)
+      paths.add(note.value.path)
   }
   return [...paths].filter(path => !isRuntime(path, index.config.notes_dir)).sort()
 }
 
 function maintenance(index: NoteIndex, target: Snapshot): Diagnostic[] {
   const review: Diagnostic[] = []
-  for (const note of index.notes.values()) {
+  for (const { value: note } of index.notes.values()) {
     if (note.lifecycle === 'archived')
       continue
     const unmatched = (note.metadata.scope.paths ?? []).filter(pattern => !target.paths().some(path => matchesPath(pattern, path) && target.exists(path)))
@@ -72,29 +73,31 @@ export function failure(command: string, error: unknown): Result {
   return { command, result: error instanceof NotesError && error.exitCode === 2 ? 'invalid-input' : 'failed', scope: {}, data: {}, diagnostics: [diagnostic(error)], review: [] }
 }
 
-export function run(args: string[], cwd = process.cwd(), stdin?: string): Result {
-  const parsed = parseArguments(args)
+export function run(args: string[], cwd: string, stdin: string | undefined, formats: FormatRegistry, allowProposalActivation = false): Result {
+  const parsed = parseArguments(args, undefined, formats.migrationEnabled)
   if (parsed.error)
     return failure(parsed.command, parsed.error)
   if (parsed.help)
     return { command: parsed.command, result: 'ok', scope: {}, data: { help: parsed.help }, diagnostics: [], review: [] }
   try {
     const input = parsed.input!
-    return execute(input.command === 'install' ? completeInit(input, cwd) : input, cwd, stdin)
+    return execute(input.command === 'install' ? completeInit(input, cwd, formats) : input, formats, cwd, stdin, allowProposalActivation)
   }
   catch (error) {
     return failure(parsed.command, error)
   }
 }
 
-export function execute(input: Options, cwd = process.cwd(), stdin?: string): Result {
+export function execute(input: Options, formats: FormatRegistry, cwd = process.cwd(), stdin?: string, allowProposalActivation = false): Result {
   const output: Result = { command: input.command, result: 'ok', scope: {}, data: {}, diagnostics: [], review: [] }
   try {
     if (input.command === 'install' || input.command === 'tool update' || input.command === 'hosts set' || input.command === 'repair' || input.command === 'status')
-      return manage({ ...input, command: input.command }, cwd)
+      return manage({ ...input, command: input.command }, cwd, undefined, {}, formats)
     const root = findRoot(input.root, cwd)
+    if (input.command === 'migrate' && !formats.migrationEnabled)
+      throw new NotesError('INVALID_INPUT', 'Unknown command or misplaced positional arguments. Use --help.', undefined, 2)
     if (writeCommands.includes(input.command))
-      return executeWrite(root, { command: input.command as WriteCommand, id: input.id, input: input.input!, to: input.to as 'implemented' | 'rejected' | undefined, mechanical: input.mechanical, dryRun: input.dryRun, recover: input.recover, base: input.base }, stdin)
+      return executeWrite(root, { command: input.command as WriteCommand, id: input.id, input: input.input!, to: input.to, mechanical: input.mechanical, dryRun: input.dryRun, recover: input.recover, base: input.base }, stdin, {}, formats, allowProposalActivation)
     if (!input.head && !input.staged)
       assertNoTransaction(root)
     const repository = new Repository(root)
@@ -102,13 +105,13 @@ export function execute(input: Options, cwd = process.cwd(), stdin?: string): Re
     const base = input.command === 'check' ? repository.revision(input.base ?? 'HEAD', Boolean(input.base)) : undefined
     const target = repository.snapshot(head ? 'commit' : input.staged ? 'index' : 'worktree', head)
     output.scope = { root, snapshot: target.kind, base: base ?? null, head: head ?? null }
-    const index = readIndex(target)
+    const index = readIndex(target, formats, allowProposalActivation)
     output.diagnostics.push(...currentDiagnostics(index))
     if (input.command === 'show') {
       const note = index.notes.get(input.id!)
       if (!note)
         throw new NotesError('NOTE_NOT_FOUND', `No Note with ID ${input.id}.`, undefined, 2)
-      output.data = { id: note.metadata.id, path: note.path, hash: note.hash, text: note.text, superseded_by: supersededBy(index, note.metadata.id) }
+      output.data = { id: note.value.metadata.id, path: note.value.path, hash: note.source.hash, text: note.source.bytes.copy().toString('utf8'), superseded_by: supersededBy(index, note.value.metadata.id) }
     }
     else if (input.command === 'context') {
       if (!output.diagnostics.length)
@@ -118,21 +121,21 @@ export function execute(input: Options, cwd = process.cwd(), stdin?: string): Re
     }
     else {
       const baseline = base ? repository.snapshot('commit', base) : undefined
-      const before = baseline ? readIndex(baseline) : undefined
+      const before = baseline ? readIndex(baseline, formats, allowProposalActivation) : undefined
       if (before)
         output.diagnostics.push(...currentDiagnostics(before).map(item => ({ ...item, message: `Baseline: ${item.message}` })))
-      const historical = checkHistory(target, index, baseline, before)
+      const historical = checkHistory(target, index, formats, baseline, before)
       output.diagnostics.push(...historical.diagnostics)
       output.review.push(...historical.review)
-      const frozenPaths = new Set([...index.notes.values()].filter(note => note.lifecycle === 'archived').map(note => note.path))
+      const frozenPaths = new Set([...index.notes.values()].filter(note => note.value.lifecycle === 'archived').map(note => note.value.path))
       output.diagnostics.push(...checkLinks(target, target.paths().filter(path => /\.md$/i.test(path) && !frozenPaths.has(path) && !isRuntime(path, index.config.notes_dir))))
       if (baseline) {
         const changes = changedFiles(target, baseline, index, before!)
         const codeChanges = changes.filter(path => !path.startsWith(`${index.config.notes_dir}/`) && !path.startsWith(`${before!.config.notes_dir}/`))
         output.data.changed_paths = changes
-        output.data.affected_notes = [...index.notes.values()].filter(note => note.lifecycle !== 'archived').flatMap((note) => {
+        output.data.affected_notes = [...index.notes.values()].filter(note => note.value.lifecycle !== 'archived').flatMap(({ value: note, source }) => {
           const reasons = matchReasons(note.metadata.scope, codeChanges, [])
-          return reasons.length ? [{ id: note.metadata.id, path: note.path, reasons, changed: before?.notes.get(note.metadata.id)?.hash !== note.hash }] : []
+          return reasons.length ? [{ id: note.metadata.id, path: note.path, reasons, changed: before?.notes.get(note.metadata.id)?.source.hash !== source.hash }] : []
         })
         if (codeChanges.length)
           output.review.push({ code: 'CHANGE_RATIONALE_REVIEW', message: 'Review base→target changes for durable rationale and same-PR Notes. Mechanical/local UI changes may need no Note; scope matches alone do not prove a writing obligation.' })

@@ -1,10 +1,9 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { run } from '../src/cli/run'
-import { manage } from '../src/distribution/manage'
 import { testBundle } from './distribution-fixtures'
 import { body, commit, document, git, ids, note, project, write } from './fixtures'
+import { manage, run } from './production'
 
 vi.setConfig({ testTimeout: 30_000 })
 

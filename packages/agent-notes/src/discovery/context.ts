@@ -22,7 +22,7 @@ export function context(index: NoteIndex, paths: string[], topics: string[], inc
       matched.set(id, new Set())
     matched.get(id)!.add(reason)
   }
-  for (const [id, note] of index.notes) {
+  for (const [id, { value: note }] of index.notes) {
     if (!includeArchived && note.lifecycle === 'archived')
       continue
     for (const reason of matchReasons(note.metadata.scope, paths, topics))
@@ -33,7 +33,7 @@ export function context(index: NoteIndex, paths: string[], topics: string[], inc
     if (visited.has(id))
       return
     visited.add(id)
-    const note = index.notes.get(id)!
+    const note = index.notes.get(id)!.value
     if (note.lifecycle === 'archived')
       return
     for (const required of note.metadata.relations?.requires ?? []) {
@@ -44,7 +44,7 @@ export function context(index: NoteIndex, paths: string[], topics: string[], inc
   for (const id of matched.keys())
     dependencies(id)
   return [...matched].map(([id, reasons]) => {
-    const note = index.notes.get(id)!
+    const note = index.notes.get(id)!.value
     return {
       id,
       title: note.title,

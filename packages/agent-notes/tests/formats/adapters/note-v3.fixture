@@ -1,0 +1,46 @@
+import type { Registration } from '../../../src/notes/formats/ports'
+import { hasComments, source } from '../../../src/notes/formats/carrier'
+import { NotesError } from '../../../src/notes/model'
+import { v2NoteRegistration } from './note-v2'
+
+const format = 'agent-note/3'
+const v2 = v2NoteRegistration.adapter
+const schema = {
+  type: 'object',
+  required: ['format', 'routing'],
+  properties: {
+    format: { const: format },
+    routing: {
+      type: 'object',
+      required: ['readWhen'],
+      properties: { readWhen: { type: 'string' } },
+      additionalProperties: false,
+    },
+  },
+}
+
+export const v3NoteRegistration: Registration<'note'> = {
+  ...v2NoteRegistration,
+  format,
+  schema,
+  write: false,
+  migrate: { from: false, to: false },
+  adapter: {
+    ...v2,
+    format,
+    validate(value, path) {
+      if (!value || typeof value !== 'object' || !('routing' in value) || 'readWhen' in value)
+        throw new NotesError('INVALID_NOTE_V3', 'Expected routing.readWhen.', path)
+      const { routing, ...remaining } = value
+      if (!routing || typeof routing !== 'object' || !('readWhen' in routing) || Object.keys(routing).length !== 1)
+        throw new NotesError('INVALID_NOTE_V3', 'Expected routing.readWhen.', path)
+      return v2.validate({ ...remaining, format: v2.format, readWhen: routing.readWhen }, path)
+    },
+    parse(bytes, { path, assertPlacement }, carrier) {
+      const metadata = v3NoteRegistration.adapter.validate(carrier.metadata, path)
+      assertPlacement(metadata)
+      const title = v2.checkBody(carrier.body, metadata.status, path)
+      return { value: { metadata, title, body: carrier.body }, source: source(format, path, bytes, hasComments(carrier.document)) }
+    },
+  },
+}

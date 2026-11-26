@@ -1,19 +1,27 @@
-import type { Diagnostic, NoteIndex, Supersession } from './model'
+import type { Diagnostic, LocatedNote, NoteIndex, Supersession } from './model'
 
 export interface IncomingSupersession extends Supersession {
   path: string
   effective: boolean
 }
 
+function effective(index: NoteIndex, note: LocatedNote, edge: Supersession): boolean {
+  return note.lifecycle !== 'archived' && (note.metadata.status === 'implemented'
+    || (index.allowProposalActivation && note.metadata.status === 'proposed' && edge.activation === 'on-proposal'))
+}
+
 export function supersededBy(index: NoteIndex, id: string): IncomingSupersession[] {
-  return [...index.notes.values()].flatMap(note => (note.metadata.relations?.supersedes ?? [])
+  return [...index.notes.values()].flatMap(({ value: note }) => (note.metadata.relations?.supersedes ?? [])
     .filter(edge => edge.id === id)
-    .map(edge => ({ id: note.metadata.id, path: note.path, extent: edge.extent, reason: edge.reason, effective: note.metadata.status === 'implemented' && note.lifecycle !== 'archived' })))
+    .map(edge => ({ id: note.metadata.id, path: note.path, extent: edge.extent, reason: edge.reason, effective: effective(index, note, edge) })))
 }
 
 export function checkRelations(index: NoteIndex): Diagnostic[] {
   const diagnostics: Diagnostic[] = []
-  for (const note of index.notes.values()) {
+  for (const { value: note } of index.notes.values()) {
+    if (!index.allowProposalActivation && note.metadata.relations?.supersedes?.some(edge => edge.activation)) {
+      diagnostics.push({ code: 'POLICY_FEATURE_UNSUPPORTED', note_id: note.metadata.id, path: note.path, message: 'Supersession activation on proposal is disabled.' })
+    }
     if (note.lifecycle === 'archived')
       continue
     const relations = note.metadata.relations ?? {}
@@ -24,7 +32,7 @@ export function checkRelations(index: NoteIndex): Diagnostic[] {
         const report = (message: string): void => {
           diagnostics.push({ code: 'INVALID_RELATION', note_id: note.metadata.id, path: note.path, message: `${kind} → ${id}: ${message}` })
         }
-        const target = index.notes.get(id)
+        const target = index.notes.get(id)?.value
         if (!target)
           report('Target does not exist.')
         if (id === note.metadata.id || seen.has(id))
@@ -50,12 +58,12 @@ export function checkRelations(index: NoteIndex): Diagnostic[] {
     const stack = new Set<string>()
     const visit = (id: string): void => {
       if (stack.has(id)) {
-        diagnostics.push({ code: 'RELATION_CYCLE', note_id: id, path: index.notes.get(id)?.path, message: `${kind} contains a cycle.` })
+        diagnostics.push({ code: 'RELATION_CYCLE', note_id: id, path: index.notes.get(id)?.value?.path, message: `${kind} contains a cycle.` })
         return
       }
       if (done.has(id))
         return
-      const note = index.notes.get(id)
+      const note = index.notes.get(id)?.value
       if (!note || note.lifecycle === 'archived')
         return
       stack.add(id)

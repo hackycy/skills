@@ -1,17 +1,21 @@
-import type { Diagnostic, Metadata, Note, NoteIndex } from '../notes/model'
+import type { NoteChanges } from '../notes/formats/ports'
+import type { FormatRegistry } from '../notes/formats/registry'
+import type { Diagnostic, LocatedNote, Metadata, Note, NoteIndex } from '../notes/model'
 import type { LinkChange } from '../notes/rewrite'
 import type { Snapshot } from '../notes/snapshot'
 import type { WriteOptions } from './input'
 import { Buffer } from 'node:buffer'
 import { randomUUID } from 'node:crypto'
-import { anchors, checkBody, links, relativeTarget } from '../notes/markdown'
+import { isDeepStrictEqual } from 'node:util'
+import { frontmatter } from '../notes/formats/carrier'
+import { anchors, links, relativeTarget } from '../notes/markdown'
 import { NotesError } from '../notes/model'
 import { parseNote, readIndex } from '../notes/reader'
 import { supersededBy } from '../notes/relations'
 import { rewriteLinks } from '../notes/rewrite'
 import { sha256 } from '../notes/snapshot'
 import { activeMarkdown } from '../notes/validation'
-import { archiveBytes, classes, draft, expectedHash, object, patchMetadata, requiredText, serialize } from './input'
+import { classes, draft, expectedHash, object, requiredText } from './input'
 
 export interface WritePlan {
   changes: Map<string, Buffer | null>
@@ -20,16 +24,16 @@ export interface WritePlan {
 }
 
 function hashGuard(note: Note, hash: unknown): void {
-  if (note.hash !== expectedHash(hash))
-    throw new NotesError('CONCURRENT_CHANGE', 'expected_hash is stale; read the current Note and retry.', note.path)
+  if (note.source.hash !== expectedHash(hash))
+    throw new NotesError('CONCURRENT_CHANGE', 'expected_hash is stale; read the current Note and retry.', note.value.path)
 }
 
 function liveNote(index: NoteIndex, id: string): Note {
   const note = index.notes.get(id)
   if (!note)
     throw new NotesError('NOTE_NOT_FOUND', `No Note with ID ${id}.`, undefined, 2)
-  if (note.lifecycle === 'archived')
-    throw new NotesError('FROZEN_NOTE_CHANGED', 'Archived Notes cannot be updated, transitioned, archived again or pruned.', note.path)
+  if (note.value.lifecycle === 'archived')
+    throw new NotesError('FROZEN_NOTE_CHANGED', 'Archived Notes cannot be updated, transitioned, archived again or pruned.', note.value.path)
   return note
 }
 
@@ -46,18 +50,18 @@ function normalizeRelations(relations: Metadata['relations']): Metadata['relatio
   return Object.keys(result).length ? result : undefined
 }
 
-function editDraft(snapshot: Snapshot, note: Note, path: unknown, status: Metadata['status']): Buffer {
+function editDraft(snapshot: Snapshot, formats: FormatRegistry, note: Note, path: unknown, status: Metadata['status'], destination = note.value.path): Buffer {
   const input = draft(snapshot, path)
-  if (input.metadata.id !== note.metadata.id || input.metadata.format !== 'agent-note/1'
-    || ![note.metadata.status, status].includes(input.metadata.status as Metadata['status'])
+  if (input.metadata.id !== note.value.metadata.id || input.metadata.format !== note.source.format
+    || ![note.value.metadata.status, status].includes(input.metadata.status as Metadata['status'])
     || 'archive' in input.metadata || 'rejection_reason' in input.metadata) {
     throw new NotesError('INVALID_INPUT', 'An edit draft must preserve format and ID, carry the original or destination status, and contain no archive/rejection metadata.', undefined, 2)
   }
-  return serialize({ ...input.metadata, status }, input.body)
+  return formats.editNote(note, input, status, destination)
 }
 
 function noteBody(text: string): { prefix: string, body: string } {
-  const prefix = /^---\n[\s\S]*?\n---(?:\n|$)/.exec(text)?.[0] ?? ''
+  const prefix = frontmatter.exec(text)?.[0] ?? ''
   return { prefix, body: text.slice(prefix.length) }
 }
 
@@ -92,18 +96,18 @@ function removeRelation(metadata: Metadata, oldId: string, target: string | null
   return normalizeRelations(relations)
 }
 
-function pointsTo(note: Note, id: string): boolean {
+function pointsTo(note: LocatedNote, id: string): boolean {
   return Boolean(note.metadata.relations?.related?.includes(id) || note.metadata.relations?.requires?.includes(id)
     || note.metadata.relations?.supersedes?.some(edge => edge.id === id))
 }
 
-export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOptions, input: Record<string, unknown>, baseline?: Snapshot): WritePlan {
+export function planWrite(source: Snapshot, index: NoteIndex, formats: FormatRegistry, options: WriteOptions, input: Record<string, unknown>, baseline?: Snapshot): WritePlan {
   const changes = new Map<string, Buffer | null>()
   const review: Diagnostic[] = []
   const data: Record<string, unknown> = {}
   const root = index.config.notes_dir
   const date = new Date().toISOString().slice(0, 10)
-  let subject: Note
+  let subject: LocatedNote
   let destination: string
   const put = (path: string, bytes: Buffer | null): void => {
     const before = source.read(path)
@@ -113,22 +117,22 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
       changes.set(path, bytes)
   }
   const putNote = (path: string, bytes: Buffer): Note => {
-    const note = parseNote(bytes, path, root)
+    const note = parseNote(bytes, path, root, formats)
     put(path, bytes)
     return note
   }
   const current = (note: Note): Note => {
-    const bytes = changes.get(note.path)
-    return bytes ? parseNote(bytes, note.path, root) : note
+    const bytes = changes.get(note.value.path)
+    return bytes ? parseNote(bytes, note.value.path, root, formats) : note
   }
-  const backlink = (note: Note): void => {
+  const backlink = ({ value: note }: Note): void => {
     for (const edge of note.metadata.relations?.supersedes ?? []) {
       const target = index.notes.get(edge.id)
-      if (!target || target.lifecycle === 'archived')
+      if (!target || target.value.lifecycle === 'archived')
         continue
       const latest = current(target)
-      if (!latest.metadata.relations?.related?.includes(note.metadata.id))
-        putNote(latest.path, patchMetadata(latest.text, { relations: relationsWithBacklink(latest.metadata, note.metadata.id) }))
+      if (!latest.value.metadata.relations?.related?.includes(note.metadata.id))
+        putNote(latest.value.path, formats.patchNote(latest.source, { metadata: { relations: relationsWithBacklink(latest.value.metadata, note.metadata.id) } }))
     }
   }
 
@@ -139,7 +143,8 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
       throw new NotesError('INVALID_INPUT', 'create requires a supported class and status proposed or implemented.', undefined, 2)
     const document = draft(source, input.document)
     object(document.metadata, ['scope', 'read_when', 'relations'], 'New Note draft metadata')
-    const title = checkBody(document.body, String(input.status), String(input.document))
+    const status = input.status as 'proposed' | 'implemented'
+    const title = formats.checkCreateBody(document.body, status, String(input.document))
     const slug = title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '')
     if (!slug)
       throw new NotesError('INVALID_INPUT', 'The title needs letters or numbers to form a stable filename.', undefined, 2)
@@ -149,30 +154,46 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
     const id = options.dryRun ? 'an-00000000-0000-4000-8000-000000000000' : `an-${randomUUID()}`
     if (index.notes.has(id))
       throw new NotesError('DUPLICATE_ID', 'Generated identity already exists; retry.', destination)
-    subject = putNote(destination, serialize({ ...document.metadata, format: 'agent-note/1', id, status: input.status }, document.body))
-    backlink(subject)
-    data.candidates = [...index.notes.values()].filter(note => note.lifecycle !== 'archived'
+    const metadata = { ...document.metadata, id, status } as Metadata
+    const created = putNote(destination, formats.createNote({ metadata, title, body: document.body }, document))
+    subject = created.value
+    backlink(created)
+    data.candidates = [...index.notes.values()].map(note => note.value).filter(note => note.lifecycle !== 'archived'
       && (note.title === title || note.metadata.scope.topics?.some(topic => subject.metadata.scope.topics?.includes(topic)))).map(note => ({ id: note.metadata.id, title: note.title, path: note.path }))
     review.push({ code: 'RECORDING_REVIEW', path: destination, message: `Confirm the same decision is not already recorded and the durable rationale appears in the body: ${input.rationale}` })
   }
   else {
-    subject = liveNote(index, options.id!)
+    const original = liveNote(index, options.id!)
+    subject = original.value
     destination = subject.path
-    hashGuard(subject, input.expected_hash)
+    hashGuard(original, input.expected_hash)
     const reason = requiredText(input.reason, 'reason', true)
     data.reason = reason
-    if (options.command === 'update') {
+    if (options.command === 'migrate') {
+      object(input, ['expected_hash', 'reason'], 'migrate input')
+      if (subject.lifecycle === 'rejected')
+        throw new NotesError('REJECTED_NOTE_CHANGED', 'Rejected Notes cannot change format.', subject.path)
+      const format = requiredText(options.to, 'a target format')
+      const converted = putNote(subject.path, formats.convertNote(original, format))
+      if (converted.source.format !== format || !isDeepStrictEqual(subject, converted.value))
+        throw new NotesError('LOSSY_FORMAT_CONVERSION', 'Conversion changed canonical Note content.', subject.path)
+      data.from_format = original.source.format
+      data.to_format = format
+    }
+    else if (options.command === 'update') {
       object(input, subject.metadata.status === 'rejected' ? ['expected_hash', 'reason', 'metadata'] : ['expected_hash', 'reason', 'document'], 'update input')
       if (subject.metadata.status === 'rejected') {
         const metadata = object(input.metadata, ['scope', 'read_when', 'relations'], 'Rejected routing metadata')
         if (!Object.keys(metadata).length)
           throw new NotesError('INVALID_INPUT', 'Provide at least one routing metadata field.', undefined, 2)
+        if (metadata.relations === null)
+          throw new NotesError('INVALID_METADATA', 'data/relations must be object', subject.path)
         if (metadata.relations && typeof metadata.relations === 'object' && !Array.isArray(metadata.relations) && !Object.keys(metadata.relations).length)
-          metadata.relations = undefined
-        putNote(subject.path, patchMetadata(subject.text, metadata))
+          metadata.relations = null
+        putNote(subject.path, formats.patchNote(original.source, { metadata: metadata as NoteChanges['metadata'] }))
       }
       else {
-        const next = putNote(subject.path, editDraft(source, subject, input.document, subject.metadata.status))
+        const next = putNote(subject.path, editDraft(source, formats, original, input.document, subject.metadata.status))
         backlink(next)
       }
     }
@@ -185,7 +206,7 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
         throw new NotesError('PATH_CONFLICT', 'Transition destination already exists.', destination)
       let bytes: Buffer
       if (options.to === 'implemented') {
-        bytes = editDraft(source, subject, input.document, 'implemented')
+        bytes = editDraft(source, formats, original, input.document, 'implemented', destination)
       }
       else {
         const relations = structuredClone(subject.metadata.relations ?? {})
@@ -193,7 +214,7 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
           relations.related = [...new Set([...(relations.related ?? []), ...relations.supersedes.map(edge => edge.id)])]
           delete relations.supersedes
         }
-        bytes = patchMetadata(subject.text, { status: 'rejected', rejection_reason: reason, relations: normalizeRelations(relations) })
+        bytes = formats.patchNote(original.source, { metadata: { status: 'rejected', rejection_reason: reason, relations: normalizeRelations(relations) ?? null } })
       }
       const next = putNote(destination, bytes)
       put(subject.path, null)
@@ -206,17 +227,17 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
       destination = `${root}/archived/${subject.identityPath}`
       if (source.exists(destination))
         throw new NotesError('PATH_CONFLICT', 'Archive destination already exists.', destination)
-      const bytes = archiveBytes(subject.text, date, reason)
+      const bytes = formats.patchNote(original.source, { metadata: { archive: { date, reason } } })
       putNote(destination, bytes)
       put(subject.path, null)
-      const manifest = structuredClone(index.manifest)
-      const original = baseline?.read(subject.path)
-      manifest.entries[subject.metadata.id] = {
+      const baselineBytes = baseline?.read(subject.path)
+      const entry = {
         path: `archived/${subject.identityPath}`,
         sha256: sha256(bytes),
-        source: { path: subject.relativePath, sha256: subject.hash, ...(original && sha256(original) === subject.hash ? { revision: baseline!.revision } : {}) },
+        source: { path: subject.relativePath, sha256: original.source.hash, ...(baselineBytes && sha256(baselineBytes) === original.source.hash ? { revision: baseline!.revision } : {}) },
       }
-      put(`${root}/archived/manifest.json`, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`))
+      const path = `${root}/archived/manifest.json`
+      put(path, formats.appendSeal(index.manifest, subject.metadata.id, entry, path, index.manifestSource))
     }
     else {
       if (options.mechanical && subject.metadata.status !== 'implemented')
@@ -233,28 +254,28 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
         const ownerInput = object(input.owner, ['id', 'expected_hash', 'document'], 'Absorption owner')
         let owner = liveNote(index, requiredText(ownerInput.id, 'owner.id'))
         hashGuard(owner, ownerInput.expected_hash)
-        if (owner.metadata.id === subject.metadata.id || owner.metadata.status !== 'implemented'
-          || supersededBy(index, owner.metadata.id).some(edge => edge.effective && edge.extent === 'full')) {
-          throw new NotesError('INVALID_OWNER', 'The owner must be a different, current implemented decision.', owner.path)
+        if (owner.value.metadata.id === subject.metadata.id || owner.value.metadata.status !== 'implemented'
+          || supersededBy(index, owner.value.metadata.id).some(edge => edge.effective && edge.extent === 'full')) {
+          throw new NotesError('INVALID_OWNER', 'The owner must be a different, current implemented decision.', owner.value.path)
         }
-        if (owner.metadata.relations?.supersedes?.some(edge => edge.id === subject.metadata.id && edge.extent === 'partial'))
+        if (owner.value.metadata.relations?.supersedes?.some(edge => edge.id === subject.metadata.id && edge.extent === 'partial'))
           throw new NotesError('PARTIAL_ABSORPTION', 'Partial supersession cannot justify deletion; resolve remaining unique content first.', subject.path)
         if (ownerInput.document)
-          owner = putNote(owner.path, editDraft(source, owner, ownerInput.document, 'implemented'))
-        if (owner.metadata.relations?.supersedes?.some(edge => edge.id === subject.metadata.id && edge.extent === 'partial'))
-          throw new NotesError('PARTIAL_ABSORPTION', 'The owner draft still declares partial supersession.', owner.path)
+          owner = putNote(owner.value.path, editDraft(source, formats, owner, ownerInput.document, 'implemented'))
+        if (owner.value.metadata.relations?.supersedes?.some(edge => edge.id === subject.metadata.id && edge.extent === 'partial'))
+          throw new NotesError('PARTIAL_ABSORPTION', 'The owner draft still declares partial supersession.', owner.value.path)
         const sourceAnchors = anchors(subject.body)
-        const targetAnchors = anchors(owner.body)
+        const targetAnchors = anchors(owner.value.body)
         for (const item of input.coverage) {
           const mapping = object(item, ['source', 'destination'], 'Coverage mapping')
           for (const [field, valid] of [['source', sourceAnchors], ['destination', targetAnchors]] as const) {
             const fragment = requiredText(mapping[field], `coverage.${field}`, true)
             if (!fragment.startsWith('#') || !valid.has(fragment.slice(1)))
-              throw new NotesError('INVALID_COVERAGE', `Coverage must point to an existing heading fragment: ${fragment}`, field === 'source' ? subject.path : owner.path)
+              throw new NotesError('INVALID_COVERAGE', `Coverage must point to an existing heading fragment: ${fragment}`, field === 'source' ? subject.path : owner.value.path)
           }
         }
         backlink(owner)
-        data.owner = { id: owner.metadata.id, path: owner.path }
+        data.owner = { id: owner.value.metadata.id, path: owner.value.path }
         data.coverage = input.coverage
       }
       if (!Array.isArray(input.references))
@@ -272,7 +293,7 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
       }
       const incoming = new Set<string>()
       const staged = source.overlay(changes)
-      const stagedIndex = readIndex(staged)
+      const stagedIndex = readIndex(staged, formats, index.allowProposalActivation)
       for (const snapshot of [source, staged]) {
         for (const path of activeMarkdown(snapshot, index)) {
           if (path === subject.path)
@@ -282,7 +303,7 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
             incoming.add(path)
         }
       }
-      for (const candidate of [...index.notes.values(), ...stagedIndex.notes.values()]) {
+      for (const { value: candidate } of [...index.notes.values(), ...stagedIndex.notes.values()]) {
         if (candidate.lifecycle !== 'archived' && candidate.path !== subject.path && pointsTo(candidate, subject.metadata.id))
           incoming.add(candidate.path)
       }
@@ -293,12 +314,20 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
       for (const [path, targetId] of references) {
         if (!incoming.has(path))
           throw new NotesError('INVALID_INPUT', 'Reference disposition does not name an active incoming source.', path, 2)
-        const targetPath = targetId ? index.notes.get(targetId)!.path : null
-        let bytes = staged.read(path)!
-        const candidate = [...stagedIndex.notes.values()].find(note => note.path === path)
-        if (candidate && pointsTo(candidate, subject.metadata.id))
-          bytes = patchMetadata(bytes.toString('utf8'), { relations: removeRelation(candidate.metadata, subject.metadata.id, targetId) })
-        put(path, repairDocument(referenceText(bytes, path), path, path, new Map([[subject.path, { path: targetPath }]])))
+        const targetPath = targetId ? index.notes.get(targetId)!.value.path : null
+        const candidate = [...stagedIndex.notes.values()].find(note => note.value.path === path)
+        const redirects = new Map([[subject.path, { path: targetPath }]])
+        if (candidate) {
+          const body = rewriteLinks(candidate.value.body, path, path, redirects)
+          const metadata = pointsTo(candidate.value, subject.metadata.id)
+            ? { relations: removeRelation(candidate.value.metadata, subject.metadata.id, targetId) ?? null }
+            : undefined
+          if (metadata || body !== candidate.value.body)
+            put(path, formats.patchNote(candidate.source, { metadata, body }))
+        }
+        else {
+          put(path, repairDocument(referenceText(staged.read(path)!, path), path, path, redirects))
+        }
       }
       put(subject.path, null)
       data.references = input.references
@@ -313,13 +342,23 @@ export function planWrite(source: Snapshot, index: NoteIndex, options: WriteOpti
 
   if (destination !== subject.path) {
     const moved = new Map([[subject.path, { path: destination }]])
+    const notesByPath = new Map([...index.notes.values()].map(note => [note.value.path, note]))
     for (const path of activeMarkdown(source, index)) {
       if (path === subject.path && options.command === 'archive')
         continue
       const nextPath = path === subject.path ? destination : path
       const bytes = changes.get(nextPath) ?? source.read(path)
-      if (bytes)
+      if (!bytes)
+        continue
+      if (notesByPath.has(path)) {
+        const note = changes.has(nextPath) ? parseNote(bytes, nextPath, root, formats) : notesByPath.get(path)!
+        const body = rewriteLinks(note.value.body, path, nextPath, moved)
+        if (body !== note.value.body)
+          put(nextPath, formats.patchNote(note.source, { body }))
+      }
+      else {
         put(nextPath, repairDocument(referenceText(bytes, path), path, nextPath, moved))
+      }
     }
   }
   data.id = options.command === 'create' && options.dryRun ? null : subject.metadata.id

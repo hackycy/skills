@@ -6,8 +6,8 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
+import { jsonYaml } from '../src/notes/formats/carrier'
 import { checkLinks, links, relativeTarget } from '../src/notes/markdown'
-import { jsonYaml } from '../src/notes/reader'
 import { Repository, sha256 } from '../src/notes/snapshot'
 import { commit, git, ids, mechanicalBody, note, project, write } from './fixtures'
 

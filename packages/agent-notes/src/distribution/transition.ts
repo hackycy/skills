@@ -4,6 +4,7 @@ import type { Bundle } from './bundle'
 import type { Installation } from './manifest'
 import type { Projection } from './projection'
 import { Buffer } from 'node:buffer'
+import { isDeepStrictEqual } from 'node:util'
 import { NotesError } from '../notes/model'
 import { sha256 } from '../notes/snapshot'
 import { parseSource } from './bundle'
@@ -13,9 +14,16 @@ import { receipt, validate } from './projection'
 import { base64, budget, byteOrder, canonical, hashPattern, keys, limits } from './protocol'
 
 export type Operation = 'install' | 'hosts set' | 'tool update' | 'repair'
+// transaction/2 records the original config representation independently of document dispatch.
+interface JournalConfig extends ProjectConfig { format: 'agent-notes-config/1' }
+
+function journalConfig(config: ProjectConfig): JournalConfig {
+  return { format: 'agent-notes-config/1', notes_dir: config.notes_dir, language: config.language }
+}
+
 export interface TransitionContext {
   operation: Operation
-  config: ProjectConfig
+  config: JournalConfig
   before: Installation | null
   after: Installation
   beforeIndex: string | null
@@ -26,7 +34,7 @@ export type ReadEndpoint = (path: string) => Buffer | undefined
 const equal = (a: Buffer | null | undefined, b: Buffer | null | undefined): boolean => a == null ? b == null : b != null && a.equals(b)
 
 /** Complete plan, including controls; used again independently during recovery. */
-export function planFiles(before: Projection | undefined, after: Projection, config: ProjectConfig, read: ReadEndpoint): Map<string, Buffer | null> {
+export function planFiles(before: Projection | undefined, after: Projection, config: ProjectConfig, read: ReadEndpoint, renderConfig: (config: ProjectConfig) => Buffer): Map<string, Buffer | null> {
   const layout = notesLayout(config.notes_dir)
   const changes = new Map<string, Buffer | null>()
   const old = new Map(before?.assets.map(asset => [asset.path, asset]))
@@ -51,7 +59,7 @@ export function planFiles(before: Projection | undefined, after: Projection, con
     }
   }
   if (!read(layout.configPath))
-    changes.set(layout.configPath, canonical(config))
+    changes.set(layout.configPath, renderConfig(config))
   const manifest = canonical(receipt(after))
   if (!equal(read(layout.installPath), manifest))
     changes.set(layout.installPath, manifest)
@@ -72,7 +80,7 @@ export function transitionContext(operation: Operation, config: ProjectConfig, b
         supplemental[file.sha256] = projection.source.files.get(file.path)!.toString('base64')
     }
   }
-  return { operation, config, before: before ? receipt(before) : null, after: receipt(after), beforeIndex: before?.source.index.toString('base64') ?? null, afterIndex: after.source.index.toString('base64'), supplemental }
+  return { operation, config: journalConfig(config), before: before ? receipt(before) : null, after: receipt(after), beforeIndex: before?.source.index.toString('base64') ?? null, afterIndex: after.source.index.toString('base64'), supplemental }
 }
 
 export const validateJournal: JournalValidator = (journal: Journal, readLive: ReadEndpoint): void => {
@@ -83,7 +91,8 @@ export const validateJournal: JournalValidator = (journal: Journal, readLive: Re
   keys(context.config, ['format', 'notes_dir', 'language'], 'RECOVERY_CONFLICT')
   if (context.config.format !== 'agent-notes-config/1' || !['zh-CN', 'en'].includes(context.config.language))
     throw new NotesError('RECOVERY_CONFLICT', 'Invalid project configuration.')
-  const layout = notesLayout(context.config.notes_dir)
+  const { format: _format, ...config } = context.config
+  const layout = notesLayout(config.notes_dir)
   const entries = new Map(journal.entries.map(entry => [entry.path, entry]))
   const endpoint = (side: 'before' | 'after'): ReadEndpoint => path => entries.has(path) ? entries.get(path)![side] === null ? undefined : base64(entries.get(path)![side]) : readLive(path)
   const beforeView = endpoint('before')
@@ -138,7 +147,7 @@ export const validateJournal: JournalValidator = (journal: Journal, readLive: Re
     const installation = parseInstallation(canonical(context.before))
     if (context.beforeIndex === null)
       throw new NotesError('RECOVERY_CONFLICT', 'Missing old source evidence.')
-    before = validate({ kind: 'installation', source: rebuild(context.beforeIndex, beforeView), config: context.config, installation })
+    before = validate({ kind: 'installation', source: rebuild(context.beforeIndex, beforeView), config, installation })
     const bytes = beforeView(layout.installPath)
     if (!bytes || !canonical(parseInstallation(bytes)).equals(canonical(installation)))
       throw new NotesError('RECOVERY_CONFLICT', 'Before manifest does not match the journal intention.')
@@ -146,7 +155,7 @@ export const validateJournal: JournalValidator = (journal: Journal, readLive: Re
   else if (context.beforeIndex !== null || beforeView(layout.installPath)) {
     throw new NotesError('RECOVERY_CONFLICT', 'Invalid initial installation state.')
   }
-  const after = validate({ kind: 'installation', source: rebuild(context.afterIndex, afterView), config: context.config, installation: parseInstallation(canonical(context.after)) })
+  const after = validate({ kind: 'installation', source: rebuild(context.afterIndex, afterView), config, installation: parseInstallation(canonical(context.after)) })
   validate({ kind: 'transition', before, after, operation: context.operation })
   if (used.size !== evidence.size || [...evidence.keys()].some(hash => !used.has(hash)))
     throw new NotesError('RECOVERY_CONFLICT', 'Unnecessary supplemental source evidence.')
@@ -161,7 +170,7 @@ export const validateJournal: JournalValidator = (journal: Journal, readLive: Re
     catch {
       throw new NotesError('RECOVERY_CONFLICT', 'Invalid configuration endpoint.')
     }
-    if (!canonical(value).equals(canonical(context.config)))
+    if (!isDeepStrictEqual(value, context.config))
       throw new NotesError('RECOVERY_CONFLICT', 'Configuration disagrees with the projection.')
   }
   if (before && context.operation !== 'repair') {
@@ -172,7 +181,7 @@ export const validateJournal: JournalValidator = (journal: Journal, readLive: Re
         throw new NotesError('RECOVERY_CONFLICT', 'Ordinary management cannot consume damaged assets.', asset.path)
     }
   }
-  const expected = planFiles(before, after, context.config, beforeView)
+  const expected = planFiles(before, after, config, beforeView, config => canonical(journalConfig(config)))
   if (expected.size !== journal.entries.length || journal.entries.some(entry => !expected.has(entry.path) || !equal(expected.get(entry.path), entry.after === null ? null : base64(entry.after))))
     throw new NotesError('RECOVERY_CONFLICT', 'Journal entries do not equal the complete legal transition.')
   for (const asset of after.assets) {

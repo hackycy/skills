@@ -2,9 +2,10 @@ import { Buffer } from 'node:buffer'
 import { mkdirSync, readFileSync, renameSync, rmSync, symlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { exitCode, run } from '../src/cli/run'
+import { exitCode } from '../src/cli/run'
 import { sha256 } from '../src/notes/snapshot'
 import { archive, body, commit, document, git, ids, metadata, note, project, write } from './fixtures'
+import { run } from './production'
 
 const projects: string[] = []
 function setup(): string {

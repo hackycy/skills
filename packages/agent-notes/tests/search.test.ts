@@ -2,9 +2,9 @@ import { spawnSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { manage } from '../src/distribution/manage'
 import { testBundle } from './distribution-fixtures'
 import { project, write } from './fixtures'
+import { manage } from './production'
 
 const roots: string[] = []
 const marker = 'archive-search-regression-marker'

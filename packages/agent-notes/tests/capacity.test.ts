@@ -24,7 +24,7 @@ function snapshot() {
 // Transport budget tests deliberately use a no-op domain validator. Production
 // distribution callers also require the independently tested exact projection.
 const transport = { context: null, cleanup: [], validate() {} }
-const config = { format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'en' } as const
+const config = { notes_dir: '.agents/notes', language: 'en' } as const
 
 describe('independent capacity boundaries', () => {
   it('accepts exact index/manifest raw limits and rejects one more byte', () => {

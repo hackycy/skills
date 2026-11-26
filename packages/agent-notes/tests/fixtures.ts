@@ -39,7 +39,9 @@ export function commit(root: string): string {
   return git(root, 'rev-parse', 'HEAD')
 }
 
-export function metadata(overrides: Partial<Metadata> = {}): Metadata {
+type V1Metadata = Metadata & { format: 'agent-note/1' }
+
+export function metadata(overrides: Partial<V1Metadata> = {}): V1Metadata {
   return {
     format: 'agent-note/1',
     id: ids[0],

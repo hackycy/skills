@@ -7,13 +7,13 @@ import { NotesError } from '../notes/model'
 import { safePath } from '../notes/snapshot'
 import { writeCommands } from '../workflow/input'
 
-const commands = ['context', 'show', 'check', 'install', 'tool update', 'hosts set', 'repair', 'status', 'create', 'update', 'transition', 'archive', 'prune'] as const
+const commands = ['context', 'show', 'check', 'install', 'tool update', 'hosts set', 'repair', 'status', 'create', 'update', 'transition', 'archive', 'prune', 'migrate'] as const
 const nonempty = z.string().refine(value => Boolean(value.trim()), 'Supply a nonempty value.')
 export const notesDirectory = nonempty.refine(value => safePath(value) && !/[\s*?[\]#!]/.test(value)
   && !/(?:^|\/)(?:\.git|node_modules)(?:\/|$)/i.test(value), 'Supply a literal project-relative Notes directory without whitespace or Git wildcards.')
 const repeated = <T extends z.ZodType>(schema: T): z.ZodType<z.output<T>[]> => z.union([schema, z.array(schema)]).optional().transform(value => value === undefined ? [] : Array.isArray(value) ? value : [value])
 const flag = z.boolean().optional().default(false)
-const schema = z.strictObject({
+const argumentShape = z.strictObject({
   command: z.enum(commands),
   id: nonempty.optional(),
   root: nonempty.optional(),
@@ -33,8 +33,10 @@ const schema = z.strictObject({
   base: nonempty.optional(),
   head: nonempty.optional(),
   input: nonempty.optional(),
-  to: z.enum(['implemented', 'rejected']).optional(),
-}).superRefine((value, ctx) => {
+  to: z.string().optional(),
+})
+
+function validateArguments(value: z.output<typeof argumentShape>, ctx: z.RefinementCtx): void {
   const issue = (message: string): void => ctx.addIssue({ code: 'custom', message })
   if ((value.command === 'show' || (writeCommands.includes(value.command) && value.command !== 'create')) && !value.id)
     issue(`${value.command} requires an ID.`)
@@ -44,11 +46,15 @@ const schema = z.strictObject({
     issue('--dry-run excludes --recover.')
   if (writeCommands.includes(value.command) && !value.input)
     issue('Writes require --input.')
+  if (value.command === 'migrate' && !value.to?.trim())
+    issue('migrate requires --to <format>.')
   if (value.command === 'transition' && !value.to)
     issue('transition requires --to implemented|rejected.')
-}).transform(({ topic, host, ...value }) => ({ ...value, topics: topic, hosts: host }))
+}
 
-export type Options = z.output<typeof schema>
+const migrateSchema = argumentShape.superRefine(validateArguments)
+const standardSchema = argumentShape.extend({ to: z.enum(['implemented', 'rejected']).optional() }).superRefine(validateArguments)
+export type Options = Omit<z.output<typeof migrateSchema>, 'topic' | 'host'> & { topics: string[], hosts: string[] }
 export interface ParsedArguments {
   command: string
   json: boolean
@@ -57,7 +63,7 @@ export interface ParsedArguments {
   error?: unknown
 }
 
-function declarations(kind: 'package' | 'runtime'): CAC {
+function declarations(kind: 'package' | 'runtime', migration: boolean): CAC {
   const cli = cac('agent-notes')
     .option('--root <project>', 'Project root')
     .option('--json', 'Output one Result object')
@@ -89,9 +95,10 @@ function declarations(kind: 'package' | 'runtime'): CAC {
     .option('--head <commit>', 'Target commit; requires --base, excludes --staged')
     .option('--staged', 'Read the Git index')
     .option('--maintenance', 'Report maintenance candidates')
-  const writes = writeCommands.map(name => cli.command(`${name}${name === 'create' ? '' : ' <id>'}`, `${name} a Note`)
+  const writes = writeCommands.filter(name => migration || name !== 'migrate').map(name => cli.command(`${name}${name === 'create' ? '' : ' <id>'}`, `${name} a Note`)
     .option('--input <json-file|->', 'Complete operation materials; - reads stdin'))
   writes.find(command => command.name === 'transition')!.option('--to <implemented|rejected>', 'Target status')
+  writes.find(command => command.name === 'migrate')?.option('--to <format>', 'Target Note format')
   writes.find(command => command.name === 'prune')!.option('--mechanical', 'Prune a purely mechanical or local UI implemented Note without an owner')
   for (const command of writes.filter(command => ['archive', 'prune'].includes(command.name)))
     command.option('--base <commit>', 'Trusted history baseline')
@@ -160,7 +167,7 @@ function helpText(cli: ReturnType<typeof declarations>): string {
   return result.replaceAll('hosts-set', 'hosts set').replaceAll('tool-update', 'tool update')
 }
 
-export function parseArguments(args: string[], kind = distributionSource().kind): ParsedArguments {
+export function parseArguments(args: string[], kind = distributionSource().kind, migration = false): ParsedArguments {
   const original = args
   let commandIndex = 0
   while (commandIndex < args.length && args[commandIndex].startsWith('-')) {
@@ -173,9 +180,9 @@ export function parseArguments(args: string[], kind = distributionSource().kind)
   if ((name === 'hosts' && args[commandIndex + 1] === 'set') || (name === 'tool' && args[commandIndex + 1] === 'update'))
     args = [...args.slice(0, commandIndex), name === 'hosts' ? 'hosts-set' : 'tool-update', ...args.slice(commandIndex + 2)]
 
-  const cli = declarations(kind)
+  const cli = declarations(kind, migration)
   // Parse output context independently so even malformed arguments retain JSON mode.
-  const context = declarations(kind)
+  const context = declarations(kind, migration)
   try {
     context.parse(['node', 'agent-notes', ...args], { run: false })
   }
@@ -206,11 +213,13 @@ export function parseArguments(args: string[], kind = distributionSource().kind)
       throw new Error('Supply a command. Use --help.')
     command.checkUnusedArgs()
     const decode = (value: unknown): unknown => Array.isArray(value) ? value.map(decode) : typeof value === 'string' && value.startsWith(valuePrefix) ? value.slice(valuePrefix.length) : value
+    const schema = command.name === 'migrate' ? migrateSchema : standardSchema
     const result = schema.safeParse({ ...Object.fromEntries(Object.entries(values).map(([key, value]) => [key, decode(value)])), command: command.name === 'hosts-set' ? 'hosts set' : command.name === 'tool-update' ? 'tool update' : command.name, id: cli.args[0] })
     if (!result.success)
       throw new Error(result.error.issues.map(issue => `${issue.path.join('.') || 'arguments'}: ${issue.message}`).join(' '))
-    parsed.input = result.data
-    parsed.json = result.data.json
+    const { topic, host, ...value } = result.data
+    parsed.input = { ...value, topics: topic, hosts: host }
+    parsed.json = value.json
   }
   catch (error) {
     parsed.error = error instanceof NotesError ? error : new NotesError('INVALID_INPUT', error instanceof Error ? error.message : String(error), undefined, 2)

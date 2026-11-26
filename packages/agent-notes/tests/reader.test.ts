@@ -1,12 +1,15 @@
 import { Buffer } from 'node:buffer'
 import { describe, expect, it } from 'vitest'
 import { matchesPath, validPattern } from '../src/discovery/scope'
-import { parseNote, validateManifest, validateMetadata } from '../src/notes/reader'
+import { validateManifest } from '../src/notes/formats/adapters/manifest-v1'
+import { validateMetadata } from '../src/notes/formats/adapters/note-v1'
+import { productionFormats } from '../src/notes/formats/production'
+import { parseNote } from '../src/notes/reader'
 import examples from './contract-examples.json'
 import { body, document, metadata } from './fixtures'
 
 const path = '.agents/notes/implemented/architecture/2026-10-21-event-ownership.md'
-const parse = (text: string, destination = path) => parseNote(Buffer.from(text), destination, '.agents/notes')
+const parse = (text: string, destination = path) => parseNote(Buffer.from(text), destination, '.agents/notes', productionFormats)
 
 describe('frozen v1 compatibility examples', () => {
   it.each(examples.note_valid)('accepts $name', ({ value }) => {
@@ -23,7 +26,7 @@ describe('frozen v1 compatibility examples', () => {
 describe('document reader', () => {
   it('accepts Chinese headings without changing the public format', () => {
     const contents = body().replace('Problem', '问题').replace('Decision', '决策').replace('Alternatives considered', '考虑过的替代方案').replace('Consequences', '后果').replace('Verification', '验证')
-    expect(parse(document(metadata(), contents)).title).toBe('Event ownership')
+    expect(parse(document(metadata(), contents)).value.title).toBe('Event ownership')
   })
 
   it.each([
@@ -48,13 +51,13 @@ describe('document reader', () => {
   })
 
   it('rejects malformed UTF-8 and invalid dates/locations', () => {
-    expect(() => parseNote(Buffer.from([0xFF]), path, '.agents/notes')).toThrow(/UTF-8/)
+    expect(() => parseNote(Buffer.from([0xFF]), path, '.agents/notes', productionFormats)).toThrow(/UTF-8/)
     expect(() => parse(document(), path.replace('2026-10-21', '2026-02-30'))).toThrow(/path|slug/i)
     expect(() => parse(document(), path.replace('/implemented/', '/proposed/'))).toThrow(/disagree/)
   })
 
   it('ignores headings inside code fences', () => {
-    expect(parse(`${document()}\n## Example\n\n\`\`\`md\n# title\n## Plan\n\`\`\`\n`).title).toBe('Event ownership')
+    expect(parse(`${document()}\n## Example\n\n\`\`\`md\n# title\n## Plan\n\`\`\`\n`).value.title).toBe('Event ownership')
   })
 })
 

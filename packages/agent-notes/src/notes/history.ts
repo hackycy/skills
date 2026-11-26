@@ -1,4 +1,5 @@
-import type { Diagnostic, Note, NoteIndex } from './model'
+import type { FormatRegistry } from './formats/registry'
+import type { Diagnostic, LocatedNote, Note, NoteIndex } from './model'
 import type { Snapshot } from './snapshot'
 import { isDeepStrictEqual } from 'node:util'
 import { diagnostic, NotesError } from './model'
@@ -8,10 +9,10 @@ import { sha256 } from './snapshot'
 
 // Permit only byte-preserving URL substitutions to the same Note identity.
 // Ambiguous/escaped destinations are deliberately left for an explicit correction.
-function repairedBody(old: Note, current: Note, before: NoteIndex, after: NoteIndex): string {
+function repairedBody(old: LocatedNote, current: LocatedNote, before: NoteIndex, after: NoteIndex): string {
   const moves = new Map<string, { path: string }>()
-  for (const previous of before.notes.values()) {
-    const next = after.notes.get(previous.metadata.id)
+  for (const { value: previous } of before.notes.values()) {
+    const next = after.notes.get(previous.metadata.id)?.value
     if (next && next.path !== previous.path)
       moves.set(previous.path, { path: next.path })
   }
@@ -20,24 +21,24 @@ function repairedBody(old: Note, current: Note, before: NoteIndex, after: NoteIn
 
 export function checkArchive(index: NoteIndex): Diagnostic[] {
   const diagnostics: Diagnostic[] = []
-  for (const note of index.notes.values()) {
+  for (const { value: note, source } of index.notes.values()) {
     if (note.lifecycle !== 'archived')
       continue
     const entry = index.manifest.entries[note.metadata.id]
-    if (!entry || entry.path !== note.relativePath || entry.sha256 !== note.hash
+    if (!entry || entry.path !== note.relativePath || entry.sha256 !== source.hash
       || entry.source.path !== `implemented/${note.identityPath}`) {
       diagnostics.push({ code: 'INVALID_ARCHIVE_SEAL', path: note.path, note_id: note.metadata.id, message: 'Archive identity, source, path and raw-byte hash must agree with the manifest.' })
     }
   }
   for (const [id, entry] of Object.entries(index.manifest.entries)) {
-    const note = index.notes.get(id)
+    const note = index.notes.get(id)?.value
     if (!note || note.lifecycle !== 'archived' || note.relativePath !== entry.path)
       diagnostics.push({ code: 'INVALID_ARCHIVE_SEAL', note_id: id, message: 'Every manifest entry must have exactly one archived Note at its sealed path.' })
   }
   return diagnostics
 }
 
-export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snapshot, before?: NoteIndex): { diagnostics: Diagnostic[], review: Diagnostic[] } {
+export function checkHistory(target: Snapshot, index: NoteIndex, formats: FormatRegistry, baseline?: Snapshot, before?: NoteIndex): { diagnostics: Diagnostic[], review: Diagnostic[] } {
   const diagnostics: Diagnostic[] = []
   const review: Diagnostic[] = []
   if (!baseline || !before) {
@@ -48,14 +49,16 @@ export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snap
       const path = `${before.config.notes_dir}/${entry.path}`
       const bytes = target.read(path)
       if (!isDeepStrictEqual(entry, index.manifest.entries[id]) || !bytes || sha256(bytes) !== entry.sha256
-        || index.notes.get(id)?.path !== path) {
+        || index.notes.get(id)?.value.path !== path) {
         diagnostics.push({ code: 'FROZEN_NOTE_CHANGED', path, note_id: id, message: 'A baseline archive cannot be edited, moved, deleted or resealed.' })
       }
     }
-    for (const [id, previous] of before.notes) {
-      const current = index.notes.get(id)
+    for (const [id, prior] of before.notes) {
+      const previous = prior.value
+      const next = index.notes.get(id)
+      const current = next?.value
       if (previous.lifecycle === 'archived') {
-        if (!current || current.path !== previous.path || current.hash !== previous.hash)
+        if (!current || current.path !== previous.path || next!.source.hash !== prior.source.hash)
           diagnostics.push({ code: 'FROZEN_NOTE_CHANGED', path: previous.path, note_id: id, message: 'Frozen baseline bytes and identity must remain at the same path, even if the seal or archive marker was removed.' })
         continue
       }
@@ -69,7 +72,7 @@ export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snap
         diagnostics.push({ code: 'INVALID_TRANSITION', note_id: id, path: current.path, message: `Cannot transition ${previous.metadata.status} to ${current.metadata.status}.` })
       if (previous.metadata.status === 'rejected') {
         try {
-          if (previous.metadata.rejection_reason !== current.metadata.rejection_reason
+          if (prior.source.format !== next!.source.format || previous.metadata.rejection_reason !== current.metadata.rejection_reason
             || repairedBody(previous, current, before, index) !== current.body) {
             throw new NotesError('REJECTED_NOTE_CHANGED', 'Rejected history preserves its original proposal and rejection reason; record a new related decision.', current.path)
           }
@@ -78,13 +81,17 @@ export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snap
           diagnostics.push(diagnostic(error))
         }
       }
-      if (previous.hash !== current.hash) {
+      if (prior.source.hash !== next!.source.hash) {
+        if (isMechanicalMigration(prior, next!, formats)) {
+          review.push({ code: 'NOTE_FORMAT_MIGRATION', note_id: id, path: current.path, message: `Replayed format conversion from ${prior.source.format} to ${next!.source.format} with identical Note content.` })
+          continue
+        }
         review.push({ code: 'NOTE_CHANGE_REVIEW', note_id: id, path: current.path, message: 'Confirm this still describes the same decision, preserves rationale, and reflects delivered facts.' })
         if (previous.metadata.status === 'proposed' && current.metadata.status === 'rejected')
           review.push({ code: 'REJECTION_HISTORY_REVIEW', note_id: id, path: current.path, message: 'The two snapshots cannot reconstruct proposal edits made before rejection; review the retained proposal and verdict.' })
       }
     }
-    for (const [id, note] of index.notes) {
+    for (const [id, { value: note }] of index.notes) {
       if (!before.notes.has(id))
         review.push({ code: 'NEW_NOTE_REVIEW', note_id: id, path: note.path, message: 'Verify durable rationale and discarded alternatives cannot be carried adequately by code, tests or existing docs, and related code ships in this PR.' })
     }
@@ -93,9 +100,10 @@ export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snap
   for (const [id, entry] of Object.entries(index.manifest.entries)) {
     if (before?.manifest.entries[id])
       continue
-    const archived = index.notes.get(id)
-    if (!archived)
+    const sealed = index.notes.get(id)
+    if (!sealed)
       continue
+    const archived = sealed.value
     try {
       let source: Note | undefined
       if (entry.source.revision) {
@@ -106,17 +114,18 @@ export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snap
         const bytes = historical.read(path)
         if (!bytes || sha256(bytes) !== entry.source.sha256)
           throw new NotesError('INVALID_ARCHIVE_SOURCE', 'Source revision does not contain the declared source bytes.', archived.path)
-        source = parseNote(bytes, path, index.config.notes_dir)
+        source = parseNote(bytes, path, index.config.notes_dir, formats)
       }
       else {
         const candidate = before?.notes.get(id)
-        if (candidate?.hash === entry.source.sha256 && candidate.relativePath === entry.source.path)
+        if (candidate?.source.hash === entry.source.sha256 && candidate.value.relativePath === entry.source.path)
           source = candidate
       }
       if (source) {
-        const { archive: _archive, ...metadata } = archived.metadata
-        if (source.metadata.status !== 'implemented' || source.lifecycle === 'archived'
-          || source.metadata.id !== id || source.body !== archived.body || !isDeepStrictEqual(source.metadata, metadata)) {
+        const { archive, ...metadata } = archived.metadata
+        if (source.source.format !== sealed.source.format || source.value.metadata.status !== 'implemented' || source.value.lifecycle === 'archived'
+          || source.value.metadata.id !== id || source.value.body !== archived.body || !isDeepStrictEqual(source.value.metadata, metadata)
+          || !archive || !formats.preservesArchiveSource(source.source, archive, sealed.source)) {
           throw new NotesError('INVALID_ARCHIVE_SOURCE', 'Archive must preserve its implemented source body and metadata, adding only archive metadata.', archived.path)
         }
       }
@@ -129,4 +138,19 @@ export function checkHistory(target: Snapshot, index: NoteIndex, baseline?: Snap
     }
   }
   return { diagnostics, review }
+}
+
+export function isMechanicalMigration(previous: Note, current: Note, formats: FormatRegistry): boolean {
+  if (previous.value.lifecycle === 'rejected' || previous.value.lifecycle === 'archived'
+    || previous.source.format === current.source.format || !isDeepStrictEqual(previous.value, current.value)) {
+    return false
+  }
+  try {
+    return formats.convertNote(previous, current.source.format).equals(current.source.bytes.copy())
+  }
+  catch (error) {
+    if (error instanceof NotesError)
+      return false
+    throw error
+  }
 }

@@ -1,4 +1,5 @@
 import type { Result } from '../cli/run'
+import type { FormatRegistry } from '../notes/formats/registry'
 import type { WriteOptions } from './input'
 import type { TransactionHooks } from './transaction'
 import { observeRuntime } from '../distribution/bundle'
@@ -12,7 +13,7 @@ import { planWrite } from './plan'
 import { recoverTransaction } from './recovery'
 import { assertNoTransaction, commitTransaction, verifyObservations } from './transaction'
 
-export function executeWrite(root: string, options: WriteOptions, stdin?: string, hooks: TransactionHooks = {}): Result {
+export function executeWrite(root: string, options: WriteOptions, stdin: string | undefined, hooks: TransactionHooks, formats: FormatRegistry, allowProposalActivation = false): Result {
   const result: Result = { command: options.command, result: 'ok', scope: { root, snapshot: 'worktree' }, data: {}, diagnostics: [], review: [] }
   try {
     const recovered = options.recover ? recoverTransaction(root) : false
@@ -23,26 +24,26 @@ export function executeWrite(root: string, options: WriteOptions, stdin?: string
     result.scope.base = base ?? null
     const source = repository.snapshot('worktree')
     observeRuntime(source)
-    const index = readIndex(source)
+    const index = readIndex(source, formats, allowProposalActivation)
     const baseline = base ? repository.snapshot('commit', base) : undefined
-    const previous = baseline ? readIndex(baseline) : undefined
+    const previous = baseline ? readIndex(baseline, formats, allowProposalActivation) : undefined
     const initial = ['archive', 'prune'].includes(options.command) ? validateCurrent(source, index) : currentDiagnostics(index)
     if (previous)
       initial.push(...currentDiagnostics(previous))
-    initial.push(...checkHistory(source, index, baseline, previous).diagnostics)
+    initial.push(...checkHistory(source, index, formats, baseline, previous).diagnostics)
     if (initial.length) {
       result.diagnostics.push(...initial)
     }
     else {
       const input = readInput(source, options.input, stdin)
-      const plan = planWrite(source, index, options, input, baseline)
+      const plan = planWrite(source, index, formats, options, input, baseline)
       const overlay = source.overlay(plan.changes)
-      const next = readIndex(overlay)
+      const next = readIndex(overlay, formats, allowProposalActivation)
       result.diagnostics.push(...validateCurrent(overlay, next))
-      const history = checkHistory(overlay, next, baseline, previous)
+      const history = checkHistory(overlay, next, formats, baseline, previous)
       result.diagnostics.push(...history.diagnostics)
       // Protect uncommitted rejected/archive history, too; Git may predate its creation.
-      const operationHistory = checkHistory(overlay, next, source, index)
+      const operationHistory = checkHistory(overlay, next, formats, source, index)
       result.diagnostics.push(...operationHistory.diagnostics)
       result.review.push(...plan.review, ...history.review)
       result.data = {

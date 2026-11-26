@@ -1,3 +1,4 @@
+import type { FormatRegistry } from '../notes/formats/registry'
 import type { Options } from './arguments'
 import process from 'node:process'
 import { cancel, intro, isCancel, isCI, multiselect, select, text } from '@clack/prompts'
@@ -37,7 +38,7 @@ export function interactiveInit(input: Options, environment = { stdinTTY: proces
     && !environment.ci && !input.json && input.interactive !== false
 }
 
-function initContext(input: Options, cwd: string): { input: Options, verify: () => void } {
+function initContext(input: Options, cwd: string, formats: FormatRegistry): { input: Options, verify: () => void } {
   const root = installationRoot(input.root, cwd, true)
   // Complete recovery requests keep the manager's recover-before-read path.
   if (input.hosts.length && input.notesDir && input.language)
@@ -50,7 +51,7 @@ function initContext(input: Options, cwd: string): { input: Options, verify: () 
   const hasConfig = Boolean(view.source.read(layout.configPath))
   if (installation && !hasConfig)
     throw new NotesError('CONFIG_CONFLICT', 'Installed configuration is missing; restore it explicitly.', layout.configPath)
-  const config = readConfig(view.source, layout)
+  const { value: config } = readConfig(view.source, formats, layout)
   if (hasConfig && ((input.notesDir && input.notesDir !== config.notes_dir) || (input.language && input.language !== config.language)))
     throw new NotesError('CONFIG_CONFLICT', 'Existing project configuration is preserved. Requested initialization options disagree with it.', layout.configPath, 2)
   if (input.command === 'install' && installation && input.hosts.length && [...input.hosts].sort().join() !== [...installation.integrations].sort().join())
@@ -73,15 +74,15 @@ function finish(input: Options): Options {
 }
 
 /** Deterministic path for scripts and synchronous callers; shares context and defaults with the wizard. */
-export function completeInit(input: Options, cwd: string): Options {
-  const context = initContext(input, cwd)
+export function completeInit(input: Options, cwd: string, formats: FormatRegistry): Options {
+  const context = initContext(input, cwd, formats)
   const complete = finish(context.input)
   context.verify()
   return complete
 }
 
-async function collectInit(input: Options, cwd: string, adapter: InitPrompts): Promise<Options> {
-  const context = initContext(input, cwd)
+async function collectInit(input: Options, cwd: string, formats: FormatRegistry, adapter: InitPrompts): Promise<Options> {
+  const context = initContext(input, cwd, formats)
   const complete = context.input
   const answer = async <T>(value: Promise<T | symbol>): Promise<T> => {
     const result = await value
@@ -105,14 +106,14 @@ async function collectInit(input: Options, cwd: string, adapter: InitPrompts): P
   return resolved
 }
 
-export async function promptInit(input: Options, cwd: string, adapter: InitPrompts = prompts): Promise<Options> {
+export async function promptInit(input: Options, cwd: string, formats: FormatRegistry, adapter: InitPrompts = prompts): Promise<Options> {
   // Clack's core wraps using stdout.columns even when its output is stderr.
   // Supply a width for piped stdout, and restore the stream after the questions.
   const columns = process.stdout.columns
   if (adapter === prompts && !columns)
     process.stdout.columns = process.stderr.columns || 80
   try {
-    return await collectInit(input, cwd, adapter)
+    return await collectInit(input, cwd, formats, adapter)
   }
   finally {
     if (adapter === prompts && !columns) {

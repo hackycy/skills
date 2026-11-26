@@ -8,13 +8,13 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { manage } from '../src/distribution/manage'
 import { canonical } from '../src/distribution/protocol'
 import { validateJournal } from '../src/distribution/transition'
 import { recoverTransaction } from '../src/workflow/recovery'
 import { recoverTransaction as recoverWithHooks } from '../src/workflow/transaction'
 import { legacyBundle, testBundle } from './distribution-fixtures'
 import { archive, git, note, project, write } from './fixtures'
+import { manage } from './production'
 
 vi.setConfig({ testTimeout: 120_000 })
 const roots: string[] = []

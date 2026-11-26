@@ -5,9 +5,9 @@ import { readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
 import { readBundle } from '../src/distribution/bundle'
-import { manage } from '../src/distribution/manage'
 import { boundedRead, canonical } from '../src/distribution/protocol'
 import { project, write } from './fixtures'
+import { manage } from './production'
 
 const paths = process.argv.slice(2)
 const load = (cli: string): Bundle => readBundle((path, max) => boundedRead(path, max), join(dirname(cli), 'source-index.json'), path => path === 'cli.mjs' ? cli : join(dirname(cli), '..', path))

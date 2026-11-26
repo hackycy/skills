@@ -4,10 +4,9 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { run } from '../src/cli/run'
-import { executeWrite } from '../src/workflow/execute'
 import { recoverTransaction } from '../src/workflow/transaction'
 import { commit, ids, metadata, note, project, write } from './fixtures'
+import { executeWrite, run } from './production'
 
 const roots: string[] = []
 function setup(): { root: string, path: string, input: string } {

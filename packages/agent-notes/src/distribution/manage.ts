@@ -1,4 +1,5 @@
 import type { Result } from '../cli/run'
+import type { FormatRegistry } from '../notes/formats/registry'
 import type { ProjectConfig } from '../notes/model'
 import type { Snapshot } from '../notes/snapshot'
 import type { TransactionHooks } from '../workflow/transaction'
@@ -49,16 +50,16 @@ export function installationRoot(explicit: string | undefined, cwd: string, inst
     return repository.available ? realpathSync(execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim()) : realpathSync(cwd)
   }
 }
-function configFor(source: Snapshot, options: ManageOptions, layout: NotesLayout): ProjectConfig {
+function configFor(source: Snapshot, options: ManageOptions, layout: NotesLayout, formats: FormatRegistry): ProjectConfig {
   const existing = source.read(layout.configPath)
   if (existing) {
-    const config = readConfig(source, layout)
+    const { value: config } = readConfig(source, formats, layout)
     if ((options.notesDir && options.notesDir !== config.notes_dir) || (options.language && options.language !== config.language))
       throw new NotesError('CONFIG_CONFLICT', 'Existing project configuration is preserved. Requested initialization options disagree with it.', layout.configPath, 2)
     return config
   }
-  const config: ProjectConfig = { format: 'agent-notes-config/1', notes_dir: layout.notesRoot, language: options.language ?? 'zh-CN' }
-  return readConfig(source.overlay(new Map([[layout.configPath, Buffer.from(JSON.stringify(config))]])), layout)
+  const config: ProjectConfig = { notes_dir: layout.notesRoot, language: options.language ?? 'zh-CN' }
+  return formats.readConfig(formats.renderInitialConfig(config), layout.configPath).value
 }
 
 function noteInventory(source: Snapshot, notesDir: string): string[] {
@@ -134,7 +135,7 @@ function backup(source: Snapshot, modified: Asset[], changes: Map<string, Buffer
   return directory
 }
 
-export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bundle, hooks: TransactionHooks = {}): Result {
+export function manage(options: ManageOptions, cwd: string, suppliedBundle: Bundle | undefined, hooks: TransactionHooks, formats: FormatRegistry): Result {
   const output: Result = { command: options.command, result: 'ok', scope: {}, data: {}, diagnostics: [], review: [] }
   let scratch: string | undefined
   try {
@@ -153,7 +154,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
     if (!view)
       assertNoTransaction(root)
     const source = view?.source ?? repository.snapshot('worktree')
-    const config = configFor(source, options, layoutFromSnapshot(source, options.notesDir ?? defaultNotesRoot))
+    const config = configFor(source, options, layoutFromSnapshot(source, options.notesDir ?? defaultNotesRoot), formats)
     const layout = notesLayout(config.notes_dir)
     const installation = readInstallation(source, layout)
     if (!installation && options.command !== 'install')
@@ -212,10 +213,10 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
       if (collision)
         throw new NotesError('PROJECTION_CONFLICT', 'Existing case/normalization collision.', collision)
     }
-    const changes = planFiles(before, after, config, path => source.read(path, limits.endpoint))
+    const changes = planFiles(before, after, config, path => source.read(path, limits.endpoint), formats.renderInitialConfig)
     const notes = noteInventory(source, config.notes_dir)
     for (const path of notes) source.read(path)
-    const diagnostics = currentDiagnostics(readIndex(source.overlay(changes)))
+    const diagnostics = currentDiagnostics(readIndex(source.overlay(changes), formats))
     if (diagnostics.length) {
       output.diagnostics = diagnostics
       output.result = diagnostics.some(item => item.code === 'UNSUPPORTED_FORMAT') ? 'invalid-input' : 'failed'
@@ -230,7 +231,7 @@ export function manage(options: ManageOptions, cwd: string, suppliedBundle?: Bun
       // All input, source, ownership and target semantics pass before recovery writes.
       view!.verify()
       const recovered = recoverTransaction(root)
-      const result = manage({ ...options, root, recover: false }, cwd, suppliedBundle, hooks)
+      const result = manage({ ...options, root, recover: false }, cwd, suppliedBundle, hooks, formats)
       result.data.recovered = recovered
       return result
     }

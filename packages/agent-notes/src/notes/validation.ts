@@ -15,7 +15,7 @@ export function isRuntime(path: string, notesRoot = '.agents/notes'): boolean {
 }
 
 export function activeMarkdown(snapshot: Snapshot, index: NoteIndex): string[] {
-  const frozen = new Set([...index.notes.values()].filter(note => note.lifecycle === 'archived').map(note => note.path))
+  const frozen = new Set([...index.notes.values()].filter(note => note.value.lifecycle === 'archived').map(note => note.value.path))
   return snapshot.paths().filter(path => /\.md$/i.test(path) && !frozen.has(path) && !isRuntime(path, index.config.notes_dir))
 }
 

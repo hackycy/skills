@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
-import { executeWrite } from '../src/workflow/execute'
+import { executeWrite } from './production'
 
 const root = process.argv[2]
 const mode = process.argv[3]

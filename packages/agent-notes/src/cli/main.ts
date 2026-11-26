@@ -2,6 +2,7 @@
 import type { Result } from './run'
 import process from 'node:process'
 import { delegate } from '../distribution/delegate'
+import { productionFormats } from '../notes/formats/production'
 import { parseArguments } from './arguments'
 import { completeInit, InitCancelled, interactiveInit, promptInit, reportCancellation } from './init'
 import { execute, exitCode, failure, render } from './run'
@@ -24,8 +25,8 @@ try {
     }
     else {
       if (['install', 'hosts set'].includes(input.command))
-        input = interactiveInit(input) ? await promptInit(input, process.cwd()) : completeInit(input, process.cwd())
-      result = execute(input)
+        input = interactiveInit(input) ? await promptInit(input, process.cwd(), productionFormats) : completeInit(input, process.cwd(), productionFormats)
+      result = execute(input, productionFormats)
     }
   }
 }

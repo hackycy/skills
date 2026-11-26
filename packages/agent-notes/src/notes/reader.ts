@@ -1,100 +1,24 @@
+import type { Buffer } from 'node:buffer'
 import type { NotesLayout } from '../distribution/layout'
-import type { Manifest, Metadata, Note, NoteIndex, ProjectConfig } from './model'
+import type { FormatRegistry } from './formats/registry'
+import type { LocatedNote, Metadata, Note, NoteIndex, ProjectConfig, Source } from './model'
 import type { Snapshot } from './snapshot'
-import { Buffer } from 'node:buffer'
-import Ajv from 'ajv'
-import addFormats from 'ajv-formats'
-import { isAlias, isMap, isScalar, parseDocument, visit } from 'yaml'
-import noteSchema from '../../assets/formats/agent-note-1.schema.json'
-import archiveSchema from '../../assets/formats/agent-note-archive-1.schema.json'
 import { validPattern } from '../discovery/scope'
 import { defaultNotesRoot, layoutFromSnapshot } from '../distribution/layout'
-import { checkBody } from './markdown'
 import { diagnostic, NotesError } from './model'
-import { safePath, sha256 } from './snapshot'
 
-const ajv = new Ajv({ allErrors: true, strictRequired: false, strictTypes: false })
-addFormats(ajv)
-export const validateMetadata = ajv.compile<Metadata>(noteSchema)
-export const validateManifest = ajv.compile<Manifest>(archiveSchema)
-
-export function decode(bytes: Buffer, path: string): string {
-  if (bytes.subarray(0, 3).equals(Buffer.from([0xEF, 0xBB, 0xBF])))
-    throw new NotesError('INVALID_ENCODING', 'Use UTF-8 without BOM.', path)
-  let text: string
-  try {
-    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
-  }
-  catch {
-    throw new NotesError('INVALID_ENCODING', 'Invalid UTF-8 bytes.', path)
-  }
-  if (text.includes('\r') || text.includes('\0'))
-    throw new NotesError('INVALID_ENCODING', 'Use LF newlines without NUL bytes.', path)
-  return text
-}
-
-function format(value: unknown, expected: string, path: string): void {
-  if (typeof value === 'object' && value !== null && 'format' in value && value.format !== expected)
-    throw new NotesError('UNSUPPORTED_FORMAT', `Supported format: ${expected}; found ${String(value.format)}.`, path, 2)
-}
-
-export function parseJson(bytes: Buffer, path: string): unknown {
-  // JSON is a YAML 1.2 subset; this pass also rejects duplicate JSON keys.
-  const text = decode(bytes, path)
-  try {
-    JSON.parse(text)
-    return jsonYaml(text, path)
-  }
-  catch (error) {
-    if (error instanceof NotesError)
-      throw error
-    throw new NotesError('INVALID_JSON', 'Expected valid JSON with unique keys.', path)
-  }
-}
-
-export function jsonYaml(text: string, path: string): unknown {
-  const document = parseDocument(text, { schema: 'core', uniqueKeys: true, strict: true })
-  if (document.errors.length || document.warnings.length)
-    throw new NotesError('INVALID_YAML', [...document.errors, ...document.warnings].map(error => error.message).join('; '), path)
-  visit(document, (key, node) => {
-    if (isAlias(node) || (node && typeof node === 'object' && 'tag' in node && node.tag))
-      throw new NotesError('INVALID_YAML', 'Aliases and explicit YAML tags are not supported.', path)
-    if (isMap(node) && node.items.some(pair => !isScalar(pair.key) || typeof pair.key.value !== 'string'))
-      throw new NotesError('INVALID_YAML', 'JSON-compatible mappings require string keys.', path)
-    if (isScalar(node) && ((key === 'key' && node.value === '<<') || (typeof node.value === 'number' && !Number.isFinite(node.value))))
-      throw new NotesError('INVALID_YAML', 'Merge keys and non-JSON numbers are not supported.', path)
-  })
-  return document.toJS({ maxAliasCount: 0, mapAsMap: false })
-}
-
-export function readConfig(snapshot: Snapshot, suppliedLayout?: NotesLayout): ProjectConfig {
-  const layout = suppliedLayout ?? layoutFromSnapshot(snapshot, defaultNotesRoot)
+export function readConfig(snapshot: Snapshot, formats: FormatRegistry, layout = layoutFromSnapshot(snapshot, defaultNotesRoot)): { value: ProjectConfig, source?: Source } {
   const path = layout.configPath
   const bytes = snapshot.read(path)
   if (!bytes)
-    return { format: 'agent-notes-config/1', notes_dir: layout.notesRoot, language: 'zh-CN' }
-  const value = parseJson(bytes, path)
-  format(value, 'agent-notes-config/1', path)
-  if (!value || typeof value !== 'object' || !('format' in value) || !('notes_dir' in value)
-    || !('language' in value) || typeof value.notes_dir !== 'string' || !safePath(value.notes_dir)
-    || !['zh-CN', 'en'].includes(String(value.language))
-    || Object.keys(value).some(key => !['format', 'notes_dir', 'language'].includes(key))
-    || /(?:^|\/)(?:\.git|node_modules)(?:\/|$)/i.test(value.notes_dir)
-    || value.notes_dir !== layout.notesRoot) {
+    return { value: { notes_dir: layout.notesRoot, language: 'zh-CN' } }
+  const parsed = formats.readConfig(bytes, path)
+  if (parsed.value.notes_dir !== layout.notesRoot)
     throw new NotesError('INVALID_CONFIG', 'Expected v1 config with a safe notes_dir and language zh-CN or en.', path, 2)
-  }
-  return value as ProjectConfig
+  return parsed
 }
 
-export function parseNote(bytes: Buffer, path: string, notesDir: string): Note {
-  const text = decode(bytes, path)
-  const frontmatter = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(text)
-  if (!frontmatter)
-    throw new NotesError('INVALID_FRONTMATTER', 'A Note must begin with YAML frontmatter delimited by --- lines.', path)
-  const metadata = jsonYaml(frontmatter[1], path)
-  format(metadata, 'agent-note/1', path)
-  if (!validateMetadata(metadata))
-    throw new NotesError('INVALID_METADATA', ajv.errorsText(validateMetadata.errors, { separator: '; ' }), path)
+function placement(path: string, notesDir: string, metadata: Metadata): Pick<LocatedNote, 'path' | 'relativePath' | 'identityPath' | 'lifecycle'> {
   for (const pattern of metadata.scope.paths ?? []) {
     if (!validPattern(pattern))
       throw new NotesError('INVALID_SCOPE', `Unsupported scope path: ${pattern}`, path)
@@ -106,28 +30,37 @@ export function parseNote(bytes: Buffer, path: string, notesDir: string): Note {
     || !/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(match[3])) {
     throw new NotesError('INVALID_NOTE_PATH', 'Expected <lifecycle>/<class>/YYYY-MM-DD-safe-slug.md.', path)
   }
-  const lifecycle = match[1]
+  const lifecycle = match[1] as LocatedNote['lifecycle']
   if (lifecycle === 'archived' ? !metadata.archive : (metadata.archive || metadata.status !== lifecycle))
     throw new NotesError('INVALID_LIFECYCLE', 'Directory, status and archive metadata disagree.', path)
-  const body = text.slice(frontmatter[0].length)
-  const title = checkBody(body, metadata.status, path)
-  return { metadata, path, relativePath, lifecycle, identityPath: relativePath.slice(lifecycle.length + 1), title, text, body, hash: sha256(bytes) }
+  return { path, relativePath, lifecycle, identityPath: relativePath.slice(lifecycle.length + 1) }
 }
 
-export function readIndex(snapshot: Snapshot): NoteIndex {
-  const layout = layoutFromSnapshot(snapshot, defaultNotesRoot)
-  const config = readConfig(snapshot, layout)
+export function parseNote(bytes: Buffer, path: string, notesDir: string, formats: FormatRegistry): Note {
+  let location: ReturnType<typeof placement> | undefined
+  const parsed = formats.readNote(bytes, {
+    path,
+    assertPlacement: (metadata) => {
+      location = placement(path, notesDir, metadata)
+    },
+  })
+  if (!location)
+    throw new Error(`Format adapter omitted placement validation for ${path}.`)
+  return { ...parsed, value: { ...parsed.value, ...location } }
+}
+
+export function readIndex(snapshot: Snapshot, formats: FormatRegistry, allowProposalActivation = false): NoteIndex {
+  const layout: NotesLayout = layoutFromSnapshot(snapshot, defaultNotesRoot)
+  const { value: config, source: configSource } = readConfig(snapshot, formats, layout)
   snapshot.includeDirectory(config.notes_dir)
-  const result: NoteIndex = { config, notes: new Map(), manifest: { format: 'agent-note-archive/1', entries: {} }, diagnostics: [] }
+  const result: NoteIndex = { config, configSource, notes: new Map(), manifest: { entries: {} }, diagnostics: [], allowProposalActivation }
   const manifestPath = `${config.notes_dir}/archived/manifest.json`
   try {
     const bytes = snapshot.read(manifestPath)
     if (bytes) {
-      const value = parseJson(bytes, manifestPath)
-      format(value, 'agent-note-archive/1', manifestPath)
-      if (!validateManifest(value))
-        throw new NotesError('INVALID_MANIFEST', ajv.errorsText(validateManifest.errors), manifestPath)
-      result.manifest = value
+      const parsed = formats.readManifest(bytes, manifestPath)
+      result.manifest = parsed.value
+      result.manifestSource = parsed.source
     }
   }
   catch (error) {
@@ -136,17 +69,17 @@ export function readIndex(snapshot: Snapshot): NoteIndex {
   for (const path of snapshot.paths()) {
     if (!path.startsWith(`${config.notes_dir}/`) || path.startsWith(`${layout.runtimeRoot}/`) || path.startsWith(`${layout.localRoot}/`) || !/\.md$/i.test(path))
       continue
-    // Only the root README is a routing document; lifecycle trees contain Notes.
     if (path === `${config.notes_dir}/README.md`)
       continue
     try {
       const bytes = snapshot.read(path)
       if (!bytes)
         continue
-      const note = parseNote(bytes, path, config.notes_dir)
-      if (result.notes.has(note.metadata.id))
-        throw new NotesError('DUPLICATE_ID', `ID also appears in ${result.notes.get(note.metadata.id)!.path}.`, path)
-      result.notes.set(note.metadata.id, note)
+      const note = parseNote(bytes, path, config.notes_dir, formats)
+      const id = note.value.metadata.id
+      if (result.notes.has(id))
+        throw new NotesError('DUPLICATE_ID', `ID also appears in ${result.notes.get(id)!.value.path}.`, path)
+      result.notes.set(id, note)
     }
     catch (error) {
       result.diagnostics.push(diagnostic(error))

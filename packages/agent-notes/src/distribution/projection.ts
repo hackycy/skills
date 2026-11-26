@@ -25,8 +25,8 @@ export interface Projection {
 export const ancestors = (path: string): string[] => path.split('/').slice(0, -1).map((_, i) => path.split('/').slice(0, i + 1).join('/'))
 
 export function project(input: { source: Bundle, config: ProjectConfig, integrations: readonly string[] }): Projection {
-  keys(input.config, ['format', 'notes_dir', 'language'], 'INVALID_CONFIG')
-  if (input.config.format !== 'agent-notes-config/1' || !['zh-CN', 'en'].includes(input.config.language))
+  keys(input.config, ['notes_dir', 'language'], 'INVALID_CONFIG')
+  if (!['zh-CN', 'en'].includes(input.config.language))
     throw new NotesError('INVALID_CONFIG', 'Invalid project configuration.', undefined, 2)
   const source = localizeBundle(input.source, input.config.notes_dir)
   const index = verifyBundle(source)
