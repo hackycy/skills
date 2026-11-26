@@ -1,6 +1,6 @@
 # 维护验证
 
-本文用于为本次变更选择检查、运行真实包验收并保存证据。从仓库根执行命令，另有目录说明的除外。历史通过结果见[实现验收记录](adapter-validation.md)，不替代本次检查。
+本文用于为本次变更选择检查、运行真实包验收并保存证据。从仓库根执行命令，另有目录说明的除外。特定产物的历史结果见[宿主接入验收](adapter-validation.md)与[持久文档格式适配验收记录](document-format-validation.md)。
 
 ## 按改动选择检查
 
@@ -53,6 +53,29 @@ pnpm --filter @hackycy/agent-notes test
 macOS/Linux 的 PTY 用例需要 Python 3 标准库；Windows 跳过这组，不构成 Windows 终端验证。新增回归场景应观察用户保证，而非重复实现。新增能力后仍需保持[历史格式样例](../../tests/contract-examples.json)合法。
 
 分别覆盖完整替代与完整吸收、基线冻结与首次归档来源、结构通过与语义 review，不能用其中一项代替另一项。
+
+## 格式适配验收
+
+按[持久文档格式适配](design.md#持久文档格式适配)核对兼容性。现有 [v1 冻结样例](../../tests/contract-examples.json)和[手写 v2 夹具](../../tests/formats/fixtures.ts)提供独立预期。
+
+| 检查 | 输入和观察点 |
+| --- | --- |
+| 分派与诊断 | 分别读取 v1、v2 及混合树，覆盖 worktree、index、commit 和精确归档来源。校验编码、重复键与 YAML alias 在分派前被拒绝，合法载体中的已知版本按自身 schema 校验。缺失清单和配置才可使用默认值，未知格式须列出同类别支持项并中止写入。 [格式回归](../../tests/formats/format-adapters.test.ts) |
+| v1 差分与旧包负向 | 固定旧 reader 和 CLI 比较 canonical 投影、诊断代码、消息、路径、顺序、退出码和写回字节。覆盖 `show/check/context` 与现有写命令，写入差分使用固定预览 ID。以实际旧包和候选生产 CLI 验证纯 v2 树及混合树被拒绝，旧包的诊断断言以实测为准。 [差分脚本](../../tests/formats/compatibility.ts) |
+| 字节往返 | 用固定 seed 生成块式和流式 YAML、注释、双语正文、引用及嵌套扩展，断言局部 patch 的改动范围、空 patch 恒等、可转换子集的 canonical 等价和有损转换失败后的原字节。v1 写回另用旧 writer 作为差分基准。 [往返属性测试](../../tests/formats/roundtrip.test.ts) |
+| 共享领域规则 | 用文档契约和固定旧 runtime 验证身份、路径与 lifecycle，用 A/B/C 独立样例核对激活、full/partial、反链和 requires。以 Git blob 独立计算 seal 和源 hash，覆盖新增 seal、伪造 revision、改文重封和跨格式换壳。用提交或操作前字节核对 rejected 的正文、理由、格式和同身份链接修复。 [格式回归](../../tests/formats/format-adapters.test.ts) · [Reader 测试](../../tests/reader.test.ts) |
+| 迁移、事务与快照 | 用手写两端文件验证可重放迁移、正文或路由改动、状态变化和无基线的历史提示。覆盖陈旧 `expected_hash`、真实锁竞争、SIGKILL、journal 恢复及外部编辑保留。以不同 Notes 根、暂存配置、精确 ref 和包升级复核配置与清单来源一致及旧字节保留。 [格式回归](../../tests/formats/format-adapters.test.ts) · [事务测试](../../tests/transaction.test.ts) · [布局测试](../../tests/layout.test.ts) |
+| 架构和变异 | 检查核心的 TypeScript 依赖图无法到达版本 Adapter 或 schema，生产入口无法到达实验资源。隔离删除 v1/v2 注册、切换分派、绕过 hash 或冻结保护、忽略激活字段时，须触发对应断言。移除生产 Adapter 时须触发预期的编译和构建错误。测试未启动不计作变异被杀死。 [架构测试](../../tests/formats/architecture.test.ts) · [扩展验收脚本](../../tests/formats/extension-proof.sh) |
+| 假 v3 扩展 | 在隔离检出添加一个同载体 Adapter 文件及一行测试注册，检查 diff，运行实际测试 CLI 读取 v1/v2/v3 混合树，再复跑 v1/v2、policy 和架构测试。 [v3 fixture](../../tests/formats/adapters/note-v3.fixture) · [扩展验收脚本](../../tests/formats/extension-proof.sh) |
+
+格式适配抽取的旧源码基线为 `10f4fce058b45bdf069bb148c3019e6de2a352cc`，旧包负向基线为发布于 `e5b53eaf8c216fa572b82d6e094c006f9de58796` 的 `@hackycy/agent-notes@0.6.0`。在隔离 checkout 用冻结 lockfile 构建旧源码，保留旧 CLI 所在 checkout 的源码和依赖。第二个参数可用候选构建或提取自候选 tarball 的 CLI，第三个使用已发布旧包的 CLI。差分脚本在仓库外建立临时 Git 项目，扩展脚本自行建立隔离检出。
+
+```sh
+pnpm exec tsx packages/agent-notes/tests/formats/compatibility.ts /absolute/baseline/dist/cli.mjs /absolute/candidate/dist/cli.mjs /absolute/published/dist/cli.mjs
+bash packages/agent-notes/tests/formats/extension-proof.sh
+```
+
+实验 v2 以本地测试通过为验收范围。改动生产分发时另做[实际包验收](#实际包验收)，检查 tarball 和安装后的 runtime 仅包含生产格式资产。原抽取的实测结果见[持久文档格式适配验收记录](document-format-validation.md)。
 
 ## 实际包验收
 
@@ -185,4 +208,4 @@ pnpm exec tsx packages/agent-notes/tests/extension-smoke.ts /absolute/new-eviden
 
 资源布局变化还需 A/B 替换验证：废弃受管资产被清理，手改先修复并备份，未知邻接文件保留，Notes/配置/seal 原字节保持，本地源损坏可从匹配完整包修复。
 
-README 提供产品概览与入门教程，示例串联用户和 Agent 从想法到记录及再次使用的过程；参数、格式与写入规则仍以各自契约为准。教程示例须与实际输入及输出一致，区分协作建议和 CLI 强制规则。清理文档保留上游固定 commit 和实际未验证项，不用删除内容掩盖契约差异。完成时报告本次实际检查范围，历史结果继续留在[实现验收记录](adapter-validation.md)。
+README 提供产品概览与入门教程，示例串联用户和 Agent 从想法到记录及再次使用的过程；参数、格式与写入规则仍以各自契约为准。教程示例须与实际输入及输出一致，区分协作建议和 CLI 强制规则。清理文档保留上游固定 commit 和实际未验证项，不用删除内容掩盖契约差异。完成时报告本次实际检查范围，历史结果留在对应的验收记录中。

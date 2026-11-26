@@ -17,11 +17,12 @@
 | 目标 | 阅读入口 | 文档职责 |
 | --- | --- | --- |
 | 判断产品边界、记录原则与内容归属 | [设计约束与依据](maintainers/design.md) | 解释持续适用的设计选择 |
-| 评审多版本文档格式的适配器设计 | [多版本文档格式通过 Adapter 共存](maintainers/adr/0001-document-format-adapters.md) | 记录已接受的接口、写入规则和验证结果 |
+| 维护文档格式、兼容写入或历史校验 | [持久文档格式适配](maintainers/design.md#持久文档格式适配) | 说明逐文件分派、保真、迁移及生产与实验的支持范围 |
 | 修改安装、投影、所有权或恢复实现 | [安装投影与恢复](maintainers/integrations.md) | 解释模块协作、内部协议与容量计量 |
 | 为本次变更选择检查并复现验收 | [维护验证](maintainers/validation.md) | 定义验证流程、验收矩阵和证据要求 |
 | 追溯治理原则或更新上游研究 | [上游依据](maintainers/upstreams.md)及[版本锁](maintainers/upstreams.lock.json) | 区分固定来源事实与本包采纳的规则 |
 | 查询 2026-11-10 的实际验证结果 | [项目 skill 接入实现验收](maintainers/adapter-validation.md) | 保存特定产物的历史证据与未验证项 |
+| 查询 2026-11-26 的格式适配结果 | [持久文档格式适配验收记录](maintainers/document-format-validation.md) | 保存兼容差分、扩展实验及候选包验证结果 |
 
 `installation.md` 是面向使用者的操作指南，`maintainers/` 是仅供仓库维护的材料。历史验收记录只证明当时的产物；本次变更需要哪些检查，以维护验证为准。
 

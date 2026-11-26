@@ -83,6 +83,70 @@ Schema 定义字段形状，文档契约定义跨文件规则，模板提供起�
 
 未知文件不因邻接关系获得工具所有权。受管损坏先修复，必要备份失败不覆盖；源损坏使用匹配的完整 npm 包。项目定制使用配置或独立补充规则，配置不提供关闭冻结和路径保护等核心约束的政策 DSL。
 
+## 持久文档格式适配
+
+Note、归档清单和项目配置按文件的顶层 `format` 分派给 Adapter。Adapter 将持久表示转换为版本无关的 canonical 模型。核心负责身份、路径与状态、关系生效、历史保护、seal 校验和写入事务。每个文件保留自己的来源，混合版本的 Note 因此可以在同一索引里共享身份和关系规则。产品支持范围见[文档契约](../../assets/formats/document.md#7-兼容承诺)。
+
+| 考虑过的方案 | 取舍 |
+| --- | --- |
+| 用最新解析器在读取时统一转换 | 封存历史仍依赖旧格式解码及原始字节。隐式转换会把兼容性绑到最新格式，并扩大常规写入的影响范围。 |
+| 为每个版本复制 reader、关系、历史和写入逻辑 | 混合版本的依赖与反链仍需跨版本判断，重复实现还会使 seal、rejected 保护与基线规则分叉。 |
+| 建通用版本框架和迁移链 | 三类文档共用 Markdown frontmatter 和 JSON 两种载体。静态注册与直接转换便于验证目标是否能表达源内容。 |
+
+### 模型、来源和分派
+
+| 模型 | 内容与写入职责 |
+| --- | --- |
+| `NoteContent` | 生产格式为 `agent-note/1`。包含决定的 canonical 元数据、正文及提取出的标题。reader 补充路径和 lifecycle，归档路径中的状态仍为 `implemented`。Adapter 可创建、按原格式 patch 或渲染显式转换结果。 |
+| `Manifest` | 生产格式为 `agent-note-archive/1`。按 Note ID 保存 seal，含归档路径、SHA-256 和可复核的源路径、hash 及可选 revision。清单缺失时可初始化，每次只追加一个新 seal。 |
+| `ProjectConfig` | 生产格式为 `agent-notes-config/1`。记录当前快照的 Notes 根和模板语言。仅首装且缺失时渲染，升级直接保留既有字节。 |
+
+来源保存 `format`、路径、只读原字节、原字节的 SHA-256，以及注释和不透明扩展是否存在。缺失配置或清单可使用默认值，其来源明确缺失。安装恢复使用独立的 `transaction/2` DTO 解读旧 journal 的配置快照。 [Canonical 模型](../../src/notes/model.ts) · [Adapter 端口](../../src/notes/formats/ports.ts) · [Reader](../../src/notes/reader.ts) · [安装事务](../../src/distribution/transition.ts)
+
+1. 共享载体读取器在同一快照内验证 UTF-8、frontmatter 分隔符和映射语法，拒绝重复键、YAML alias、显式 tag 和 merge key，并限制嵌套。分派只读取顶层 `format`。工作树、index、commit 和可复核的归档来源各自按所读字节分派。配置候选按当前快照发现，并核对 `notes_dir` 与实际布局。 [载体读取](../../src/notes/formats/carrier.ts) · [布局发现](../../src/distribution/layout.ts)
+2. Registry 按文档类别和格式查找已冻结的注册项。每项声明 Adapter、校验器、读写与迁入迁出权限及 `introducedIn`、`deprecatedIn`、`removedIn`。组装时验证注册唯一、格式标识一致、版本窗口有序及默认项可读可写。三个生产 v1 格式始于工具 `0.1.0`。生产和测试入口均默认创建 v1，测试入口额外注册实验 `agent-note/2` 并允许 v1/v2 双向迁移。 [Registry](../../src/notes/formats/registry.ts) · [生产注册](../../src/notes/formats/production-entries.ts) · [测试注册](../../tests/formats/entries.ts)
+3. 所选 Adapter 执行格式校验和 canonical 映射。Note 的解析先校验元数据，再通过核心注入的检查确认 scope 路径及状态与位置相符，最后校验正文并提取标题，保留 v1 诊断顺序。索引、关系、历史检查和写入规划通过注入的格式接口工作。兼容现有载体的纯表示变更只需一个 Adapter 文件和一条静态注册。载体变化需评审共享读取接口，领域行为变化需显式修改核心规则。 [生产装配](../../src/notes/formats/production.ts) · [测试装配](../../tests/formats/experimental.ts)
+
+### 表示变化与领域规则
+
+实验 v2 将 `read_when` 改名为 `readWhen`，两者映射到同一个 canonical `metadata.read_when`，按各自字段名写回。其余共同字段逐值映射，保留缺省和关系数组顺序。v2 声明的 `extensions` 作为不透明来源保留，外层 schema 继续拒绝未声明字段。可选的 `activation: on-proposal` 保留在 canonical 替代边上，v1 无法表达该字段。 [v1 Adapter](../../src/notes/formats/adapters/note-v1.ts) · [实验 v2 Adapter](../../tests/formats/adapters/note-v2.ts)
+
+测试入口默认按现行规则检查，遇到激活标记报 `POLICY_FEATURE_UNSUPPORTED`。通过 `AGENT_NOTES_TEST_PROPOSAL_ACTIVATION=1` 启用测试 CLI 的实验规则后，活跃 implemented 的替代边继续生效，活跃 proposed 只有带标记的边提前生效，rejected 和 archived 的出边均不生效。查询、依赖校验、维护和清理共享该判定，基线和目标使用同一规则。例如活跃决定 A 通过 `related` 回链到 proposed 后继 B，C 的 `requires` 指向 A。普通替代下 C 的依赖有效。若在实验规则下 B 提前完整替代 A，C 得到 `INVALID_RELATION`，部分替代时 C 的依赖仍有效。 [关系实现](../../src/notes/relations.ts) · [生产关系契约](../../assets/formats/document.md#3-关系)
+
+### 原格式写回与字节保真
+
+`create` 使用 registry 中的默认格式。更新、状态转换、归档和引用修复按每个被写文件的来源选择 Adapter，编辑草稿须使用目标文件的格式。核心根据 Markdown AST 计算链接修复，并在同一事务中重读、校验生成的 Note。只读格式或无法安全 patch 的目标会中止写入。 [写入规划](../../src/workflow/plan.ts) · [写入执行](../../src/workflow/execute.ts)
+
+| 操作 | 字节保证 |
+| --- | --- |
+| v1 兼容写回 | 元数据 patch 可重排 YAML，保留原正文字节。全草稿替换沿用原序列化。归档只插入必要字段，保留已有 frontmatter 和正文。若为 v1 引入局部保真，须作为独立的写回变更验收。 |
+| v2 局部 patch | 获准改动之外的字节原样保留，包括注释、YAML 排版、不透明扩展和未改正文。空 patch 返回相同字节。若无法定位安全区间或会留下无归属的注释，以 `UNSAFE_FORMAT_PATCH` 终止事务。 |
+| 显式迁移 | 格式标识和 frontmatter 排版可变化。canonical 字段、关系数组次序、标题及正文字节均须相同。来源含注释或不透明扩展，或目标无法表达字段时，报 `LOSSY_FORMAT_CONVERSION` 并保留源字节。 |
+| 归档读取、`show` 与 hash | 使用来源字节。归档新增的 seal 对应归档文件的实际原字节。 |
+
+归档一篇 v2 implemented Note 时，Note 仍为 v2，既有 v1 清单按自身格式追加 seal。追加后重读清单以核对全部旧条目及新条目。核心验证旧 seal、对应的归档文件以及新归档的原字节和来源。 [归档清单契约](../../assets/formats/document.md#5-归档清单)
+
+### 显式迁移与历史检查
+
+本地测试入口提供 `migrate <id> --to <format> --input <file>`，从输入文件或 stdin（`--input -`）取得当前原字节的 `expected_hash` 和非空 `reason`。每次在原路径转换一篇 proposed 或未归档的 implemented Note，两端须允许对应的迁出或迁入，且目标可读可写。同格式请求、rejected 和 archived Note 均拒绝，清单和配置没有迁移命令。迁移复用现有 dry-run、锁、journal 与 recover，在 overlay 重读输出以核对身份、状态与内容。原字节 hash 用于预检、持锁后和提交前的并发复查。已提交后用旧 hash 重试会触发 `CONCURRENT_CHANGE`。
+
+历史检查先验证冻结、身份和生命周期。只有活跃 Note 的 ID、路径、状态和内容一致，且从可信基线重放同一转换能得到完全相同的目标字节，才报告 `NOTE_FORMAT_MIGRATION`。同时修改内容或无法重放的变更沿用 `NOTE_CHANGE_REVIEW`。没有可信基线时报告 `NO_HISTORY_BASELINE`。机械迁移提示只说明两端字节可以重放。写命令另与操作前快照比较，保护尚未提交的 rejected 和 archived 文件。
+
+已归档 Note 和旧 seal 即使 canonical 内容等价，也按原路径、原 hash 及完整条目保护。首次归档可复核时，以相同格式的 implemented 来源核对内容。局部保真格式还重放仅插入 archive 字段的 patch，v1 保留原有正文与元数据等值检查。先迁移再归档若缺少可重现基线或精确 source revision，则报告 `ARCHIVE_SOURCE_REVIEW`。rejected 基线要求保留格式、拒绝理由和正文，正文允许现有可验证的同身份引用修复。 [历史检查](../../src/notes/history.ts)
+
+### 格式诊断与兼容范围
+
+生产 CLI、schema 和模板仅提供 v1。实验 v2 的写入和迁移由本地测试入口验证，发行窗口留空。未来正式格式的最低工具版本提示须来自可信发行映射。通用 JSON 结构与退出码仍由 [CLI 契约](../../assets/references/cli.md#输出与退出码)定义。
+
+| 场景 | 诊断 |
+| --- | --- |
+| 未知或不可读的格式标识 | `UNSUPPORTED_FORMAT`，退出 2。字符串标识通过 `details.format` 及 `details.supported_formats` 返回遇到的值和同类可读格式。生产入口遇到实验 v2 时只列出 `agent-note/1`。未知清单和配置格式各列同类格式并停止写入。 |
+| 载体出错或格式标识缺失、类型错误 | 载体问题优先。缺失标识沿用默认 v1 校验器的必填诊断，非字符串标识沿用 `UNSUPPORTED_FORMAT`。保留既有 v1 schema、正文和配置诊断。 |
+| 已识别的实验 v2 内容非法 | Adapter 返回 `INVALID_NOTE_V2`，退出 1，`details.phase` 标明 `metadata` 或 `body`。 |
+| 写入、迁移或核心规则失败 | 只读格式或不可选迁移目标退出 2。有损转换、无法安全 patch、关系、历史和事务错误退出 1。缺少必需决定材料沿用退出 3。多项错误聚合时，退出 2 优先于退出 1。 |
+
+复验入口和历史运行范围见[格式适配验收](validation.md#格式适配验收)。
+
 ## 输入校验与交互
 
 [参数层](../../src/cli/arguments.ts)用 cac 集中声明命令、解析语法和生成帮助，用 Zod 校验类型、枚举与跨字段约束。持久文档仍使用 JSON Schema/Ajv；CLI 输入模型不成为文档格式的新权威。
