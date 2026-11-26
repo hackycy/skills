@@ -2,10 +2,11 @@ import type { Buffer } from 'node:buffer'
 import type { NotesLayout } from '../distribution/layout'
 import type { Snapshot } from '../notes/snapshot'
 import { randomUUID } from 'node:crypto'
-import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, renameSync, rmdirSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, renameSync, rmdirSync, rmSync, writeFileSync } from 'node:fs'
 import { hostname } from 'node:os'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
+import { isDeepStrictEqual } from 'node:util'
 import { layoutFromDisk, layoutFromPaths, localNotesLayout, notesLayout } from '../distribution/layout'
 import { assertPath, base64, boundedRead, budget, canonical, json, keys, limits } from '../distribution/protocol'
 import { NotesError } from '../notes/model'
@@ -278,6 +279,32 @@ function recoveryEndpoints(root: string, journal: Journal): Map<string, Buffer |
   return projected
 }
 
+function rollbackDirectories(root: string, directories: string[], before: Map<string, Buffer | null>): Set<string> {
+  const retainedParents = new Set<string>()
+  for (const [path, bytes] of before) {
+    if (bytes !== null) {
+      for (let parent = dirname(path); parent !== '.' && !retainedParents.has(parent); parent = dirname(parent))
+        retainedParents.add(parent)
+    }
+  }
+
+  const removed = new Set<string>()
+  // Mirror rollback's deepest-first rmdir, including entries invisible to Git.
+  for (const path of [...directories].sort((a, b) => b.length - a.length)) {
+    if (retainedParents.has(path))
+      continue
+    const full = local(root, path)
+    const stat = lstatSync(full, { throwIfNoEntry: false })
+    if (!stat || (stat.isDirectory() && readdirSync(full, { withFileTypes: true }).every((entry) => {
+      const child = `${path}/${entry.name}`
+      return entry.isDirectory() ? removed.has(child) : entry.isFile() && before.get(child) === null
+    }))) {
+      removed.add(path)
+    }
+  }
+  return removed
+}
+
 /** Inspect recovery without acquiring a marker, modifying files or cleaning the lock. */
 export function recoveryView(source: Snapshot, validator?: JournalValidator): { source: Snapshot, verify: () => void } {
   const root = source.repository.root
@@ -300,11 +327,15 @@ export function recoveryView(source: Snapshot, validator?: JournalValidator): { 
   const overlay = journal ? recoveryEndpoints(root, journal) : new Map<string, Buffer | null>()
   for (const path of overlay.keys())
     source.read(path)
-  return { source: source.overlay(overlay), verify: () => {
+  const directories = journal?.purpose === 'distribution' && journal.state === 'prepared' ? journal.directories : undefined
+  const removedDirectories = directories && rollbackDirectories(root, directories, overlay)
+  return { source: source.overlay(overlay, removedDirectories), verify: () => {
     if (!existsSync(full) || existsSync(marker))
       throw new NotesError('CONCURRENT_CHANGE', 'Transaction changed while collecting initialization input; retry.', layout.lockPath)
     verifyObservations(source, source.repository.snapshot('worktree'))
     recoveryOwner(root, layout)
+    if (directories && !isDeepStrictEqual(rollbackDirectories(root, directories, overlay), removedDirectories))
+      throw new NotesError('CONCURRENT_CHANGE', 'Directories changed since recovery preflight; retry.', layout.lockPath)
   } }
 }
 

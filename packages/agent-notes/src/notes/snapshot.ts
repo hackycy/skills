@@ -292,13 +292,17 @@ export class Snapshot {
     return new Map([...this.cache].map(([path, bytes]) => [path, bytes ? sha256(bytes) : null]))
   }
 
-  overlay(changes: Map<string, Buffer | null>): Snapshot {
-    return new OverlaySnapshot(this, changes)
+  overlay(changes: Map<string, Buffer | null>, removedDirectories?: ReadonlySet<string>): Snapshot {
+    return new OverlaySnapshot(this, changes, removedDirectories)
   }
 }
 
 class OverlaySnapshot extends Snapshot {
-  constructor(private readonly source: Snapshot, private readonly changes: Map<string, Buffer | null>) {
+  constructor(
+    private readonly source: Snapshot,
+    private readonly changes: Map<string, Buffer | null>,
+    private readonly removedDirectories?: ReadonlySet<string>,
+  ) {
     super(source.repository, source.kind, new Map(source.entries), source.revision)
     for (const [path, bytes] of changes) {
       if (bytes === null)
@@ -320,6 +324,8 @@ class OverlaySnapshot extends Snapshot {
   override exists(path: string): boolean {
     if (this.changes.has(path))
       return this.changes.get(path) !== null
-    return [...this.changes].some(([candidate, bytes]) => bytes !== null && candidate.startsWith(`${path}/`)) || this.source.exists(path)
+    if ([...this.changes].some(([candidate, bytes]) => bytes !== null && candidate.startsWith(`${path}/`)))
+      return true
+    return !this.removedDirectories?.has(path) && this.source.exists(path)
   }
 }
