@@ -88,6 +88,7 @@ describe.skipIf(process.platform === 'win32')('本机 CLI 发布', () => {
     const f = fixture()
     const result = run(f)
     expect(result.status, result.stderr).toBe(0)
+    expect(result.stdout).toContain('发布 CLI：@test/a')
     expect(events(f)).toEqual([expect.objectContaining({
       args: ['publish'],
       name: '@test/a',
@@ -234,6 +235,7 @@ describe.skipIf(process.platform === 'win32')('真实终端交互', () => {
     const f = fixture(true)
     const result = terminal(f, ['--yes'], [{ expect: 'Current version', send: '\r' }])
     expect(result.status, result.output).toBe(0)
+    expect(result.output).toContain('发布 CLI：@test/a')
     expect(events(f)[0]).toMatchObject({ name: '@test/a', version: '0.1.1' })
   })
 

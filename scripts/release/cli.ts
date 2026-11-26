@@ -67,6 +67,8 @@ async function main(): Promise<void> {
   if (git('status', '--porcelain'))
     throw new Error('发布需要干净工作树，请先提交或 stash 当前改动')
 
+  console.log(`发布 CLI：${pkg.name}（当前版本 ${pkg.version}）`)
+
   let published = false
   let stage = '版本更新'
   try {
