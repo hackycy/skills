@@ -1,6 +1,6 @@
 # 维护验证
 
-本文用于为本次变更选择检查、运行真实包验收并保存证据。从仓库根执行命令，另有目录说明的除外。特定产物的历史结果见[宿主接入验收](adapter-validation.md)与[持久文档格式适配验收记录](document-format-validation.md)。
+本文用于为本次变更选择检查、运行真实包验收并保存证据。从仓库根执行命令，另有目录说明的除外。特定产物的历史结果见[宿主接入验收](adapter-validation.md)。
 
 ## 按改动选择检查
 
@@ -47,7 +47,7 @@ pnpm --filter @hackycy/agent-notes test
 | 归档搜索边界、隐藏/自定义根与显式历史搜索 | [search.test.ts](../../tests/search.test.ts)，需要 PATH 中的 ripgrep |
 | 独立上限与 +1、累计超限、大端点解码、非法编码与文件增长 | [capacity.test.ts](../../tests/capacity.test.ts)、[projection.test.ts](../../tests/projection.test.ts) |
 | 产品、npm 文档及维护材料的引用闭包 | [assets.test.ts](../../tests/assets.test.ts) |
-| 参数、来源限制、缺项/复用/冲突、取消、恢复只读投影与真实 CLI | [cli-input.test.ts](../../tests/cli-input.test.ts) |
+| 参数、来源限制、交互缺项与取消、恢复只读投影、首装中断后的 CLI 恢复 | [cli-input.test.ts](../../tests/cli-input.test.ts) |
 | 独立 PTY 问答、纠错、Esc/Ctrl+C、退出码 130 和输出分离 | [terminal.test.ts](../../tests/terminal.test.ts) |
 
 macOS/Linux 的 PTY 用例需要 Python 3 标准库；Windows 跳过这组，不构成 Windows 终端验证。新增回归场景应观察用户保证，而非重复实现。新增能力后仍需保持[历史格式样例](../../tests/contract-examples.json)合法。
@@ -56,26 +56,16 @@ macOS/Linux 的 PTY 用例需要 Python 3 标准库；Windows 跳过这组，不
 
 ## 格式适配验收
 
-按[持久文档格式适配](design.md#持久文档格式适配)核对兼容性。现有 [v1 冻结样例](../../tests/contract-examples.json)和[手写 v2 夹具](../../tests/formats/fixtures.ts)提供独立预期。
+按[持久文档格式适配](design.md#持久文档格式适配)核对生产兼容性。[v1 冻结样例](../../tests/contract-examples.json)提供历史输入和独立预期。
 
 | 检查 | 输入和观察点 |
 | --- | --- |
-| 分派与诊断 | 分别读取 v1、v2 及混合树，覆盖 worktree、index、commit 和精确归档来源。校验编码、重复键与 YAML alias 在分派前被拒绝，合法载体中的已知版本按自身 schema 校验。缺失清单和配置才可使用默认值，未知格式须列出同类别支持项并中止写入。 [格式回归](../../tests/formats/format-adapters.test.ts) |
-| v1 差分与旧包负向 | 固定旧 reader 和 CLI 比较 canonical 投影、诊断代码、消息、路径、顺序、退出码和写回字节。覆盖 `show/check/context` 与现有写命令，写入差分使用固定预览 ID。以实际旧包和候选生产 CLI 验证纯 v2 树及混合树被拒绝，旧包的诊断断言以实测为准。 [差分脚本](../../tests/formats/compatibility.ts) |
-| 字节往返 | 用固定 seed 生成块式和流式 YAML、注释、双语正文、引用及嵌套扩展，断言局部 patch 的改动范围、空 patch 恒等、可转换子集的 canonical 等价和有损转换失败后的原字节。v1 写回另用旧 writer 作为差分基准。 [往返属性测试](../../tests/formats/roundtrip.test.ts) |
-| 共享领域规则 | 用文档契约和固定旧 runtime 验证身份、路径与 lifecycle，用 A/B/C 独立样例核对激活、full/partial、反链和 requires。以 Git blob 独立计算 seal 和源 hash，覆盖新增 seal、伪造 revision、改文重封和跨格式换壳。用提交或操作前字节核对 rejected 的正文、理由、格式和同身份链接修复。 [格式回归](../../tests/formats/format-adapters.test.ts) · [Reader 测试](../../tests/reader.test.ts) |
-| 迁移、事务与快照 | 用手写两端文件验证可重放迁移、正文或路由改动、状态变化和无基线的历史提示。覆盖陈旧 `expected_hash`、真实锁竞争、SIGKILL、journal 恢复及外部编辑保留。以不同 Notes 根、暂存配置、精确 ref 和包升级复核配置与清单来源一致及旧字节保留。 [格式回归](../../tests/formats/format-adapters.test.ts) · [事务测试](../../tests/transaction.test.ts) · [布局测试](../../tests/layout.test.ts) |
-| 架构和变异 | 检查核心的 TypeScript 依赖图无法到达版本 Adapter 或 schema，生产入口无法到达实验资源。隔离删除 v1/v2 注册、切换分派、绕过 hash 或冻结保护、忽略激活字段时，须触发对应断言。移除生产 Adapter 时须触发预期的编译和构建错误。测试未启动不计作变异被杀死。 [架构测试](../../tests/formats/architecture.test.ts) · [扩展验收脚本](../../tests/formats/extension-proof.sh) |
-| 假 v3 扩展 | 在隔离检出添加一个同载体 Adapter 文件及一行测试注册，检查 diff，运行实际测试 CLI 读取 v1/v2/v3 混合树，再复跑 v1/v2、policy 和架构测试。 [v3 fixture](../../tests/formats/adapters/note-v3.fixture) · [扩展验收脚本](../../tests/formats/extension-proof.sh) |
+| v1 兼容与载体校验 | 读取历史 Note 和清单样例，覆盖合法输入、编码、YAML 重复键及别名、路径和状态等边界。 [Reader 测试](../../tests/reader.test.ts) |
+| 分派与快照 | 分别检查 worktree、index、commit 及精确归档来源。生产 CLI 遇到未知 Note、清单或配置格式时退出 2，列出同类可读格式。 [命令测试](../../tests/commands.test.ts) |
+| 写入与历史保护 | 创建使用 v1，写回验证身份、引用修复与 `expected_hash`。核对 rejected 的正文和理由、封存文件与清单条目，以及中断恢复后保留的外部编辑。 [写入测试](../../tests/workflow.test.ts) · [命令测试](../../tests/commands.test.ts) · [事务测试](../../tests/transaction.test.ts) |
+| 生产入口 | 用真实 tarball 检查帮助和命令入口对迁移的限制、暂存格式诊断、离线安装和分发资源范围。 [Bundle 验收](../../tests/bundle-smoke.ts) · [安装验收](../../tests/install-smoke.ts) |
 
-格式适配抽取的旧源码基线为 `10f4fce058b45bdf069bb148c3019e6de2a352cc`，旧包负向基线为发布于 `e5b53eaf8c216fa572b82d6e094c006f9de58796` 的 `@hackycy/agent-notes@0.6.0`。在隔离 checkout 用冻结 lockfile 构建旧源码，保留旧 CLI 所在 checkout 的源码和依赖。第二个参数可用候选构建或提取自候选 tarball 的 CLI，第三个使用已发布旧包的 CLI。差分脚本在仓库外建立临时 Git 项目，扩展脚本自行建立隔离检出。
-
-```sh
-pnpm exec tsx packages/agent-notes/tests/formats/compatibility.ts /absolute/baseline/dist/cli.mjs /absolute/candidate/dist/cli.mjs /absolute/published/dist/cli.mjs
-bash packages/agent-notes/tests/formats/extension-proof.sh
-```
-
-实验 v2 以本地测试通过为验收范围。改动生产分发时另做[实际包验收](#实际包验收)，检查 tarball 和安装后的 runtime 仅包含生产格式资产。原抽取的实测结果见[持久文档格式适配验收记录](document-format-validation.md)。
+改动生产分发时另做[实际包验收](#实际包验收)。排查适配器抽取前后的 v1 兼容差异时，可用当时的差分脚本与基线 `10f4fce058b45bdf069bb148c3019e6de2a352cc`，比较读取结果、诊断和写回字节。 [历史差分脚本](https://github.com/hackycy/skills/blob/b607b44ba4b382a8a4975a82498bdf0bc70e328c/packages/agent-notes/tests/formats/compatibility.ts)
 
 ## 实际包验收
 
@@ -108,13 +98,9 @@ pnpm --filter @hackycy/agent-notes test:bundle /absolute/a/dist/cli.mjs /absolut
 
 该检查逐字节比较 Notes、配置和 seal。分发验收覆盖 package.json 的 Node 下限及精确 Node 24 版本；`test:install` 必须在相应 Node/npm PATH 中运行，不能用 bundle 的 Node 参数代替。原生平台要求见[宿主声明与平台政策](#宿主声明与平台政策)。
 
-归档搜索升级另用 D5 之前的固定基线包与不同版本的新包验证，两个 CLI 均来自仓库外的真实 tarball。该测试覆盖七集合、默认/自定义根及 Notes/config/seal 原字节保留，需要 ripgrep：
+归档搜索的旧收据升级和恢复由分发回归覆盖。旧收据夹具保留受管搜索块引入前的资产清单。搜索测试覆盖默认根与自定义根的真实搜索行为。 [分发回归](../../tests/distribution.test.ts) · [搜索测试](../../tests/search.test.ts) · [首次引入搜索块时的包验收脚本](https://github.com/hackycy/skills/blob/f8f1c7071e5bd548ad2e197f7316351bcd31988a/packages/agent-notes/tests/archive-search-upgrade.ts)
 
-```sh
-pnpm exec tsx packages/agent-notes/tests/archive-search-upgrade.ts /absolute/old/dist/cli.mjs /absolute/new/dist/cli.mjs /absolute/node
-```
-
-## 容量与同类接入扩展
+## 容量验收
 
 按[容量计量](integrations.md#容量预算)验证独立上限和累计边界，并对真实候选包运行：
 
@@ -124,17 +110,9 @@ pnpm exec tsx packages/agent-notes/tests/capacity-audit.ts /absolute/a/dist/cli.
 
 审计覆盖七集合的安装、A→B、B→A 及同时损坏本地源与宿主 skill 后的匹配包 repair。记录源、资产、动作数、衍生路径、端点、补充资料、逻辑/编码/备份量及内存/耗时；正常候选超预算时携实测复审。
 
-同类接入扩展另运行：
-
-```sh
-pnpm exec tsx packages/agent-notes/tests/extension-smoke.ts /absolute/new-evidence-directory /absolute/node
-```
-
-证据目录须不存在。脚本仅在隔离源码描述表增加 example-agent，构建两份真实包，分别验证新根和共享根的安装、撤出及 SIGKILL 后恢复；构建使用仓库依赖，最终 CLI 在仓库外运行，正式 catalog 不加入夹具。
-
 ## 安装模型验收矩阵
 
-以下 M01–M20 是持续维护的机械交付要求，历史运行结果另记于[实现验收记录](adapter-validation.md)。真实矩阵见 [integration-matrix.ts](../../tests/integration-matrix.ts)，协议和故障用例见 [projection.test.ts](../../tests/projection.test.ts)、[distribution.test.ts](../../tests/distribution.test.ts) 及上面的行为覆盖入口。
+以下生产验收场景沿用[实现验收记录](adapter-validation.md)中的编号。真实包承担完整的宿主组合矩阵，源码回归覆盖代表性组合、协议、权限和故障恢复。 [真实矩阵](../../tests/integration-matrix.ts) · [投影测试](../../tests/projection.test.ts) · [分发测试](../../tests/distribution.test.ts)
 
 | 编号 | 场景 | 必须观察到的结果 |
 | --- | --- | --- |
@@ -155,7 +133,6 @@ pnpm exec tsx packages/agent-notes/tests/extension-smoke.ts /absolute/new-eviden
 | M15 | 恢复前/中第三种字节、额外 entries/目录、块外改写、缺补充源 | 保留编辑和 journal，候选路径不授权，资料不足停止，不执行旧脚本/下载或跳过校验 |
 | M16 | dry-run/status/问答/取消/recover 及真实 PTY | 预览/status/取消不写项目或恢复，互斥参数先失败，问答先于锁和恢复，stdout/提示分离 |
 | M17 | 仓库外 npm bin、离线 runtime、Node 下限与 Node 24 | npm --offline --ignore-scripts 真安装；runtime 不依赖 checkout/node_modules/联网，stdin/JSON/文档生命周期有效 |
-| M18 | test-only example-agent 的真实隔离包 | 仅增加描述及夹具/证据/派生构建，不新增调用方宿主分支；新根、共享与恢复成立 |
 | M19 | 索引/清单/源/端点/journal/备份预算 | 读取/解码前及累计过程限额，分层覆盖最大合法值、+1、单项合法但累计超限、非法编码/引用与现场增长，不截断 |
 | M20 | 包/文档范围及旧管理语义退出 | 源索引与资源齐全，维护/研究/cache 不入包，无旧命令/target/install/1 alias 或 reader；历史 Note 契约继续有效 |
 

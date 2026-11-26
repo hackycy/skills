@@ -84,6 +84,8 @@ Git 与 `.rgignore` 受管块由投影确定，块外原文保留，块比较允
 
 恢复期间持续复查源与端点。完成前沿用开始时的未变源观察值，并再次检查全部目标端点，不能重新读取现场来接受期间发生的外部修改。用户处理方法见[事务和恢复](../../assets/references/writing.md#事务和恢复)。
 
+首次安装在写入 `config.json` 后中断时，已发布的 0.6.0 可能在 `install --recover` 预检返回 `INVALID_INSTALLATION`。修复后的预检会根据 prepared journal 计算回滚时可移除的目录，将其反映到只读快照，并在收齐输入后再次核对目录状态。 [修复提交](https://github.com/hackycy/skills/commit/010b281283acfbb1b22d1633f7e6c122a97349a2) · [首装恢复测试](../../tests/cli-input.test.ts)
+
 ## 容量预算
 
 限额由 [protocol.ts](../../src/distribution/protocol.ts)统一定义。下表说明计量对象；MiB = 1,048,576 B，KiB = 1024 B。
@@ -106,4 +108,4 @@ Git 与 `.rgignore` 受管块由投影确定，块外原文保留，块比较允
 
 首个受管写入及 prepared 之前预检双端资料、journal 和必要备份。超限报告对象、实际量、上限与人工处理指引，不截断条目、不自动扩容、迁移 Notes 根或清理未知文件。备份失败或恢复证据不足时保留现场，如实报告部分 local 证据，历史备份不自动删除。
 
-容量审计覆盖七集合、A/B 双向切换和匹配包 repair。正常候选超限时，带实测复审表示方式或预算。命令与边界检查见[容量与同类接入扩展](validation.md#容量与同类接入扩展)，特定产物的历史观测见[实现验收记录](adapter-validation.md)。
+容量审计覆盖七集合、A/B 双向切换和匹配包 repair。正常候选超限时，带实测复审表示方式或预算。命令与边界检查见[容量验收](validation.md#容量验收)，特定产物的历史观测见[实现验收记录](adapter-validation.md)。

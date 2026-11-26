@@ -54,6 +54,7 @@ describe('create and update', () => {
     expect(result.result, JSON.stringify(result)).toBe('ok')
     expect(result.data.id).toMatch(/^an-[a-f\d-]{36}$/)
     expect(result.data.id).not.toBe('an-00000000-0000-4000-8000-000000000000')
+    expect(readFileSync(join(root, String(result.data.path)), 'utf8')).toMatch(/^format: agent-note\/1$/m)
     expect(check(root).result).toBe('ok')
     expect(action(root, 'create', params).diagnostics.map(item => item.code)).toContain('PATH_CONFLICT')
   })

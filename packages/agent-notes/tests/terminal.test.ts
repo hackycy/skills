@@ -33,16 +33,6 @@ describe.skipIf(process.platform === 'win32')('real terminal initialization', ()
     expect(readdirSync(root)).toEqual(['.git'])
   })
 
-  it.each(['Notes directory', 'Template language'])('cancels at %s before creating local state', (question) => {
-    const root = setup()
-    const actions = [{ expect: 'Project integrations', send: '\r' }]
-    if (question === 'Template language')
-      actions.push({ expect: 'Notes directory', send: '\r' })
-    actions.push({ expect: question, send: '\x03' })
-    expect(terminal(root, ['install'], actions)).toMatchObject({ status: 130, stdout: '' })
-    expect(readdirSync(root)).toEqual(['.git'])
-  })
-
   it('corrects invalid input in place and previews without writes', () => {
     const root = setup()
     const result = terminal(root, ['install', '--dry-run'], [

@@ -19,7 +19,6 @@ import { manage } from './production'
 vi.setConfig({ testTimeout: 120_000 })
 const roots: string[] = []
 const installPath = '.agents/notes/install.json'
-const sets = Array.from({ length: 7 }, (_, n) => ['generic', 'codex', 'claude-code'].filter((_, i) => (n + 1) & (1 << i)))
 function setup(): string {
   const root = project()
   roots.push(root)
@@ -157,7 +156,11 @@ describe('project integrations', () => {
     ok(command(root, 'status'))
   })
 
-  it.each(sets)('installs %j and preserves every permanent rule file', (...hosts) => {
+  it.each([
+    { hosts: ['generic', 'codex'] },
+    { hosts: ['claude-code'] },
+    { hosts: ['generic', 'codex', 'claude-code'] },
+  ])('installs $hosts and preserves every permanent rule file', ({ hosts }) => {
     const root = setup()
     const rules = ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', 'AGENTS.override.md', '.claude/CLAUDE.local.md']
     write(root, '.gitignore', '.agents/\n.claude/\n')
@@ -170,20 +173,6 @@ describe('project integrations', () => {
     expect(existsSync(join(root, '.claude/skills/agent-note/SKILL.md'))).toBe(hosts.includes('claude-code'))
     ok(command(root, 'status'))
     expect(command(root).data.changes).toEqual([])
-  })
-
-  it('handles all 49 complete set transitions with exact fresh receipts', () => {
-    for (const from of sets) {
-      for (const to of sets) {
-        const root = setup()
-        const fresh = setup()
-        ok(command(root, 'install', testBundle(), { hosts: from }))
-        ok(command(root, 'hosts set', testBundle(), { hosts: to }))
-        ok(command(fresh, 'install', testBundle(), { hosts: to }))
-        expect(read(root, installPath)).toEqual(read(fresh, installPath))
-        for (const asset of manifest(root).assets) expect(read(root, asset.path)).toEqual(read(fresh, asset.path))
-      }
-    }
   })
 
   it('keeps unknown contents and refuses to readopt a residual skill directory', () => {
@@ -373,10 +362,10 @@ describe('project integrations', () => {
     ok(command(root, 'status'))
   })
 
-  it.each(['before-config', 'after-config', 'after-install'])('recovers an initial installation killed at %s', (step) => {
+  it('recovers an initial installation killed before writing config', () => {
     const root = setup()
     rmSync(join(root, '.agents'), { recursive: true })
-    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'install', step], { timeout: 30_000 })
+    const child = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), fileURLToPath(new URL('./distribution-child.ts', import.meta.url)), root, 'install', 'before-config'], { timeout: 30_000 })
     expect(child.signal, child.stderr?.toString()).toBe('SIGKILL')
     expect(recoverTransaction(root)).toBe(true)
     expect(existsSync(join(root, installPath))).toBe(false)

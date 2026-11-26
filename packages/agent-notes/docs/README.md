@@ -22,7 +22,6 @@
 | 为本次变更选择检查并复现验收 | [维护验证](maintainers/validation.md) | 定义验证流程、验收矩阵和证据要求 |
 | 追溯治理原则或更新上游研究 | [上游依据](maintainers/upstreams.md)及[版本锁](maintainers/upstreams.lock.json) | 区分固定来源事实与本包采纳的规则 |
 | 查询 2026-11-10 的实际验证结果 | [项目 skill 接入实现验收](maintainers/adapter-validation.md) | 保存特定产物的历史证据与未验证项 |
-| 查询 2026-11-26 的格式适配结果 | [持久文档格式适配验收记录](maintainers/document-format-validation.md) | 保存兼容差分、扩展实验及候选包验证结果 |
 
 `installation.md` 是面向使用者的操作指南，`maintainers/` 是仅供仓库维护的材料。历史验收记录只证明当时的产物；本次变更需要哪些检查，以维护验证为准。
 

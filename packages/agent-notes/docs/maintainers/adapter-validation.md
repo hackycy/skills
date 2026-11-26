@@ -47,7 +47,7 @@ A/B 都采用新协议，不能与已发布的旧 0.3.0 混同。下面的通过
 | Git | 精确 ignore/attribute 检查、未知邻接文件的忽略/可见状态双向保留、嵌套冲突、坏标记拒绝、提交中外部 Git 输入变化回滚；真实 core.autocrlf clone 后 status/check 与冻结字节保持 |
 | CLI | install/hosts set/tool update 分工；Note update 保留；无旧别名；终端缺项/预选/取消/CI/JSON；取消恢复问答不写中断现场 |
 | npm 与离线运行 | npm install --offline --ignore-scripts 后真正 bin，包引用闭包、runtime 引用闭包、同版备份修复、本地源损坏后完整匹配包修复、未知邻接文件保持、从非 Git 子目录发现自定义根 |
-| 同类扩展改动面 | 两份真实隔离测试包，各仅在 catalog 加一行 example-agent，分别使用新根和共享根；两 Node 下安装、撤出、共享及真实 SIGKILL 后由已安装 runtime 恢复均通过。正式 choices 不含该项。见 [extension-smoke.ts](../../tests/extension-smoke.ts) |
+| 同类扩展改动面 | 两份真实隔离测试包，各仅在 catalog 加一行 example-agent，分别使用新根和共享根；两 Node 下安装、撤出、共享及真实 SIGKILL 后由已安装 runtime 恢复均通过。正式 choices 不含该项。 [当时的扩展脚本](https://github.com/hackycy/skills/blob/8745a26775aee02af0e45c94d601638fcc3ea918/packages/agent-notes/tests/extension-smoke.ts) |
 
 ## 容量与运行观测
 

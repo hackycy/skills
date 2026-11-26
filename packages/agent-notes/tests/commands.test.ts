@@ -46,13 +46,19 @@ describe('discovery', () => {
     expect(result.data).toMatchObject({ path: frozen, hash: sha256(readFileSync(join(root, frozen))), text: readFileSync(join(root, frozen), 'utf8') })
   })
 
-  it('reports broken/unknown Notes rather than an empty successful search', () => {
+  it('reports unsupported Note and manifest formats with separate support lists', () => {
     const root = setup()
     const path = note(root)
     write(root, path, document().replace('agent-note/1', 'agent-note/99'))
+    const manifestPath = '.agents/notes/archived/manifest.json'
+    write(root, manifestPath, '{"format":"agent-note-archive/99","entries":{}}')
     const result = run(['context', '--root', root, '--topic', 'events'])
     expect(exitCode(result)).toBe(2)
-    expect(result.diagnostics.map(item => item.code)).toContain('UNSUPPORTED_FORMAT')
+    expect(result.diagnostics).toMatchObject([
+      { code: 'UNSUPPORTED_FORMAT', path: manifestPath, details: { format: 'agent-note-archive/99', supported_formats: ['agent-note-archive/1'] } },
+      { code: 'UNSUPPORTED_FORMAT', path, details: { format: 'agent-note/99', supported_formats: ['agent-note/1'] } },
+    ])
+    expect(result.data.notes).toBeUndefined()
   })
 
   it('locates config upward and supports explicit root before installation', () => {
@@ -90,7 +96,11 @@ describe('snapshot isolation', () => {
     write(root, '.agents/notes/config.json', '{"format":"agent-notes-config/99"}')
     git(root, 'add', '.agents/notes/config.json')
     write(root, '.agents/notes/config.json', JSON.stringify({ format: 'agent-notes-config/1', notes_dir: '.agents/notes', language: 'zh-CN' }))
-    expect(check(root, '--staged').diagnostics.map(item => item.code)).toContain('UNSUPPORTED_FORMAT')
+    const staged = check(root, '--staged')
+    expect(exitCode(staged)).toBe(2)
+    expect(staged.diagnostics).toMatchObject([
+      { code: 'UNSUPPORTED_FORMAT', path: '.agents/notes/config.json', details: { format: 'agent-notes-config/99', supported_formats: ['agent-notes-config/1'] } },
+    ])
     expect(check(root).result).toBe('ok')
   })
 

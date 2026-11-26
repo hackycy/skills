@@ -74,6 +74,11 @@ try {
   assert.equal(invoke(['context', '--paths', 'src/orders/new.ts']).result, 'ok')
   const shown = invoke(['show', ids[0]])
   assert.equal(shown.data.text, readFileSync(join(root, path), 'utf8'))
+  const help = invoke(['--help']).data.help
+  assert.ok(typeof help === 'string')
+  assert.doesNotMatch(help, /\bmigrate\b/)
+  const migration = invoke(['migrate', ids[0], '--to', 'agent-note/2', '--input', '-'], 2, { expected_hash: shown.data.hash, reason: 'Verify unavailable format migration.' })
+  assert.equal(migration.diagnostics[0].code, 'INVALID_INPUT')
   write(root, path, document().replace('agent-note/1', 'agent-note/2'))
   git(root, 'add', path)
   write(root, path, document())

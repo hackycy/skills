@@ -104,14 +104,14 @@ Note、归档清单和项目配置按文件的顶层 `format` 分派给 Adapter�
 来源保存 `format`、路径、只读原字节、原字节的 SHA-256，以及注释和不透明扩展是否存在。缺失配置或清单可使用默认值，其来源明确缺失。安装恢复使用独立的 `transaction/2` DTO 解读旧 journal 的配置快照。 [Canonical 模型](../../src/notes/model.ts) · [Adapter 端口](../../src/notes/formats/ports.ts) · [Reader](../../src/notes/reader.ts) · [安装事务](../../src/distribution/transition.ts)
 
 1. 共享载体读取器在同一快照内验证 UTF-8、frontmatter 分隔符和映射语法，拒绝重复键、YAML alias、显式 tag 和 merge key，并限制嵌套。分派只读取顶层 `format`。工作树、index、commit 和可复核的归档来源各自按所读字节分派。配置候选按当前快照发现，并核对 `notes_dir` 与实际布局。 [载体读取](../../src/notes/formats/carrier.ts) · [布局发现](../../src/distribution/layout.ts)
-2. Registry 按文档类别和格式查找已冻结的注册项。每项声明 Adapter、校验器、读写与迁入迁出权限及 `introducedIn`、`deprecatedIn`、`removedIn`。组装时验证注册唯一、格式标识一致、版本窗口有序及默认项可读可写。三个生产 v1 格式始于工具 `0.1.0`。生产和测试入口均默认创建 v1，测试入口额外注册实验 `agent-note/2` 并允许 v1/v2 双向迁移。 [Registry](../../src/notes/formats/registry.ts) · [生产注册](../../src/notes/formats/production-entries.ts) · [测试注册](../../tests/formats/entries.ts)
-3. 所选 Adapter 执行格式校验和 canonical 映射。Note 的解析先校验元数据，再通过核心注入的检查确认 scope 路径及状态与位置相符，最后校验正文并提取标题，保留 v1 诊断顺序。索引、关系、历史检查和写入规划通过注入的格式接口工作。兼容现有载体的纯表示变更只需一个 Adapter 文件和一条静态注册。载体变化需评审共享读取接口，领域行为变化需显式修改核心规则。 [生产装配](../../src/notes/formats/production.ts) · [测试装配](../../tests/formats/experimental.ts)
+2. Registry 按文档类别和格式查找已冻结的注册项。每项声明 Adapter、校验器、读写与迁入迁出权限及 `introducedIn`、`deprecatedIn`、`removedIn`。组装时验证注册唯一、格式标识一致、版本窗口有序及默认项可读可写。三个生产 v1 格式始于工具 `0.1.0`，创建使用 `agent-note/1`。 [Registry](../../src/notes/formats/registry.ts) · [生产注册](../../src/notes/formats/production-entries.ts)
+3. 所选 Adapter 执行格式校验和 canonical 映射。Note 的解析先校验元数据，再通过核心注入的检查确认 scope 路径及状态与位置相符，最后校验正文并提取标题，保留 v1 诊断顺序。索引、关系、历史检查和写入规划通过注入的格式接口工作。兼容现有载体的纯表示变更只需一个 Adapter 文件和一条静态注册。载体变化需评审共享读取接口，领域行为变化需显式修改核心规则。 [生产装配](../../src/notes/formats/production.ts)
 
 ### 表示变化与领域规则
 
-实验 v2 将 `read_when` 改名为 `readWhen`，两者映射到同一个 canonical `metadata.read_when`，按各自字段名写回。其余共同字段逐值映射，保留缺省和关系数组顺序。v2 声明的 `extensions` 作为不透明来源保留，外层 schema 继续拒绝未声明字段。可选的 `activation: on-proposal` 保留在 canonical 替代边上，v1 无法表达该字段。 [v1 Adapter](../../src/notes/formats/adapters/note-v1.ts) · [实验 v2 Adapter](../../tests/formats/adapters/note-v2.ts)
+格式适配抽取时，v2 原型用字段重命名验证表示边界。`read_when` 和 `readWhen` 映射到同一个 canonical `metadata.read_when`，按各自字段名写回。其余共同字段逐值映射，保留缺省和关系数组顺序。原型将声明的 `extensions` 作为不透明来源保留。可选的 `activation: on-proposal` 保留在 canonical 替代边上，v1 无法表达该字段。 [v1 Adapter](../../src/notes/formats/adapters/note-v1.ts) · [v2 原型源码](https://github.com/hackycy/skills/blob/b607b44ba4b382a8a4975a82498bdf0bc70e328c/packages/agent-notes/tests/formats/adapters/note-v2.ts)
 
-测试入口默认按现行规则检查，遇到激活标记报 `POLICY_FEATURE_UNSUPPORTED`。通过 `AGENT_NOTES_TEST_PROPOSAL_ACTIVATION=1` 启用测试 CLI 的实验规则后，活跃 implemented 的替代边继续生效，活跃 proposed 只有带标记的边提前生效，rejected 和 archived 的出边均不生效。查询、依赖校验、维护和清理共享该判定，基线和目标使用同一规则。例如活跃决定 A 通过 `related` 回链到 proposed 后继 B，C 的 `requires` 指向 A。普通替代下 C 的依赖有效。若在实验规则下 B 提前完整替代 A，C 得到 `INVALID_RELATION`，部分替代时 C 的依赖仍有效。 [关系实现](../../src/notes/relations.ts) · [生产关系契约](../../assets/formats/document.md#3-关系)
+原型还验证了提案阶段提前生效的领域规则。活跃 implemented 的替代边生效，活跃 proposed 只有带标记的边提前生效，rejected 和 archived 的出边均不生效。查询、依赖校验、维护和清理共享该判定，基线和目标使用同一规则。例如活跃决定 A 通过 `related` 回链到 proposed 后继 B，C 的 `requires` 指向 A。普通替代下 C 的依赖有效。若在实验规则下 B 提前完整替代 A，C 得到 `INVALID_RELATION`，部分替代时 C 的依赖仍有效。 [关系实现](../../src/notes/relations.ts) · [生产关系契约](../../assets/formats/document.md#3-关系)
 
 ### 原格式写回与字节保真
 
@@ -120,15 +120,15 @@ Note、归档清单和项目配置按文件的顶层 `format` 分派给 Adapter�
 | 操作 | 字节保证 |
 | --- | --- |
 | v1 兼容写回 | 元数据 patch 可重排 YAML，保留原正文字节。全草稿替换沿用原序列化。归档只插入必要字段，保留已有 frontmatter 和正文。若为 v1 引入局部保真，须作为独立的写回变更验收。 |
-| v2 局部 patch | 获准改动之外的字节原样保留，包括注释、YAML 排版、不透明扩展和未改正文。空 patch 返回相同字节。若无法定位安全区间或会留下无归属的注释，以 `UNSAFE_FORMAT_PATCH` 终止事务。 |
-| 显式迁移 | 格式标识和 frontmatter 排版可变化。canonical 字段、关系数组次序、标题及正文字节均须相同。来源含注释或不透明扩展，或目标无法表达字段时，报 `LOSSY_FORMAT_CONVERSION` 并保留源字节。 |
+| v2 原型的局部 patch | 获准改动之外的字节原样保留，包括注释、YAML 排版、不透明扩展和未改正文。空 patch 返回相同字节。若无法定位安全区间或会留下无归属的注释，以 `UNSAFE_FORMAT_PATCH` 终止事务。 |
+| 原型的显式迁移 | 格式标识和 frontmatter 排版可变化。canonical 字段、关系数组次序、标题及正文字节均须相同。来源含注释或不透明扩展，或目标无法表达字段时，报 `LOSSY_FORMAT_CONVERSION` 并保留源字节。 |
 | 归档读取、`show` 与 hash | 使用来源字节。归档新增的 seal 对应归档文件的实际原字节。 |
 
-归档一篇 v2 implemented Note 时，Note 仍为 v2，既有 v1 清单按自身格式追加 seal。追加后重读清单以核对全部旧条目及新条目。核心验证旧 seal、对应的归档文件以及新归档的原字节和来源。 [归档清单契约](../../assets/formats/document.md#5-归档清单)
+归档分别使用 Note 和清单自身的格式。追加后重读清单以核对全部旧条目及新条目。核心验证旧 seal、对应的归档文件以及新归档的原字节和来源。 [归档清单契约](../../assets/formats/document.md#5-归档清单)
 
 ### 显式迁移与历史检查
 
-本地测试入口提供 `migrate <id> --to <format> --input <file>`，从输入文件或 stdin（`--input -`）取得当前原字节的 `expected_hash` 和非空 `reason`。每次在原路径转换一篇 proposed 或未归档的 implemented Note，两端须允许对应的迁出或迁入，且目标可读可写。同格式请求、rejected 和 archived Note 均拒绝，清单和配置没有迁移命令。迁移复用现有 dry-run、锁、journal 与 recover，在 overlay 重读输出以核对身份、状态与内容。原字节 hash 用于预检、持锁后和提交前的并发复查。已提交后用旧 hash 重试会触发 `CONCURRENT_CHANGE`。
+原型用 `migrate` 验证显式迁移。Registry 须存在不同的可读源格式和可读写目标格式，并授予对应的迁出和迁入权限，命令入口才会启用。每次在原路径转换一篇 proposed 或未归档的 implemented Note，输入须提供当前原字节的 `expected_hash` 和非空 `reason`。迁移复用 dry-run、锁、journal 与 recover，在 overlay 重读输出以核对身份、状态与内容。写入事务并发复查原字节 hash。命令只覆盖活跃 Note 的跨格式转换。
 
 历史检查先验证冻结、身份和生命周期。只有活跃 Note 的 ID、路径、状态和内容一致，且从可信基线重放同一转换能得到完全相同的目标字节，才报告 `NOTE_FORMAT_MIGRATION`。同时修改内容或无法重放的变更沿用 `NOTE_CHANGE_REVIEW`。没有可信基线时报告 `NO_HISTORY_BASELINE`。机械迁移提示只说明两端字节可以重放。写命令另与操作前快照比较，保护尚未提交的 rejected 和 archived 文件。
 
@@ -136,16 +136,15 @@ Note、归档清单和项目配置按文件的顶层 `format` 分派给 Adapter�
 
 ### 格式诊断与兼容范围
 
-生产 CLI、schema 和模板仅提供 v1。实验 v2 的写入和迁移由本地测试入口验证，发行窗口留空。未来正式格式的最低工具版本提示须来自可信发行映射。通用 JSON 结构与退出码仍由 [CLI 契约](../../assets/references/cli.md#输出与退出码)定义。
+生产 CLI、schema 和模板仅提供 v1，迁移入口处于禁用状态。未来正式格式的最低工具版本提示须来自可信发行映射。通用 JSON 结构与退出码见 [CLI 契约](../../assets/references/cli.md#输出与退出码)。
 
 | 场景 | 诊断 |
 | --- | --- |
 | 未知或不可读的格式标识 | `UNSUPPORTED_FORMAT`，退出 2。字符串标识通过 `details.format` 及 `details.supported_formats` 返回遇到的值和同类可读格式。生产入口遇到实验 v2 时只列出 `agent-note/1`。未知清单和配置格式各列同类格式并停止写入。 |
 | 载体出错或格式标识缺失、类型错误 | 载体问题优先。缺失标识沿用默认 v1 校验器的必填诊断，非字符串标识沿用 `UNSUPPORTED_FORMAT`。保留既有 v1 schema、正文和配置诊断。 |
-| 已识别的实验 v2 内容非法 | Adapter 返回 `INVALID_NOTE_V2`，退出 1，`details.phase` 标明 `metadata` 或 `body`。 |
-| 写入、迁移或核心规则失败 | 只读格式或不可选迁移目标退出 2。有损转换、无法安全 patch、关系、历史和事务错误退出 1。缺少必需决定材料沿用退出 3。多项错误聚合时，退出 2 优先于退出 1。 |
+| 写入或核心规则失败 | 只读格式退出 2。关系、历史和事务错误退出 1。缺少必需决定材料沿用退出 3。多项错误聚合时，退出 2 优先于退出 1。 |
 
-复验入口和历史运行范围见[格式适配验收](validation.md#格式适配验收)。
+兼容性检查见[格式适配验收](validation.md#格式适配验收)。
 
 ## 输入校验与交互
 
