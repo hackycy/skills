@@ -58,7 +58,7 @@ relations:
 
 ## 4. 正文与生命周期
 
-正文从问题开始，章节内容必须非空，不能包含未填写模板占位符。识别下面固定的中英文 H2 名称；项目语言只选择生成哪种模板，不改变旧文件的合法性。可以增加领域章节，H1 不重复。
+正文从问题开始，各节非空且无未填占位符，项目状态、清单等事实只链接所属项目文档。识别下面固定的中英文 H2 名称；项目语言只选择生成哪种模板，不改变旧文件的合法性。可以增加领域章节，H1 不重复。
 
 | 状态 | 按顺序出现的必需章节 |
 | --- | --- |
@@ -66,7 +66,7 @@ relations:
 | implemented | 问题 / Problem；决策 / Decision；考虑过的替代方案 / Alternatives considered；后果 / Consequences；验证 / Verification |
 | rejected | 保留拒绝时的 proposed 正文与章节；拒绝理由放 rejection_reason |
 
-implemented 不保留 Proposal、Plan、Migration plan、Acceptance criteria 及其对应中文提案/计划标题。验证描述实际已完成的检查与可定位证据，不能只写“已完成”。替代方案必须来自实际考虑；没有其他可行候选时如实说明为何没有，不为满足模板编造讨论。
+implemented 不保留 Proposal、Plan、Migration plan、Acceptance criteria 及其对应中文提案/计划标题。验证描述实际已完成的检查与可定位证据，不能只写“已完成”。替代方案只记实际考虑过、日后会被重提并须再选的方案及落选理由，若无则说明原因。
 
 更新边界固定如下：
 
