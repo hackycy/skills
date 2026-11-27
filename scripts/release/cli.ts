@@ -14,7 +14,8 @@ const help = `本机发布一个 CLI：
 
 省略包名时交互选择，省略版本时使用 bumpp 交互；--yes 跳过 bumpp 确认。
 CI 或非终端必须提供 --package、--version 和 --yes。
-顺序：更新版本 → npm publish（含 prepack）→ 提交和 tag → 推送 origin。
+顺序：npm 登录检查 → 更新版本 → npm publish（含 prepack）→ 提交和 tag → 推送 origin。
+登录检查使用所选 CLI 的 publishConfig.registry，未登录时在版本选择前中断。
 tag 格式为 <包名>@<版本>；仅发布所选 CLI，使用包现有的 npm 发布配置。
 `
 
@@ -23,6 +24,7 @@ interface CliPackage {
   version: string
   private?: boolean
   bin?: string | Record<string, string>
+  publishConfig?: { registry?: string }
   path: string
 }
 
@@ -68,6 +70,13 @@ async function main(): Promise<void> {
     throw new Error('发布需要干净工作树，请先提交或 stash 当前改动')
 
   console.log(`发布 CLI：${pkg.name}（当前版本 ${pkg.version}）`)
+  const registry = pkg.publishConfig?.registry
+  const whoami = await x('npm', ['whoami', ...(registry ? ['--registry', registry] : [])], {
+    nodeOptions: { cwd: pkg.path },
+  })
+  if (whoami.exitCode !== 0 || !whoami.stdout.trim())
+    throw new Error(`npm 登录检查失败，请运行 npm login 后重试：\n${whoami.stderr.trim()}`)
+  console.log(`npm 登录用户：${whoami.stdout.trim()}`)
 
   let published = false
   let stage = '版本更新'

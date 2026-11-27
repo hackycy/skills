@@ -26,7 +26,7 @@ function executable(file: string, value: string): void {
   chmodSync(file, 0o755)
 }
 
-function fixture(single = false) {
+function fixture(single = false, publishConfig?: { registry: string }) {
   const base = realpathSync(mkdtempSync(join(tmpdir(), 'release test-')))
   roots.push(base)
   const root = join(base, 'repo')
@@ -35,7 +35,7 @@ function fixture(single = false) {
   const bin = join(base, 'bin')
   write(join(root, 'package.json'), { private: true, version: '0.0.0' })
   write(join(root, 'pnpm-lock.yaml'), '# unchanged lockfile\n')
-  write(join(root, 'packages/a/package.json'), { name: '@test/a', version: '0.1.0', bin: { a: 'dist/cli.mjs' } })
+  write(join(root, 'packages/a/package.json'), { name: '@test/a', version: '0.1.0', bin: { a: 'dist/cli.mjs' }, ...(publishConfig ? { publishConfig } : {}) })
   if (!single)
     write(join(root, 'packages/b/package.json'), { name: '@test/b', version: '0.1.0', bin: 'dist/cli.mjs' })
   write(join(root, 'packages/private/package.json'), { name: '@test/private', version: '0.1.0', private: true, bin: 'cli.mjs' })
@@ -45,10 +45,18 @@ function fixture(single = false) {
     `#!${process.execPath}`,
     'const { appendFileSync, readFileSync } = require("node:fs")',
     'const { execFileSync } = require("node:child_process")',
-    'const manifest = JSON.parse(readFileSync("package.json", "utf8"))',
-    'const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim()',
-    'appendFileSync(process.env.RELEASE_TEST_LOG, JSON.stringify({ args: process.argv.slice(2), cwd: process.cwd(), name: manifest.name, version: manifest.version, head: git("rev-parse", "HEAD"), tags: git("tag", "--list") }) + "\\n")',
-    'if (process.env.RELEASE_TEST_NPM_FAIL) process.exit(1)',
+    'const args = process.argv.slice(2)',
+    'if (args[0] === "whoami") {',
+    '  if (process.env.RELEASE_TEST_NPM_WHOAMI_LOG) appendFileSync(process.env.RELEASE_TEST_NPM_WHOAMI_LOG, JSON.stringify({ args, cwd: process.cwd() }) + "\\n")',
+    '  if (process.env.RELEASE_TEST_NPM_LOGGED_OUT) { process.stderr.write("npm error code E401\\n"); process.exitCode = 1 }',
+    '  else console.log("release-test")',
+    '}',
+    'else {',
+    '  const manifest = JSON.parse(readFileSync("package.json", "utf8"))',
+    '  const git = (...gitArgs) => execFileSync("git", gitArgs, { encoding: "utf8" }).trim()',
+    '  appendFileSync(process.env.RELEASE_TEST_LOG, JSON.stringify({ args, cwd: process.cwd(), name: manifest.name, version: manifest.version, head: git("rev-parse", "HEAD"), tags: git("tag", "--list") }) + "\\n")',
+    '  if (process.env.RELEASE_TEST_NPM_FAIL) process.exit(1)',
+    '}',
   ].join('\n')}\n`)
   git(root, 'init', '--initial-branch=release-work')
   git(root, 'config', 'user.name', 'Release Test')
@@ -89,6 +97,7 @@ describe.skipIf(process.platform === 'win32')('本机 CLI 发布', () => {
     const result = run(f)
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout).toContain('发布 CLI：@test/a')
+    expect(result.stdout).toContain('npm 登录用户：release-test')
     expect(events(f)).toEqual([expect.objectContaining({
       args: ['publish'],
       name: '@test/a',
@@ -136,6 +145,26 @@ describe.skipIf(process.platform === 'win32')('本机 CLI 发布', () => {
     expect(run(f).stderr).toContain('需要干净工作树')
     expect(events(f)).toEqual([])
     expect(git(f.root, 'rev-parse', 'HEAD')).toBe(f.start)
+  })
+
+  it('未登录 npm 时在版本选择前失败，不改动工作树', () => {
+    const f = fixture()
+    const result = run(f, complete, { RELEASE_TEST_NPM_LOGGED_OUT: '1' })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('npm login')
+    expect(result.stderr).toContain('E401')
+    unchanged(f)
+  })
+
+  it('按所选包的 publishConfig.registry 检查登录', () => {
+    const f = fixture(true, { registry: 'https://registry.example.test' })
+    const whoamiLog = join(dirname(f.log), 'whoami.jsonl')
+    const result = run(f, complete, { RELEASE_TEST_NPM_WHOAMI_LOG: whoamiLog })
+    expect(result.status, result.stderr).toBe(0)
+    expect(readFileSync(whoamiLog, 'utf8').trim().split('\n').map(line => JSON.parse(line))).toEqual([{
+      args: ['whoami', '--registry', 'https://registry.example.test'],
+      cwd: join(f.root, 'packages/a'),
+    }])
   })
 
   it('版本错误交给 bumpp，发生在 npm 发布之前', () => {
@@ -213,9 +242,9 @@ const terminalDriver = [
   '  os.close(master)',
 ].join('\n')
 
-function terminal(f: ReturnType<typeof fixture>, args: string[], actions: { expect: string, send: string }[]) {
+function terminal(f: ReturnType<typeof fixture>, args: string[], actions: { expect: string, send: string }[], env = {}) {
   const result = spawnSync('python3', ['-c', terminalDriver], {
-    input: JSON.stringify({ root: f.root, argv: [...argv, ...args], actions, env: { ...f.env, CI: '', TERM: 'xterm-256color', NO_COLOR: '1' } }),
+    input: JSON.stringify({ root: f.root, argv: [...argv, ...args], actions, env: { ...f.env, CI: '', TERM: 'xterm-256color', NO_COLOR: '1', ...env } }),
     encoding: 'utf8',
     timeout: 25_000,
   })
@@ -237,6 +266,15 @@ describe.skipIf(process.platform === 'win32')('真实终端交互', () => {
     expect(result.status, result.output).toBe(0)
     expect(result.output).toContain('发布 CLI：@test/a')
     expect(events(f)[0]).toMatchObject({ name: '@test/a', version: '0.1.1' })
+  })
+
+  it('未登录时在任何版本选择之前退出', () => {
+    const f = fixture(true)
+    const result = terminal(f, [], [], { RELEASE_TEST_NPM_LOGGED_OUT: '1' })
+    expect(result.status, result.output).toBe(1)
+    expect(result.output).toContain('npm login')
+    expect(result.output).not.toContain('Current version')
+    unchanged(f)
   })
 
   it.each(['\x1B', '\x03'])('取消包选择无副作用（%j）', (key) => {

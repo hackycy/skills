@@ -68,6 +68,11 @@ Omitted package names prompt for a CLI, or select the only candidate. Omitted
 versions use bumpp's native prompt; `--yes` skips its confirmation. CI and
 non-terminal callers must supply `--package`, `--version`, and `--yes`.
 
+Before any version prompt, the entry point runs `npm whoami` in the selected
+package against its publish registry (`publishConfig.registry`, else npm's
+default) and exits with code 1 when not logged in, leaving the working tree
+untouched.
+
 bumpp updates only the selected manifest, then runs `npm publish` in that
 package using its existing publish configuration and `prepack` build. After
 npm returns success, bumpp creates `chore(release): <name>@<version>` and the
